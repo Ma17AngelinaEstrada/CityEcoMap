@@ -15,7 +15,7 @@ function MapView() {
           <img src={logo} alt="CityEcoMap Logo" className="logo-img" />
         </div>
         <nav className="header-nav">
-          <a href="/" className="nav-link active">Home</a>
+          <a href="/map" className="nav-link active">Home</a>
           <a href="/track-report" className="nav-link">Track Report</a>
           <a href="/about" className="nav-link">About</a>
         </nav>
@@ -49,7 +49,7 @@ function MapView() {
 
       {/* Bottom Nav - Mobile Only */}
       <div className="bottom-nav">
-        <a href="/" className="bottom-nav-item active">
+        <a href="/map" className="bottom-nav-item active">
           <span>🏠</span>
           <span>Home</span>
         </a>
