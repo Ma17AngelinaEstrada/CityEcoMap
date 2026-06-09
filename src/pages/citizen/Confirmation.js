@@ -2,31 +2,36 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logowhite from '../../logowhite2.png';
 import './Confirmation.css';
+import { useLocation } from 'react-router-dom';
 
 function Confirmation() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [reportId, setReportId] = useState('');
   const [copied, setCopied] = useState(false);
   const blockRef = useRef(true);
 
   useEffect(() => {
-    const id = 'WI' + Math.random().toString(36).substring(2, 7).toUpperCase();
+  // Get Report ID passed from ReviewSubmit
+  const id = location?.state?.reportId;
+  if (id) {
     setReportId(id);
+  }
 
-    // Push many states to block back button
-    for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 5; i++) {
+    window.history.pushState(null, '', window.location.href);
+  }
+
+  const blockNavigation = () => {
+    if (blockRef.current) {
       window.history.pushState(null, '', window.location.href);
     }
+  };
 
-    const blockNavigation = () => {
-      if (blockRef.current) {
-        window.history.pushState(null, '', window.location.href);
-      }
-    };
-
-    window.addEventListener('popstate', blockNavigation);
-    return () => window.removeEventListener('popstate', blockNavigation);
-  }, []);
+  window.addEventListener('popstate', blockNavigation);
+  return () => window.removeEventListener('popstate', blockNavigation);
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(`#${reportId}`);

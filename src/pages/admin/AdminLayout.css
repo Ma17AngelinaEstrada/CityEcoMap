@@ -1,0 +1,119 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.al2-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+/* Topbar */
+.al2-topbar {
+  width: 100%;
+  background-color: #f5f0e8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1.5rem;
+  border-bottom: 1px solid #ddd;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 56px;
+}
+
+.al2-logo {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+}
+
+.al2-hamburger {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.al2-hamburger span {
+  display: block;
+  width: 24px;
+  height: 2.5px;
+  background-color: #1a4a1a;
+  border-radius: 2px;
+}
+
+/* Body */
+.al2-body {
+  display: flex;
+  flex: 1;
+}
+
+/* Sidebar */
+.al2-sidebar {
+  width: 270px;
+  min-width: 270px;
+  background-color: #1a4a1a;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 56px);
+}
+
+.al2-nav {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.al2-nav-item {
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  color: #ffffff;
+  font-family: Georgia, serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  padding: 1.1rem 1.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.al2-nav-item:hover {
+  background-color: rgba(255,255,255,0.08);
+}
+
+.al2-nav-item--active {
+  background-color: rgba(255,255,255,0.15);
+  border-left: 4px solid #7eb87e;
+}
+
+.al2-logout {
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  color: #ffffff;
+  font-family: Georgia, serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  padding: 1.1rem 1.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.al2-logout:hover {
+  background-color: rgba(255,255,255,0.08);
+}
+
+/* Main content area */
+.al2-main {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  background-color: #ede8dc;
+}

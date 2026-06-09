@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../logowhite2.png';
 import './TrackReport.css';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../firebase/firebase';
 
 function TrackReport() {
 // eslint-disable-next-line no-unused-vars
@@ -10,20 +12,39 @@ function TrackReport() {
   const [searched, setSearched] = useState(false);
   const [report, setReport] = useState(null);
 
-  const handleSearch = () => {
-    if (!reportId.trim()) {
-      alert('Please enter a Report ID.');
-      return;
+  const handleSearch = async () => {
+  if (!reportId.trim()) {
+    alert('Please enter a Report ID.');
+    return;
+  }
+  setSearched(true);
+  setReport(null);
+
+  try {
+    const q = query(
+      collection(db, 'reports'),
+      where('reportId', '==', reportId.trim().replace('#', ''))
+    );
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      const data = querySnapshot.docs[0].data();
+      setReport({
+        id: data.reportId,
+        category: data.category,
+        description: data.description,
+        status: data.status,
+        date: data.createdAt?.toDate().toLocaleDateString() || 'N/A',
+        photo: data.photo,
+      });
+    } else {
+      setReport(null);
     }
-    setSearched(true);
-    setReport({
-      id: reportId.trim().replace('#', ''),
-      category: 'Waste Issue',
-      description: 'Sample report description.',
-      status: 'Pending',
-      date: new Date().toLocaleDateString(),
-    });
-  };
+  } catch (error) {
+    console.error('Error fetching report:', error);
+    alert('Error fetching report. Please try again.');
+  }
+};
 
   const getStatusColor = (status) => {
     if (status === 'Pending') return '#f0a500';

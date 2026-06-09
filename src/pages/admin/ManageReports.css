@@ -1,0 +1,260 @@
+.mr-header {
+  margin-bottom: 1.5rem;
+}
+
+.mr-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  font-family: Georgia, serif;
+}
+
+.mr-subtitle {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 4px;
+  font-family: sans-serif;
+}
+
+.mr-filters {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.mr-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mr-filter-group label {
+  font-size: 0.75rem;
+  color: #666;
+  font-family: sans-serif;
+}
+
+.mr-filter-group select {
+  padding: 7px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: sans-serif;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+}
+
+.mr-count {
+  font-size: 0.8rem;
+  color: #888;
+  font-family: sans-serif;
+  margin-left: auto;
+}
+
+.mr-loading {
+  color: #666;
+  font-family: sans-serif;
+  font-size: 0.9rem;
+}
+
+.mr-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.mr-table-card {
+  flex: 1;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e0ddd5;
+  min-width: 0;
+}
+
+.mr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: sans-serif;
+  font-size: 0.85rem;
+}
+
+.mr-table thead tr {
+  border-bottom: 2px solid #eee;
+}
+
+.mr-table th {
+  text-align: left;
+  padding: 0.9rem 1rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.mr-table td {
+  padding: 0.8rem 1rem;
+  color: #444;
+  border-bottom: 1px solid #f0ede5;
+}
+
+.mr-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.mr-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.mr-table tbody tr:hover {
+  background: #f9f7f2;
+}
+
+.mr-row--selected {
+  background: #eef5ee !important;
+}
+
+.mr-empty {
+  text-align: center;
+  color: #999;
+  padding: 2rem;
+}
+
+.mr-view-btn {
+  background: #1a4a1a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: sans-serif;
+}
+
+.mr-view-btn:hover {
+  background: #2d6a2d;
+}
+
+/* Badges */
+.mr-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: sans-serif;
+}
+
+.mr-badge--pending { background: #e53935; color: #fff; }
+.mr-badge--inprogress { background: #f9a825; color: #fff; }
+.mr-badge--resolved { background: #2e7d32; color: #fff; }
+
+/* Detail panel */
+.mr-detail {
+  width: 320px;
+  min-width: 320px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e0ddd5;
+  overflow: hidden;
+}
+
+.mr-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #eee;
+  background: #f9f7f2;
+}
+
+.mr-detail-header h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  font-family: Georgia, serif;
+}
+
+.mr-close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #888;
+}
+
+.mr-detail-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.mr-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mr-detail-label {
+  font-size: 0.72rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: sans-serif;
+}
+
+.mr-detail-value {
+  font-size: 0.88rem;
+  color: #333;
+  font-family: sans-serif;
+  line-height: 1.5;
+}
+
+.mr-detail-photo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mr-photo {
+  width: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+  max-height: 180px;
+}
+
+.mr-status-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 0.5rem;
+  border-top: 1px solid #eee;
+}
+
+.mr-status-btns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mr-status-btn {
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 2px solid transparent;
+  font-size: 0.8rem;
+  font-family: sans-serif;
+  cursor: pointer;
+  font-weight: 600;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.mr-status-btn.active { opacity: 1; }
+.mr-status-btn:hover { opacity: 0.85; }
+
+.mr-status-btn--pending { background: #e53935; color: #fff; }
+.mr-status-btn--inprogress { background: #f9a825; color: #fff; }
+.mr-status-btn--resolved { background: #2e7d32; color: #fff; }

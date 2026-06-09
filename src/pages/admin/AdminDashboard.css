@@ -1,0 +1,265 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.ad-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: Georgia, "Times New Roman", serif;
+  background-color: #E9E9E9;
+}
+
+/* Top navbar */
+.ad-topbar {
+  width: 100%;
+  background-color: #f5f0e8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1.5rem;
+  border-bottom: 1px solid #ddd;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.ad-topbar-logo-img {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+}
+
+.ad-hamburger {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.ad-hamburger span {
+  display: block;
+  width: 24px;
+  height: 2.5px;
+  background-color: #1a4a1a;
+  border-radius: 2px;
+}
+
+/* Body = sidebar + main */
+.ad-body {
+  display: flex;
+  flex: 1;
+  background-color: #E9E9E9;
+}
+
+/* Sidebar */
+.ad-sidebar {
+  width: 270px;
+  min-width: 270px;
+  background-color: #1a4a1a;
+  display: flex;
+  flex-direction: column;
+}
+
+.ad-nav {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.ad-nav-item {
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  color: #ffffff;
+  font-family: Georgia, serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  padding: 1.1rem 1.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ad-nav-item:hover {
+  background-color: rgba(255,255,255,0.08);
+}
+
+.ad-nav-item--active {
+  background-color: rgba(255,255,255,0.12);
+  border-left: 4px solid #7eb87e;
+}
+
+.ad-logout {
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  color: #ffffff;
+  font-family: Georgia, serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  padding: 1.1rem 1.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ad-logout:hover {
+  background-color: rgba(255,255,255,0.08);
+}
+
+/* Main */
+.ad-main {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  background-color: #E9E9E9;
+}
+
+.ad-loading {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+/* Stat cards */
+.ad-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ad-stat-card {
+  background-color: #D9D9D9;
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ad-stat-label {
+  font-size: 0.85rem;
+  color: #4a6b4a;
+  font-family: sans-serif;
+}
+
+.ad-stat-number {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  font-family: Georgia, serif;
+}
+
+/* Table */
+.ad-table-card {
+  background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e0ddd5;
+}
+
+.ad-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: sans-serif;
+  font-size: 0.88rem;
+}
+
+.ad-table thead tr {
+  background: #ffffff;
+  border-bottom: 2px solid #eee;
+}
+
+.ad-table th {
+  text-align: left;
+  padding: 1rem 1.25rem;
+  font-weight: 700;
+  color: #333;
+  font-size: 0.88rem;
+}
+
+.ad-table td {
+  padding: 0.85rem 1.25rem;
+  color: #444;
+  border-bottom: 1px solid #f0ede5;
+}
+
+.ad-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ad-empty {
+  text-align: center;
+  color: #999;
+  padding: 2rem;
+}
+
+/* Status badges */
+.ad-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: sans-serif;
+}
+
+.ad-badge--pending {
+  background-color: #e53935;
+  color: #ffffff;
+}
+
+.ad-badge--inprogress {
+  background-color: #f9a825;
+  color: #ffffff;
+}
+
+.ad-badge--resolved {
+  background-color: #2e7d32;
+  color: #ffffff;
+}
+
+/* Bottom row */
+.ad-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+/* Map placeholder */
+.ad-map-placeholder {
+  background: #d8e8d8;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  border: 1px solid #c0d8c0;
+}
+
+.ad-map-note {
+  color: #4a6b4a;
+  font-size: 0.95rem;
+  font-family: sans-serif;
+}
+
+/* Chart */
+.ad-chart-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #e0ddd5;
+}
+
+.ad-chart-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  margin-bottom: 1rem;
+  font-family: sans-serif;
+  text-align: center;
+}

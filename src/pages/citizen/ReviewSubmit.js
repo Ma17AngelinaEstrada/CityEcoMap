@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../logowhite2.png';
 import './ReviewSubmit.css';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../firebase/firebase';
 
 function ReviewSubmit() {
   const navigate = useNavigate();
@@ -27,11 +29,71 @@ function ReviewSubmit() {
   }, [form, navigate]);
 
   const handleSubmit = async () => {
-    setSubmitting(true);
-    setTimeout(() => {
-      navigate('/confirmation', { replace: true });
-    }, 1500);
-  };
+  setSubmitting(true);
+  try {
+    // Generate Report ID
+    const reportId = 'WI' + Math.random().toString(36).substring(2, 7).toUpperCase();
+
+    // Compress photo to base64 if exists
+    let photoBase64 = null;
+    if (form?.photo) {
+      photoBase64 = await compressPhoto(form.photo);
+    }
+
+    // Save to Firestore
+    await addDoc(collection(db, 'reports'), {
+      reportId,
+      category: form?.selectedCategory,
+      description: form?.description,
+      email: form?.email || null,
+      location: form?.location || null,
+      photo: photoBase64,
+      status: 'Pending',
+      createdAt: serverTimestamp(),
+    });
+
+    navigate('/confirmation', {
+      replace: true,
+      state: { reportId }
+    });
+
+  } catch (error) {
+    console.error('Error submitting report:', error);
+    alert('Failed to submit report. Please try again.');
+    setSubmitting(false);
+  }
+};
+
+const compressPhoto = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxSize = 500;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height && width > maxSize) {
+          height = (height * maxSize) / width;
+          width = maxSize;
+        } else if (height > maxSize) {
+          width = (width * maxSize) / height;
+          height = maxSize;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.5));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+};
 
   const getAddress = () => {
     if (form?.location) {

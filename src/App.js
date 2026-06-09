@@ -7,6 +7,9 @@ import ReviewSubmit from './pages/citizen/ReviewSubmit';
 import Confirmation from './pages/citizen/Confirmation';
 import TrackReport from './pages/citizen/TrackReport';
 import About from './pages/citizen/About';
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import ManageReports from './pages/admin/ManageReports';
 
 function App() {
   return (
@@ -19,6 +22,12 @@ function App() {
         <Route path="/confirmation" element={<Confirmation />} />
         <Route path="/track-report" element={<TrackReport />} />
         <Route path="/about" element={<About />} />
+
+        {/* Admin Routes */}
+        <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/reports" element={<ManageReports />} />
+        
       </Routes>
     </Router>
   );

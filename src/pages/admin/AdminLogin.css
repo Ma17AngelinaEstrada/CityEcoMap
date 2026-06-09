@@ -1,0 +1,170 @@
+.al-wrapper {
+  display: flex;
+  min-height: 100vh;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+/* Left panel */
+.al-left {
+  width: 50%;
+  background-color: #1a4a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+}
+
+.al-left-content {
+  max-width: 400px;
+  text-align: center;
+}
+
+.al-left-content h1 {
+  color: #ffffff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  line-height: 1.3;
+  text-align: center;
+  width: 100%;
+}
+
+.al-left-content p {
+  color: #b8d4b8;
+  font-size: 0.90rem;
+  font-style: italic;
+  line-height: 1.6;
+  text-align: center;
+  width: 100%;
+}
+
+/* Right panel */
+.al-right {
+  width: 50%;
+  background-color: #fdf8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+}
+
+.al-form-container {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.al-logo-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.al-logo-img {
+  width: 250px;
+  height: auto;
+  object-fit: contain;
+}
+
+.al-logo-name {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  font-family: Georgia, serif;
+}
+
+.al-auth-note {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #888;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.al-error {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  padding: 10px 14px;
+  margin-bottom: 1rem;
+  width: 100%;
+  text-align: center;
+  font-family: sans-serif;
+}
+
+.al-field {
+  width: 100%;
+  margin-bottom: 1.25rem;
+}
+
+.al-field label {
+  display: block;
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 6px;
+  font-family: sans-serif;
+  font-style: normal;
+}
+
+.al-field input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #fff;
+  color: #333;
+  outline: none;
+  font-family: sans-serif;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.al-field input:focus {
+  border-color: #2d6a2d;
+  box-shadow: 0 0 0 3px rgba(45, 106, 45, 0.1);
+}
+
+.al-btn {
+  width: 100%;
+  padding: 14px;
+  background: #1a4a1a;
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-family: sans-serif;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: background 0.2s;
+}
+
+.al-btn:hover:not(:disabled) {
+  background: #2d6a2d;
+}
+
+.al-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.al-footer {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: #aaa;
+  text-align: center;
+  margin-top: 2.5rem;
+  font-family: sans-serif;
+}
+
+/* Mobile fallback */
+@media (max-width: 640px) {
+  .al-wrapper { flex-direction: column; }
+  .al-left { width: 100%; padding: 2rem; min-height: 200px; }
+  .al-right { width: 100%; }
+}
