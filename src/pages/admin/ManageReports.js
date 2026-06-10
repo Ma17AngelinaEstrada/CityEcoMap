@@ -6,6 +6,19 @@ import { auth, db } from "../../firebase/firebase";
 import AdminLayout from "./AdminLayout";
 import "./ManageReports.css";
 
+const sendEmailNotification = async (to, subject, body) => {
+  if (!to) return;
+  try {
+    await fetch('http://localhost:5000/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, body }),
+    });
+  } catch (err) {
+    console.error('Email notification failed:', err);
+  }
+};
+
 export default function ManageReports() {
   const navigate = useNavigate();
   const [reports, setReports] = useState([]);
@@ -14,6 +27,9 @@ export default function ManageReports() {
   const [filterCategory, setFilterCategory] = useState("All");
   const [selectedReport, setSelectedReport] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
+  const [rejectModal, setRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [assignModal, setAssignModal] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -29,10 +45,7 @@ export default function ManageReports() {
   const fetchReports = async () => {
     try {
       const snapshot = await getDocs(collection(db, "reports"));
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
       data.sort((a, b) => (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0));
       setReports(data);
     } catch (err) {
@@ -42,22 +55,95 @@ export default function ManageReports() {
     }
   };
 
-  const handleStatusChange = async (reportId, newStatus) => {
+  const updateStatus = async (reportId, newStatus, extraFields = {}) => {
     setUpdatingId(reportId);
     try {
-      await updateDoc(doc(db, "reports", reportId), { status: newStatus });
+      await updateDoc(doc(db, "reports", reportId), {
+        status: newStatus,
+        ...extraFields,
+      });
       setReports((prev) =>
-        prev.map((r) => (r.id === reportId ? { ...r, status: newStatus } : r))
+        prev.map((r) =>
+          r.id === reportId ? { ...r, status: newStatus, ...extraFields } : r
+        )
       );
       if (selectedReport?.id === reportId) {
-        setSelectedReport((prev) => ({ ...prev, status: newStatus }));
+        setSelectedReport((prev) => ({ ...prev, status: newStatus, ...extraFields }));
       }
     } catch (err) {
-      alert("Failed to update status. Please try again.");
+      alert("Failed to update. Please try again.");
     } finally {
       setUpdatingId(null);
     }
   };
+
+  // Approve → open assign office modal
+  const handleApprove = () => setAssignModal(true);
+
+  const handleAssignOffice = async (office) => {
+  setAssignModal(false);
+  await updateStatus(selectedReport.id, "Approved", { assignedTo: office });
+  await sendEmailNotification(
+    selectedReport.email,
+    "Your CityEcoMap Report Has Been Approved",
+    `<p>Dear Citizen,</p>
+     <p>Your report <strong>#${selectedReport.reportId}</strong> has been reviewed and approved.</p>
+     <p>It has been assigned to <strong>${office}</strong> for action.</p>
+     <p>Thank you for helping keep Lucena City clean!</p>
+     <br/>
+     <p>— CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>`
+  );
+};
+
+const handleRejectConfirm = async () => {
+  if (!rejectReason.trim()) {
+    alert("Please enter a reason for rejection.");
+    return;
+  }
+  setRejectModal(false);
+  await updateStatus(selectedReport.id, "Rejected", { rejectionReason: rejectReason });
+  await sendEmailNotification(
+    selectedReport.email,
+    "Update on Your CityEcoMap Report",
+    `<p>Dear Citizen,</p>
+     <p>Your report <strong>#${selectedReport.reportId}</strong> has been reviewed but could not be approved.</p>
+     <p><strong>Reason:</strong> ${rejectReason}</p>
+     <p>If you believe this is an error, please submit a new report with clearer details.</p>
+     <br/>
+     <p>— CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>`
+  );
+};
+
+const handleRejectClick = () => {
+  setRejectReason("");
+  setRejectModal(true);
+};
+
+const handleSetOngoing = async () => {
+  await updateStatus(selectedReport.id, "Ongoing");
+  await sendEmailNotification(
+    selectedReport.email,
+    "Cleanup in Progress — CityEcoMap Report Update",
+    `<p>Dear Citizen,</p>
+     <p>Good news! Cleanup is now in progress for your report <strong>#${selectedReport.reportId}</strong>.</p>
+     <p>Our team is actively working on resolving the issue. Thank you for your patience.</p>
+     <br/>
+     <p>— CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>`
+  );
+};
+
+const handleSetResolved = async () => {
+  await updateStatus(selectedReport.id, "Resolved");
+  await sendEmailNotification(
+    selectedReport.email,
+    "Your Report Has Been Resolved — CityEcoMap",
+    `<p>Dear Citizen,</p>
+     <p>Your report <strong>#${selectedReport.reportId}</strong> has been successfully resolved.</p>
+     <p>Thank you for helping us build a cleaner, greener Lucena City!</p>
+     <br/>
+     <p>— CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>`
+  );
+};
 
   const filtered = reports.filter((r) => {
     const matchStatus = filterStatus === "All" || r.status === filterStatus;
@@ -66,11 +152,13 @@ export default function ManageReports() {
   });
 
   const getStatusClass = (status) => {
-    if (status === "Pending") return "mr-badge mr-badge--pending";
-    if (status === "In Progress") return "mr-badge mr-badge--inprogress";
-    if (status === "Resolved") return "mr-badge mr-badge--resolved";
-    return "mr-badge";
-  };
+  if (status === "Pending") return "mr-badge mr-badge--pending";
+  if (status === "Approved") return "mr-badge mr-badge--approved";
+  if (status === "Ongoing" || status === "In Progress") return "mr-badge mr-badge--ongoing";
+  if (status === "Resolved") return "mr-badge mr-badge--resolved";
+  if (status === "Rejected") return "mr-badge mr-badge--rejected";
+  return "mr-badge";
+};
 
   const formatDate = (ts) => {
     if (!ts) return "—";
@@ -78,15 +166,52 @@ export default function ManageReports() {
     if (!date) return "—";
     return date.toLocaleDateString("en-PH", {
       year: "numeric", month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit"
+      hour: "2-digit", minute: "2-digit",
     });
+  };
+
+  // Which action buttons to show based on current status
+  const renderActions = () => {
+    const s = selectedReport?.status;
+    const busy = updatingId === selectedReport?.id;
+
+    if (s === "Pending") return (
+      <div className="mr-status-btns">
+        <button className="mr-action-btn mr-action-btn--approve" onClick={handleApprove} disabled={busy}>
+          ✔ Approve
+        </button>
+        <button className="mr-action-btn mr-action-btn--reject" onClick={handleRejectClick} disabled={busy}>
+          ✕ Reject
+        </button>
+      </div>
+    );
+
+    if (s === "Approved") return (
+      <div className="mr-status-btns">
+        <button className="mr-action-btn mr-action-btn--ongoing" onClick={handleSetOngoing} disabled={busy}>
+          ▶ Mark as Ongoing
+        </button>
+      </div>
+    );
+
+    if (s === "Ongoing" || s === "In Progress") return (
+      <div className="mr-status-btns">
+        <button className="mr-action-btn mr-action-btn--resolved" onClick={handleSetResolved} disabled={busy}>
+          ✔ Mark as Resolved
+        </button>
+      </div>
+    );
+
+    if (s === "Resolved" || s === "Rejected") return (
+      <p className="mr-no-action">No further actions available.</p>
+    );
   };
 
   return (
     <AdminLayout>
       <div className="mr-header">
         <h2 className="mr-title">Manage & Resolve Reports</h2>
-        <p className="mr-subtitle">View, update, and resolve citizen-submitted reports.</p>
+        <p className="mr-subtitle">Review, approve, reject, and resolve citizen-submitted reports.</p>
       </div>
 
       {/* Filters */}
@@ -96,8 +221,10 @@ export default function ManageReports() {
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
             <option>All</option>
             <option>Pending</option>
-            <option>In Progress</option>
+            <option>Approved</option>
+            <option>Ongoing</option>
             <option>Resolved</option>
+            <option>Rejected</option>
           </select>
         </div>
         <div className="mr-filter-group">
@@ -160,10 +287,9 @@ export default function ManageReports() {
           {selectedReport && (
             <div className="mr-detail">
               <div className="mr-detail-header">
-                <h3>Report #{selectedReport.reportId || selectedReport.id.slice(0, 6).toUpperCase()}</h3>
+                <h3>#{selectedReport.reportId || selectedReport.id.slice(0, 6).toUpperCase()}</h3>
                 <button className="mr-close" onClick={() => setSelectedReport(null)}>✕</button>
               </div>
-
               <div className="mr-detail-body">
                 <div className="mr-detail-row">
                   <span className="mr-detail-label">Type</span>
@@ -182,46 +308,78 @@ export default function ManageReports() {
                   <span className="mr-detail-value">{selectedReport.email || "Not provided"}</span>
                 </div>
                 <div className="mr-detail-row">
-                  <span className="mr-detail-label">Location</span>
-                  <span className="mr-detail-value">
-                    {selectedReport.location
-                      ? `${selectedReport.location.lat.toFixed(4)}° N, ${selectedReport.location.lng.toFixed(4)}° E`
-                      : "—"}
-                  </span>
+                  <span className="mr-detail-label">Assigned To</span>
+                  <span className="mr-detail-value">{selectedReport.assignedTo || "—"}</span>
                 </div>
-
+                {selectedReport.status === "Rejected" && (
+                  <div className="mr-detail-row">
+                    <span className="mr-detail-label">Rejection Reason</span>
+                    <span className="mr-detail-value mr-detail-value--rejected">
+                      {selectedReport.rejectionReason || "—"}
+                    </span>
+                  </div>
+                )}
                 {selectedReport.photo && (
                   <div className="mr-detail-photo">
                     <span className="mr-detail-label">Photo</span>
                     <img src={selectedReport.photo} alt="Report" className="mr-photo" />
                   </div>
                 )}
-
                 <div className="mr-detail-row">
                   <span className="mr-detail-label">Current Status</span>
                   <span className={getStatusClass(selectedReport.status)}>
                     {selectedReport.status || "Pending"}
                   </span>
                 </div>
-
                 <div className="mr-status-actions">
-                  <p className="mr-detail-label">Update Status</p>
-                  <div className="mr-status-btns">
-                    {["Pending", "In Progress", "Resolved"].map((s) => (
-                      <button
-                        key={s}
-                        className={`mr-status-btn mr-status-btn--${s.toLowerCase().replace(" ", "")} ${selectedReport.status === s ? "active" : ""}`}
-                        onClick={() => handleStatusChange(selectedReport.id, s)}
-                        disabled={updatingId === selectedReport.id}
-                      >
-                        {updatingId === selectedReport.id ? "Updating…" : s}
-                      </button>
-                    ))}
-                  </div>
+                  <p className="mr-detail-label">Actions</p>
+                  {renderActions()}
                 </div>
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Assign Office Modal */}
+      {assignModal && (
+        <div className="mr-modal-overlay">
+          <div className="mr-modal">
+            <h3>Select Office to Assign</h3>
+            <p>Assign this report to the appropriate office for action.</p>
+            <div className="mr-modal-btns">
+              <button className="mr-modal-btn mr-modal-btn--emb" onClick={() => handleAssignOffice("EMB")}>
+                EMB
+              </button>
+              <button className="mr-modal-btn mr-modal-btn--lgu" onClick={() => handleAssignOffice("LGU")}>
+                LGU
+              </button>
+            </div>
+            <button className="mr-modal-cancel" onClick={() => setAssignModal(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Reason Modal */}
+      {rejectModal && (
+        <div className="mr-modal-overlay">
+          <div className="mr-modal">
+            <h3>Reason for Rejection</h3>
+            <p>Please provide a reason why this report is being rejected.</p>
+            <textarea
+              className="mr-reject-textarea"
+              placeholder="Enter reason for rejection..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={4}
+            />
+            <div className="mr-modal-btns">
+              <button className="mr-modal-btn mr-modal-btn--emb" onClick={handleRejectConfirm}>
+                Confirm Reject
+              </button>
+              <button className="mr-modal-cancel" onClick={() => setRejectModal(false)}>Cancel</button>
+            </div>
+          </div>
         </div>
       )}
     </AdminLayout>

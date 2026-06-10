@@ -123,26 +123,41 @@ function SubmitReport() {
           </div>
 
           <div className="section-label">ADD PHOTO</div>
-          <label className="photo-upload" htmlFor="photo-input">
-            {photoPreview ? (
-              <img src={photoPreview} alt="Preview" className="photo-preview" />
-            ) : (
-              <>
-                <span className="camera-icon">📷</span>
-                <span className="photo-text">Take a Photo</span>
-                <span className="photo-subtext">Capture the issue to help us understand better.</span>
-                <span className="photo-arrow">›</span>
-              </>
-            )}
-          </label>
-          <input
-            id="photo-input"
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handlePhoto}
-            style={{ display: 'none' }}
-          />
+<div className="photo-options">
+  <label className="photo-option-btn" htmlFor="photo-camera">
+    📷 Take a Photo
+  </label>
+  <input
+    id="photo-camera"
+    type="file"
+    accept="image/*"
+    capture="environment"
+    onChange={handlePhoto}
+    style={{ display: 'none' }}
+  />
+  <label className="photo-option-btn" htmlFor="photo-gallery">
+    🖼️ Upload from Gallery
+  </label>
+  <input
+    id="photo-gallery"
+    type="file"
+    accept="image/*"
+    onChange={handlePhoto}
+    style={{ display: 'none' }}
+  />
+</div>
+
+{photoPreview && (
+  <div className="photo-preview-wrapper">
+    <img src={photoPreview} alt="Preview" className="photo-preview" />
+    <button
+      className="photo-remove-btn"
+      onClick={() => { setPhoto(null); setPhotoPreview(null); }}
+    >
+      ✕ Remove photo
+    </button>
+  </div>
+)}
 
           <div className="section-label">DESCRIPTION</div>
           <textarea

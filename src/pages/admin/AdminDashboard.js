@@ -43,7 +43,9 @@ export default function AdminDashboard() {
   const total = reports.length;
   const resolved = reports.filter((r) => r.status === "Resolved").length;
   const pending = reports.filter((r) => r.status === "Pending").length;
-  const inProgress = reports.filter((r) => r.status === "In Progress").length;
+  const inProgress = reports.filter((r) => 
+  r.status === "Ongoing" || r.status === "In Progress"
+).length;
 
   const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const chartData = monthNames.map((month, i) => {
@@ -63,12 +65,11 @@ export default function AdminDashboard() {
     .slice(0, 7);
 
   const getStatusClass = (status) => {
-    if (status === "Pending") return "ad-badge ad-badge--pending";
-    if (status === "In Progress") return "ad-badge ad-badge--inprogress";
-    if (status === "Resolved") return "ad-badge ad-badge--resolved";
-    return "ad-badge";
-  };
-
+  if (status === "Pending") return "ad-badge ad-badge--pending";
+  if (status === "Ongoing" || status === "In Progress") return "ad-badge ad-badge--inprogress";
+  if (status === "Resolved") return "ad-badge ad-badge--resolved";
+  return "ad-badge";
+};
   return (
     <AdminLayout>
       {loading ? (
