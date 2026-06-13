@@ -41,21 +41,22 @@ export default function AdminDashboard() {
   }, []);
 
   const total = reports.length;
-  const resolved = reports.filter((r) => r.status === "Resolved").length;
   const pending = reports.filter((r) => r.status === "Pending").length;
-  const inProgress = reports.filter((r) => 
-  r.status === "Ongoing" || r.status === "In Progress"
-).length;
+  const approved = reports.filter((r) => r.status === "Approved").length;
+  const ongoing = reports.filter((r) => r.status === "Ongoing" || r.status === "In Progress").length;
+  const resolved = reports.filter((r) => r.status === "Resolved").length;
+  const rejected = reports.filter((r) => r.status === "Rejected").length;
 
   const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const currentYear = new Date().getFullYear();
   const chartData = monthNames.map((month, i) => {
     const waste = reports.filter((r) => {
       const date = r.createdAt?.toDate?.();
-      return date && date.getMonth() === i && r.category === "Waste Issue";
+      return date && date.getMonth() === i && date.getFullYear() === currentYear && r.category === "Waste Issue";
     }).length;
     const drainage = reports.filter((r) => {
       const date = r.createdAt?.toDate?.();
-      return date && date.getMonth() === i && r.category === "Drainage Issue";
+      return date && date.getMonth() === i && date.getFullYear() === currentYear && r.category === "Drainage Issue";
     }).length;
     return { month, "Waste Issues": waste, "Drainage Issues": drainage };
   });
@@ -65,55 +66,89 @@ export default function AdminDashboard() {
     .slice(0, 7);
 
   const getStatusClass = (status) => {
-  if (status === "Pending") return "ad-badge ad-badge--pending";
-  if (status === "Ongoing" || status === "In Progress") return "ad-badge ad-badge--inprogress";
-  if (status === "Resolved") return "ad-badge ad-badge--resolved";
-  return "ad-badge";
-};
+    if (status === "Pending") return "ad-badge ad-badge--pending";
+    if (status === "Approved") return "ad-badge ad-badge--approved";
+    if (status === "Ongoing" || status === "In Progress") return "ad-badge ad-badge--inprogress";
+    if (status === "Resolved") return "ad-badge ad-badge--resolved";
+    if (status === "Rejected") return "ad-badge ad-badge--rejected";
+    return "ad-badge";
+  };
+
+  const formatDate = (ts) => {
+    if (!ts) return "—";
+    const date = ts.toDate?.();
+    if (!date) return "—";
+    return date.toLocaleDateString("en-PH", {
+      year: "numeric", month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+  };
+
   return (
     <AdminLayout>
       {loading ? (
         <p className="ad-loading">Loading reports...</p>
       ) : (
         <>
+          {/* 6 Stat cards */}
           <div className="ad-stats">
             <div className="ad-stat-card">
               <span className="ad-stat-label">Total Reports</span>
               <span className="ad-stat-number">{total}</span>
             </div>
-            <div className="ad-stat-card">
-              <span className="ad-stat-label">Resolved Reports</span>
-              <span className="ad-stat-number">{resolved}</span>
-            </div>
-            <div className="ad-stat-card">
-              <span className="ad-stat-label">Pending Reports</span>
+            <div className="ad-stat-card ad-stat-card--pending">
+              <span className="ad-stat-label">Pending</span>
               <span className="ad-stat-number">{pending}</span>
             </div>
-            <div className="ad-stat-card">
-              <span className="ad-stat-label">In Progress Reports</span>
-              <span className="ad-stat-number">{inProgress}</span>
+            <div className="ad-stat-card ad-stat-card--approved">
+              <span className="ad-stat-label">Approved</span>
+              <span className="ad-stat-number">{approved}</span>
+            </div>
+            <div className="ad-stat-card ad-stat-card--ongoing">
+              <span className="ad-stat-label">Ongoing</span>
+              <span className="ad-stat-number">{ongoing}</span>
+            </div>
+            <div className="ad-stat-card ad-stat-card--resolved">
+              <span className="ad-stat-label">Resolved</span>
+              <span className="ad-stat-number">{resolved}</span>
+            </div>
+            <div className="ad-stat-card ad-stat-card--rejected">
+              <span className="ad-stat-label">Rejected</span>
+              <span className="ad-stat-number">{rejected}</span>
             </div>
           </div>
 
+          {/* Recent reports table */}
           <div className="ad-table-card">
+            <div className="ad-table-header">
+              <h3 className="ad-table-title">Recent Reports</h3>
+              <button
+                className="ad-view-all"
+                onClick={() => navigate("/admin/reports")}
+              >
+                View all →
+              </button>
+            </div>
             <table className="ad-table">
               <thead>
                 <tr>
                   <th>Report ID</th>
                   <th>Type</th>
-                  <th>Location</th>
+                  <th>Date Submitted</th>
+                  <th>Assigned To</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {recent.length === 0 ? (
-                  <tr><td colSpan="4" className="ad-empty">No reports yet.</td></tr>
+                  <tr><td colSpan="5" className="ad-empty">No reports yet.</td></tr>
                 ) : (
                   recent.map((r) => (
                     <tr key={r.id}>
                       <td>#{r.reportId || r.id.slice(0, 6).toUpperCase()}</td>
                       <td>{r.category}</td>
-                      <td>—</td>
+                      <td>{formatDate(r.createdAt)}</td>
+                      <td>{r.assignedTo || "—"}</td>
                       <td>
                         <span className={getStatusClass(r.status)}>
                           {r.status || "Pending"}
@@ -126,17 +161,18 @@ export default function AdminDashboard() {
             </table>
           </div>
 
+          {/* Bottom row: map + chart */}
           <div className="ad-bottom">
             <div className="ad-map-placeholder">
               <p className="ad-map-note">🗺 Map view coming soon</p>
             </div>
             <div className="ad-chart-card">
-              <h3 className="ad-chart-title">Report Statistics</h3>
+              <h3 className="ad-chart-title">Report Statistics — {currentYear}</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                   <Tooltip />
                   <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} />
                   <Bar dataKey="Waste Issues" fill="#1a4a1a" radius={[3,3,0,0]} />

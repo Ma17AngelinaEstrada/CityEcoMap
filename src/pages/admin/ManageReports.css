@@ -45,6 +45,42 @@
   cursor: pointer;
 }
 
+.mr-search {
+  padding: 7px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: sans-serif;
+  background: #fff;
+  color: #333;
+  width: 200px;
+  outline: none;
+}
+
+.mr-search:focus {
+  border-color: #1a4a1a;
+  box-shadow: 0 0 0 3px rgba(26,74,26,0.1);
+}
+
+.mr-clear-btn {
+  padding: 7px 14px;
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-family: sans-serif;
+  color: #666;
+  cursor: pointer;
+  align-self: flex-end;
+  margin-bottom: 1px;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.mr-clear-btn:hover {
+  border-color: #1a4a1a;
+  color: #1a4a1a;
+}
+
 .mr-count {
   font-size: 0.8rem;
   color: #888;
@@ -95,6 +131,15 @@
   padding: 0.8rem 1rem;
   color: #444;
   border-bottom: 1px solid #f0ede5;
+}
+
+.mr-table th,
+.mr-table td {
+  white-space: nowrap;
+}
+
+.mr-table-card {
+  overflow-x: auto;
 }
 
 .mr-table tbody tr:last-child td { border-bottom: none; }
@@ -342,4 +387,61 @@
 .mr-reject-textarea:focus {
   border-color: #1a4a1a;
   box-shadow: 0 0 0 3px rgba(26,74,26,0.1);
+}
+
+.mr-photo {
+  width: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+  max-height: 180px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.mr-photo:hover {
+  opacity: 0.85;
+}
+
+.mr-photo-hint {
+  font-size: 0.72rem;
+  color: #aaa;
+  font-family: sans-serif;
+  font-style: italic;
+}
+
+.mr-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  cursor: pointer;
+}
+
+.mr-lightbox {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.mr-lightbox-img {
+  max-width: 90vw;
+  max-height: 85vh;
+  border-radius: 8px;
+  object-fit: contain;
+  display: block;
+}
+
+.mr-lightbox-close {
+  position: absolute;
+  top: -36px;
+  right: 0;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 4px 8px;
 }

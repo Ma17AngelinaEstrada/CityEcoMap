@@ -23,6 +23,10 @@ export default function ManageReports() {
   const navigate = useNavigate();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [filterAssigned, setFilterAssigned] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterCategory, setFilterCategory] = useState("All");
   const [selectedReport, setSelectedReport] = useState(null);
@@ -30,6 +34,7 @@ export default function ManageReports() {
   const [rejectModal, setRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [assignModal, setAssignModal] = useState(false);
+  const [lightboxPhoto, setLightboxPhoto] = useState(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -146,10 +151,28 @@ const handleSetResolved = async () => {
 };
 
   const filtered = reports.filter((r) => {
-    const matchStatus = filterStatus === "All" || r.status === filterStatus;
-    const matchCategory = filterCategory === "All" || r.category === filterCategory;
-    return matchStatus && matchCategory;
-  });
+  const matchStatus = filterStatus === "All" || r.status === filterStatus;
+  const matchCategory = filterCategory === "All" || r.category === filterCategory;
+  const matchAssigned = filterAssigned === "All" || r.assignedTo === filterAssigned;
+  const matchSearch = searchQuery === "" ||
+    (r.reportId && r.reportId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (r.description && r.description.toLowerCase().includes(searchQuery.toLowerCase()));
+  
+  let matchDate = true;
+  if (dateFrom || dateTo) {
+    const reportDate = r.createdAt?.toDate?.();
+    if (reportDate) {
+      if (dateFrom && reportDate < new Date(dateFrom)) matchDate = false;
+      if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59);
+        if (reportDate > toDate) matchDate = false;
+      }
+    }
+  }
+
+  return matchStatus && matchCategory && matchAssigned && matchSearch && matchDate;
+});
 
   const getStatusClass = (status) => {
   if (status === "Pending") return "mr-badge mr-badge--pending";
@@ -216,27 +239,76 @@ const handleSetResolved = async () => {
 
       {/* Filters */}
       <div className="mr-filters">
-        <div className="mr-filter-group">
-          <label>Status</label>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-            <option>All</option>
-            <option>Pending</option>
-            <option>Approved</option>
-            <option>Ongoing</option>
-            <option>Resolved</option>
-            <option>Rejected</option>
-          </select>
-        </div>
-        <div className="mr-filter-group">
-          <label>Category</label>
-          <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-            <option>All</option>
-            <option>Waste Issue</option>
-            <option>Drainage Issue</option>
-          </select>
-        </div>
-        <span className="mr-count">{filtered.length} report{filtered.length !== 1 ? "s" : ""}</span>
-      </div>
+  <div className="mr-filter-group">
+    <label>Status</label>
+    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+      <option>All</option>
+      <option>Pending</option>
+      <option>Approved</option>
+      <option>Ongoing</option>
+      <option>Resolved</option>
+      <option>Rejected</option>
+    </select>
+  </div>
+  <div className="mr-filter-group">
+    <label>Category</label>
+    <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+      <option>All</option>
+      <option>Waste Issue</option>
+      <option>Drainage Issue</option>
+    </select>
+  </div>
+  <div className="mr-filter-group">
+    <label>Assigned To</label>
+    <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
+      <option>All</option>
+      <option>EMB</option>
+      <option>LGU</option>
+    </select>
+  </div>
+  <div className="mr-filter-group">
+    <label>Search</label>
+    <input
+      type="text"
+      className="mr-search"
+      placeholder="Report ID or keyword..."
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+    />
+  </div>
+  <div className="mr-filter-group">
+  <label>From</label>
+  <input
+    type="date"
+    className="mr-search"
+    value={dateFrom}
+    onChange={(e) => setDateFrom(e.target.value)}
+  />
+</div>
+<div className="mr-filter-group">
+  <label>To</label>
+  <input
+    type="date"
+    className="mr-search"
+    value={dateTo}
+    onChange={(e) => setDateTo(e.target.value)}
+  />
+</div>
+<button
+  className="mr-clear-btn"
+  onClick={() => {
+    setFilterStatus("All");
+    setFilterCategory("All");
+    setFilterAssigned("All");
+    setSearchQuery("");
+    setDateFrom("");
+    setDateTo("");
+  }}
+>
+  Clear Filters
+</button>
+  <span className="mr-count">{filtered.length} report{filtered.length !== 1 ? "s" : ""}</span>
+</div>
 
       {loading ? (
         <p className="mr-loading">Loading reports...</p>
@@ -250,6 +322,8 @@ const handleSetResolved = async () => {
                   <th>Report ID</th>
                   <th>Type</th>
                   <th>Date Submitted</th>
+                  <th>Location</th>
+                  <th>Assigned To</th>
                   <th>Status</th>
                   <th>Action</th>
                 </tr>
@@ -267,6 +341,12 @@ const handleSetResolved = async () => {
                       <td>#{r.reportId || r.id.slice(0, 6).toUpperCase()}</td>
                       <td>{r.category}</td>
                       <td>{formatDate(r.createdAt)}</td>
+                      <td>
+                        {r.location
+                          ? `${r.location.lat.toFixed(4)}° N, ${r.location.lng.toFixed(4)}° E`
+                          : "—"}
+                      </td>
+                      <td>{r.assignedTo || "—"}</td>
                       <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
                       <td>
                         <button
@@ -311,6 +391,14 @@ const handleSetResolved = async () => {
                   <span className="mr-detail-label">Assigned To</span>
                   <span className="mr-detail-value">{selectedReport.assignedTo || "—"}</span>
                 </div>
+                <div className="mr-detail-row">
+                  <span className="mr-detail-label">Location</span>
+                  <span className="mr-detail-value">
+                    {selectedReport.location
+                      ? `${selectedReport.location.lat.toFixed(4)}° N, ${selectedReport.location.lng.toFixed(4)}° E`
+                      : "—"}
+                  </span>
+                </div>
                 {selectedReport.status === "Rejected" && (
                   <div className="mr-detail-row">
                     <span className="mr-detail-label">Rejection Reason</span>
@@ -322,7 +410,13 @@ const handleSetResolved = async () => {
                 {selectedReport.photo && (
                   <div className="mr-detail-photo">
                     <span className="mr-detail-label">Photo</span>
-                    <img src={selectedReport.photo} alt="Report" className="mr-photo" />
+                    <img
+                      src={selectedReport.photo}
+                      alt="Report"
+                      className="mr-photo"
+                      onClick={() => setLightboxPhoto(selectedReport.photo)}
+                    />
+                    <span className="mr-photo-hint">Click photo to enlarge</span>
                   </div>
                 )}
                 <div className="mr-detail-row">
@@ -379,6 +473,15 @@ const handleSetResolved = async () => {
               </button>
               <button className="mr-modal-cancel" onClick={() => setRejectModal(false)}>Cancel</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {lightboxPhoto && (
+        <div className="mr-lightbox-overlay" onClick={() => setLightboxPhoto(null)}>
+          <div className="mr-lightbox">
+            <button className="mr-lightbox-close" onClick={() => setLightboxPhoto(null)}>✕</button>
+            <img src={lightboxPhoto} alt="Report enlarged" className="mr-lightbox-img" />
           </div>
         </div>
       )}
