@@ -10,6 +10,7 @@ import About from './pages/citizen/About';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageReports from './pages/admin/ManageReports';
+import ExportReports from './pages/admin/ExportReports';
 
 function App() {
   return (
@@ -27,6 +28,8 @@ function App() {
         <Route path="/admin" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/reports" element={<ManageReports />} />
+        <Route path="/admin/export" element={<ExportReports />} />
+
         
       </Routes>
     </Router>

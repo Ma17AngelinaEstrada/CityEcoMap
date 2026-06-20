@@ -1,0 +1,188 @@
+.er-header { margin-bottom: 1.5rem; }
+
+.er-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  font-family: Georgia, serif;
+}
+
+.er-subtitle {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 4px;
+  font-family: sans-serif;
+}
+
+.er-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.er-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.er-filter-group label {
+  font-size: 0.75rem;
+  color: #666;
+  font-family: sans-serif;
+}
+
+.er-filter-group select,
+.er-filter-group input {
+  padding: 7px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: sans-serif;
+  background: #fff;
+  color: #333;
+}
+
+.er-clear-btn {
+  padding: 7px 14px;
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-family: sans-serif;
+  color: #666;
+  cursor: pointer;
+}
+
+.er-clear-btn:hover {
+  border-color: #1a4a1a;
+  color: #1a4a1a;
+}
+
+.er-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: 1px solid #e0ddd5;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.er-count {
+  font-size: 0.88rem;
+  color: #444;
+  font-family: sans-serif;
+}
+
+.er-export-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.er-export-btn {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: sans-serif;
+}
+
+.er-export-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.er-export-btn--pdf {
+  background: #e53935;
+  color: #fff;
+}
+
+.er-export-btn--excel {
+  background: #2e7d32;
+  color: #fff;
+}
+
+.er-loading {
+  color: #666;
+  font-family: sans-serif;
+  font-size: 0.9rem;
+}
+
+.er-table-card {
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e0ddd5;
+  overflow-x: auto;
+}
+
+.er-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: sans-serif;
+  font-size: 0.85rem;
+}
+
+.er-table thead tr { border-bottom: 2px solid #eee; }
+
+.er-table th {
+  text-align: left;
+  padding: 0.9rem 1.1rem;
+  font-weight: 700;
+  color: #333;
+  white-space: nowrap;
+}
+
+.er-table td {
+  padding: 0.8rem 1.1rem;
+  color: #444;
+  border-bottom: 1px solid #f0ede5;
+  white-space: nowrap;
+}
+
+.er-table tbody tr:last-child td { border-bottom: none; }
+
+.er-empty {
+  text-align: center;
+  color: #999;
+  padding: 2rem;
+}
+
+.er-history-btn {
+  padding: 8px 18px;
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: sans-serif;
+  color: #666;
+}
+
+.er-history-btn:hover {
+  border-color: #1a4a1a;
+  color: #1a4a1a;
+}
+
+.er-history-card {
+  background: #fff;
+  border: 1px solid #e0ddd5;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.er-history-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  font-family: Georgia, serif;
+  margin-bottom: 0.75rem;
+}
