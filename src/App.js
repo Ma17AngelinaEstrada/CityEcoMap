@@ -11,6 +11,7 @@ import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageReports from './pages/admin/ManageReports';
 import ExportReports from './pages/admin/ExportReports';
+import ManageUsers from './pages/admin/ManageUsers';
 
 function App() {
   return (
@@ -29,7 +30,7 @@ function App() {
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/reports" element={<ManageReports />} />
         <Route path="/admin/export" element={<ExportReports />} />
-
+        <Route path="/admin/users" element={<ManageUsers />} />
         
       </Routes>
     </Router>

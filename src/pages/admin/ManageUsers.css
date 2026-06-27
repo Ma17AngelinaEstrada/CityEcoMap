@@ -1,0 +1,274 @@
+.mu-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.mu-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  font-family: Georgia, serif;
+}
+
+.mu-subtitle {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 4px;
+  font-family: sans-serif;
+}
+
+.mu-create-btn {
+  background: #1a4a1a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: sans-serif;
+  white-space: nowrap;
+}
+
+.mu-create-btn:hover { background: #2d6a2d; }
+
+.mu-loading {
+  color: #666;
+  font-family: sans-serif;
+  font-size: 0.9rem;
+}
+
+.mu-table-card {
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e0ddd5;
+}
+
+.mu-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: sans-serif;
+  font-size: 0.88rem;
+}
+
+.mu-table thead tr { border-bottom: 2px solid #eee; }
+
+.mu-table th {
+  text-align: left;
+  padding: 0.9rem 1.25rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.mu-table td {
+  padding: 0.85rem 1.25rem;
+  color: #444;
+  border-bottom: 1px solid #f0ede5;
+}
+
+.mu-table tbody tr:last-child td { border-bottom: none; }
+
+.mu-empty {
+  text-align: center;
+  color: #999;
+  padding: 2rem;
+}
+
+.mu-you {
+  font-size: 0.78rem;
+  color: #888;
+  font-style: italic;
+}
+
+/* Badges */
+.mu-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.mu-badge--master  { background: #1a4a1a; color: #fff; }
+.mu-badge--regular { background: #e8e4d8; color: #444; }
+
+.mu-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.mu-status--active   { background: #e8f5e9; color: #2e7d32; }
+.mu-status--inactive { background: #f5f5f5; color: #888; }
+
+/* Actions */
+.mu-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mu-edit-btn {
+  background: #1565c0;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: sans-serif;
+}
+
+.mu-edit-btn:hover { background: #1976d2; }
+
+.mu-toggle-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: sans-serif;
+  font-weight: 600;
+}
+
+.mu-toggle-btn--deactivate { background: #e53935; color: #fff; }
+.mu-toggle-btn--activate   { background: #2e7d32; color: #fff; }
+.mu-toggle-btn:disabled    { opacity: 0.4; cursor: not-allowed; }
+
+/* Modal */
+.mu-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.mu-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+}
+
+.mu-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #eee;
+  background: #f9f7f2;
+}
+
+.mu-modal-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  font-family: Georgia, serif;
+}
+
+.mu-modal-close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #888;
+}
+
+.mu-modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mu-error {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  padding: 10px 12px;
+  font-family: sans-serif;
+}
+
+.mu-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.mu-field label {
+  font-size: 0.8rem;
+  color: #555;
+  font-family: sans-serif;
+  font-weight: 600;
+}
+
+.mu-note {
+  font-weight: 400;
+  color: #aaa;
+  font-size: 0.75rem;
+}
+
+.mu-field input,
+.mu-field select {
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-family: sans-serif;
+  outline: none;
+}
+
+.mu-field input:focus,
+.mu-field select:focus {
+  border-color: #1a4a1a;
+  box-shadow: 0 0 0 3px rgba(26,74,26,0.1);
+}
+
+.mu-field input:disabled {
+  background: #f5f5f5;
+  color: #999;
+}
+
+.mu-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #eee;
+}
+
+.mu-cancel-btn {
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  font-family: sans-serif;
+  color: #666;
+}
+
+.mu-save-btn {
+  background: #1a4a1a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: sans-serif;
+}
+
+.mu-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.mu-save-btn:hover:not(:disabled) { background: #2d6a2d; }
