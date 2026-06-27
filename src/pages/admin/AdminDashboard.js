@@ -9,6 +9,40 @@ import {
 } from "recharts";
 import AdminLayout from "./AdminLayout";
 import "./AdminDashboard.css";
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
+  iconUrl: require('leaflet/dist/images/marker-icon.png'),
+  shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+});
+
+const createIcon = (color) => L.divIcon({
+  className: '',
+  html: `<div style="
+    width: 14px; height: 14px;
+    background: ${color};
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  "></div>`,
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+  popupAnchor: [0, -10],
+});
+
+const statusColors = {
+  'Pending':  '#e53935',
+  'Approved': '#1565c0',
+  'Ongoing':  '#f9a825',
+  'Resolved': '#2e7d32',
+  'Rejected': '#757575',
+};
+
+const LUCENA_CENTER = [13.9394, 121.6169];
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -163,9 +197,78 @@ export default function AdminDashboard() {
 
           {/* Bottom row: map + chart */}
           <div className="ad-bottom">
-            <div className="ad-map-placeholder">
-              <p className="ad-map-note">🗺 Map view coming soon</p>
+            <div className="ad-map-card">
+              <div className="ad-map-header">
+                <h3 className="ad-map-title">Report Map</h3>
+                <button
+                  className="ad-map-fullscreen-btn"
+                  onClick={() => {
+                    const el = document.getElementById('admin-map-wrapper');
+                    if (!document.fullscreenElement) {
+                      el.requestFullscreen();
+                    } else {
+                      document.exitFullscreen();
+                    }
+                  }}
+                >
+                  ⛶ Fullscreen
+                </button>
+              </div>
+              <div className="ad-map-wrapper" id="admin-map-wrapper">
+                <MapContainer
+                  center={LUCENA_CENTER}
+                  zoom={14}
+                  style={{ width: '100%', height: '100%' }}
+                  zoomControl={true}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  {reports
+                    .filter((r) => r.location?.lat && r.location?.lng)
+                    .map((report) => (
+                      <Marker
+                        key={report.id}
+                        position={[report.location.lat, report.location.lng]}
+                        icon={createIcon(statusColors[report.status] || '#e53935')}
+                      >
+                        <Popup>
+                          <div style={{ fontFamily: 'sans-serif', minWidth: '140px' }}>
+                            <p style={{ fontWeight: 700, color: '#1a4a1a', marginBottom: 4 }}>
+                              #{report.reportId || report.id.slice(0, 6).toUpperCase()}
+                            </p>
+                            <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: 4 }}>
+                              {report.category}
+                            </p>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '3px 10px',
+                              borderRadius: 20,
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              color: 'white',
+                              background: statusColors[report.status] || '#e53935',
+                            }}>
+                              {report.status || 'Pending'}
+                            </span>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    ))}
+                </MapContainer>
+
+                <div className="ad-map-legend">
+                  {Object.entries(statusColors).map(([status, color]) => (
+                    <div key={status} className="ad-legend-item">
+                      <span className="ad-legend-dot" style={{ background: color }}></span>
+                      <span className="ad-legend-label">{status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
+
             <div className="ad-chart-card">
               <h3 className="ad-chart-title">Report Statistics — {currentYear}</h3>
               <ResponsiveContainer width="100%" height={220}>
