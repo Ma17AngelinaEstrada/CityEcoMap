@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs } from "firebase/firestore";
@@ -9,9 +9,10 @@ import {
 } from "recharts";
 import AdminLayout from "./AdminLayout";
 import "./AdminDashboard.css";
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { reverseGeocode } from '../../utils/geocode';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -44,10 +45,22 @@ const statusColors = {
 
 const LUCENA_CENTER = [13.9394, 121.6169];
 
+function AdminMapController({ mapRef }) {
+  const map = useMap();
+  useEffect(() => {
+    mapRef.current = map;
+  }, [map, mapRef]);
+  return null;
+}
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [addresses, setAddresses] = useState({});
+  const [mapSearchQuery, setMapSearchQuery] = useState('');
+  const adminMapRef = useRef(null);
+  const adminMarkerRefs = useRef({});
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -73,6 +86,23 @@ export default function AdminDashboard() {
     };
     fetchReports();
   }, []);
+
+  useEffect(() => {
+    const resolveAddresses = async () => {
+      const newAddresses = {};
+      for (const r of reports) {
+        if (r.location?.lat && r.location?.lng) {
+          const addr = await reverseGeocode(r.location.lat, r.location.lng);
+          newAddresses[r.id] = addr;
+          await new Promise((res) => setTimeout(res, 1100));
+        }
+      }
+      if (Object.keys(newAddresses).length > 0) {
+        setAddresses((prev) => ({ ...prev, ...newAddresses }));
+      }
+    };
+    if (reports.length > 0) resolveAddresses();
+  }, [reports]);
 
   const total = reports.length;
   const pending = reports.filter((r) => r.status === "Pending").length;
@@ -116,6 +146,47 @@ export default function AdminDashboard() {
       year: "numeric", month: "short", day: "numeric",
       hour: "2-digit", minute: "2-digit",
     });
+  };
+
+  const handleMapSearch = async (e) => {
+    if (e.key !== 'Enter') return;
+    if (!mapSearchQuery.trim()) return;
+
+    // Check if it looks like a Report ID first
+    const cleanQuery = mapSearchQuery.trim().replace('#', '').toUpperCase();
+    const matchedReport = reports.find(
+      (r) => r.reportId?.toUpperCase() === cleanQuery
+    );
+
+    if (matchedReport && matchedReport.location?.lat && matchedReport.location?.lng) {
+      adminMapRef.current?.flyTo(
+        [matchedReport.location.lat, matchedReport.location.lng],
+        17,
+        { duration: 1.5 }
+      );
+      setTimeout(() => {
+        const marker = adminMarkerRefs.current[matchedReport.id];
+        if (marker) marker.openPopup();
+      }, 1600);
+      return;
+    }
+
+    // Otherwise treat as a location search
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(mapSearchQuery)}&format=json&limit=1&countrycodes=ph`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      const data = await res.json();
+      if (data.length > 0) {
+        const { lat, lon } = data[0];
+        adminMapRef.current?.flyTo([parseFloat(lat), parseFloat(lon)], 16, { duration: 1.5 });
+      } else {
+        alert('No matching report or location found.');
+      }
+    } catch (err) {
+      console.error('Search failed:', err);
+    }
   };
 
   return (
@@ -169,6 +240,7 @@ export default function AdminDashboard() {
                   <th>Report ID</th>
                   <th>Type</th>
                   <th>Date Submitted</th>
+                  <th>Location</th>
                   <th>Assigned To</th>
                   <th>Status</th>
                 </tr>
@@ -182,6 +254,15 @@ export default function AdminDashboard() {
                       <td>#{r.reportId || r.id.slice(0, 6).toUpperCase()}</td>
                       <td>{r.category}</td>
                       <td>{formatDate(r.createdAt)}</td>
+                      <td>
+                        {r.locationDescription && <div>{r.locationDescription}</div>}
+                        {r.location && (
+                          <div style={{ fontSize: '0.78rem', color: '#888' }}>
+                            {addresses[r.id] || 'Resolving...'}
+                          </div>
+                        )}
+                        {!r.locationDescription && !r.location && '—'}
+                      </td>
                       <td>{r.assignedTo || "—"}</td>
                       <td>
                         <span className={getStatusClass(r.status)}>
@@ -215,12 +296,23 @@ export default function AdminDashboard() {
                 </button>
               </div>
               <div className="ad-map-wrapper" id="admin-map-wrapper">
+                <div className="ad-map-search">
+                  <input
+                    type="text"
+                    className="ad-map-search-input"
+                    placeholder="🔍 Search Report ID or location..."
+                    value={mapSearchQuery}
+                    onChange={(e) => setMapSearchQuery(e.target.value)}
+                    onKeyDown={handleMapSearch}
+                  />
+                </div>
                 <MapContainer
                   center={LUCENA_CENTER}
                   zoom={14}
                   style={{ width: '100%', height: '100%' }}
                   zoomControl={true}
                 >
+                  <AdminMapController mapRef={adminMapRef} />
                   <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -232,6 +324,9 @@ export default function AdminDashboard() {
                         key={report.id}
                         position={[report.location.lat, report.location.lng]}
                         icon={createIcon(statusColors[report.status] || '#e53935')}
+                        ref={(el) => {
+                          if (el) adminMarkerRefs.current[report.id] = el;
+                        }}
                       >
                         <Popup>
                           <div style={{ fontFamily: 'sans-serif', minWidth: '140px' }}>

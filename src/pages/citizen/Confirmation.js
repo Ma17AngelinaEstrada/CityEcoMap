@@ -40,15 +40,15 @@ function Confirmation() {
   };
 
   const goToMap = () => {
-    // Disable the back block before navigating
     blockRef.current = false;
-
-    // Clear all history and replace with map
     const stepsBack = window.history.length;
     window.history.go(-stepsBack);
 
     setTimeout(() => {
-      navigate('/map', { replace: true });
+      navigate('/map', {
+        replace: true,
+        state: { flyTo: location?.state?.location, flyToId: reportId }
+      });
     }, 100);
   };
 
@@ -86,7 +86,15 @@ function Confirmation() {
             View on Map
           </button>
 
-          <button className="home-link" onClick={goToMap}>
+          <button className="home-link" onClick={() => {
+            blockRef.current = false;
+            const stepsBack = window.history.length;
+            window.history.go(-stepsBack);
+
+            setTimeout(() => {
+              navigate('/map', { replace: true });
+            }, 100);
+          }}>
             Go to Home
           </button>
 

@@ -5,6 +5,7 @@ import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import AdminLayout from "./AdminLayout";
 import "./ManageReports.css";
+import { reverseGeocode } from '../../utils/geocode';
 
 const sendEmailNotification = async (to, subject, body) => {
   if (!to) return;
@@ -35,6 +36,7 @@ export default function ManageReports() {
   const [rejectReason, setRejectReason] = useState("");
   const [assignModal, setAssignModal] = useState(false);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
+  const [addresses, setAddresses] = useState({});
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -59,6 +61,27 @@ export default function ManageReports() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const resolveAddresses = async () => {
+      const newAddresses = {};
+      for (const r of reports) {
+        if (r.location?.lat && r.location?.lng) {
+          const key = r.id;
+          if (!addresses[key]) {
+            const addr = await reverseGeocode(r.location.lat, r.location.lng);
+            newAddresses[key] = addr;
+            await new Promise((res) => setTimeout(res, 1100)); // respect 1 req/sec limit
+          }
+        }
+      }
+      if (Object.keys(newAddresses).length > 0) {
+        setAddresses((prev) => ({ ...prev, ...newAddresses }));
+      }
+    };
+    if (reports.length > 0) resolveAddresses();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reports]);
 
   const updateStatus = async (reportId, newStatus, extraFields = {}) => {
     setUpdatingId(reportId);
@@ -342,9 +365,13 @@ const handleSetResolved = async () => {
                       <td>{r.category}</td>
                       <td>{formatDate(r.createdAt)}</td>
                       <td>
-                        {r.location
-                          ? `${r.location.lat.toFixed(4)}° N, ${r.location.lng.toFixed(4)}° E`
-                          : "—"}
+                        {r.locationDescription && <div>{r.locationDescription}</div>}
+                        {r.location && (
+                          <div style={{ fontSize: '0.78rem', color: '#888' }}>
+                            {addresses[r.id] || 'Resolving...'}
+                          </div>
+                        )}
+                        {!r.locationDescription && !r.location && '—'}
                       </td>
                       <td>{r.assignedTo || "—"}</td>
                       <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
@@ -392,11 +419,17 @@ const handleSetResolved = async () => {
                   <span className="mr-detail-value">{selectedReport.assignedTo || "—"}</span>
                 </div>
                 <div className="mr-detail-row">
-                  <span className="mr-detail-label">Location</span>
+                  <span className="mr-detail-label">Location Description</span>
+                  <span className="mr-detail-value">
+                    {selectedReport.locationDescription || 'Not provided by citizen'}
+                  </span>
+                </div>
+                <div className="mr-detail-row">
+                  <span className="mr-detail-label">Detected Address</span>
                   <span className="mr-detail-value">
                     {selectedReport.location
-                      ? `${selectedReport.location.lat.toFixed(4)}° N, ${selectedReport.location.lng.toFixed(4)}° E`
-                      : "—"}
+                      ? (addresses[selectedReport.id] || 'Resolving...')
+                      : '—'}
                   </span>
                 </div>
                 {selectedReport.status === "Rejected" && (

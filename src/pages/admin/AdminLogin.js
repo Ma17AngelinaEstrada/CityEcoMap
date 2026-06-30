@@ -55,9 +55,9 @@ export default function AdminLogin() {
 
           <form onSubmit={handleLogin}>
             <div className="al-field">
-              <label>Username</label>
+              <label>Email</label>
               <input
-                type="text"
+                type="email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"

@@ -1,0 +1,55 @@
+.citizen-header {
+  background: #1a6b3c;
+  color: white;
+  padding: 14px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 1000;
+  position: relative;
+}
+
+.citizen-header .header-logo {
+  display: flex;
+  align-items: center;
+}
+
+.citizen-header .logo-img {
+  height: 40px;
+  object-fit: contain;
+}
+
+.citizen-header .header-nav {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.citizen-header .nav-link {
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  opacity: 0.85;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.citizen-header .nav-link:hover,
+.citizen-header .nav-link.active {
+  opacity: 1;
+  border-bottom: 2px solid white;
+  padding-bottom: 2px;
+}
+
+@media (max-width: 767px) {
+  .citizen-header {
+    padding: 10px 16px;
+  }
+  .citizen-header .header-nav {
+    display: none;
+  }
+  .citizen-header .logo-img {
+    height: 34px;
+  }
+}

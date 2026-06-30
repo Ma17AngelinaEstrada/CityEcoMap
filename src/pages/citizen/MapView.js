@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import logo from '../../logowhite2.png';
 import './MapView.css';
+import '../../styles/CitizenHeader.css';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -39,11 +40,27 @@ const statusColors = {
 
 const LUCENA_CENTER = [13.9394, 121.6169];
 
+function MapController({ mapRef }) {
+  const map = useMap();
+  useEffect(() => {
+    mapRef.current = map;
+  }, [map, mapRef]);
+  return null;
+}
+
 function MapView() {
   const navigate = useNavigate();
   const [reports, setReports] = useState([]);
   const [filterCategory, setFilterCategory] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const mapRef = useRef(null);
+  const routerLocation = useLocation();
+  const flyToCoords = routerLocation.state?.flyTo;
+  const flyToId = routerLocation.state?.flyToId;
+  const [pendingFlyTo, setPendingFlyTo] = useState(flyToCoords || null);
+
+  const markerRefs = useRef({});
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'reports'), (snapshot) => {
@@ -55,6 +72,22 @@ function MapView() {
     });
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    if (pendingFlyTo && mapRef.current && reports.length > 0) {
+      mapRef.current.flyTo([pendingFlyTo.lat, pendingFlyTo.lng], 17, { duration: 1.5 });
+
+      // Find the matching report and open its popup after flying
+      const targetReport = reports.find((r) => r.reportId === flyToId);
+      if (targetReport) {
+        setTimeout(() => {
+          const marker = markerRefs.current[targetReport.id];
+          if (marker) marker.openPopup();
+        }, 1600);
+      }
+      setPendingFlyTo(null);
+    }
+  }, [pendingFlyTo, reports, flyToId]);
 
   const filtered = reports.filter((r) => {
     const hasLocation = r.location?.lat && r.location?.lng;
@@ -72,11 +105,32 @@ function MapView() {
     });
   };
 
+  const handleSearch = async (e) => {
+    if (e.key !== 'Enter') return;
+    if (!searchQuery.trim()) return;
+
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=1&countrycodes=ph`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      const data = await res.json();
+      if (data.length > 0) {
+        const { lat, lon } = data[0];
+        mapRef.current?.setView([parseFloat(lat), parseFloat(lon)], 16);
+      } else {
+        alert('Location not found. Try a more specific address.');
+      }
+    } catch (err) {
+      console.error('Search failed:', err);
+    }
+  };
+
   return (
     <div className="map-container">
 
       {/* Top Navigation Bar */}
-      <div className="map-header">
+      <div className="citizen-header">
         <div className="header-logo">
           <img src={logo} alt="CityEcoMap Logo" className="logo-img" />
         </div>
@@ -99,11 +153,15 @@ function MapView() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+          <MapController mapRef={mapRef} />
           {filtered.map((report) => (
             <Marker
               key={report.id}
               position={[report.location.lat, report.location.lng]}
               icon={createIcon(statusColors[report.status] || '#e53935')}
+              ref={(el) => {
+                if (el) markerRefs.current[report.id] = el;
+              }}
             >
               <Popup>
                 <div className="map-popup">
@@ -131,6 +189,9 @@ function MapView() {
             type="text"
             className="search-bar"
             placeholder="🔍 Search location..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearch}
           />
         </div>
 

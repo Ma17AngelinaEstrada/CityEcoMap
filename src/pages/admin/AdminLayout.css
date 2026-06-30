@@ -7,8 +7,9 @@
 .al2-wrapper {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   font-family: Georgia, "Times New Roman", serif;
+  overflow: hidden;
 }
 
 /* Topbar */
@@ -51,6 +52,7 @@
 .al2-body {
   display: flex;
   flex: 1;
+  overflow: hidden;
 }
 
 /* Sidebar */
@@ -60,7 +62,8 @@
   background-color: #1a4a1a;
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 56px);
+  height: 100%;
+  overflow-y: auto;
 }
 
 .al2-nav {
@@ -116,4 +119,5 @@
   padding: 2rem;
   overflow-y: auto;
   background-color: #ede8dc;
+  height: 100%;
 }

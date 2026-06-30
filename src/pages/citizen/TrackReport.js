@@ -4,6 +4,7 @@ import logo from '../../logowhite2.png';
 import './TrackReport.css';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
+import '../../styles/CitizenHeader.css';
 
 function TrackReport() {
 // eslint-disable-next-line no-unused-vars
@@ -63,7 +64,7 @@ function TrackReport() {
   return (
     <div className="track-container">
       {/* Header */}
-      <div className="track-header">
+      <div className="citizen-header">
         <div className="header-logo">
           <img src={logo} alt="CityEcoMap" className="logo-img" />
         </div>

@@ -8,41 +8,11 @@
 }
 
 /* Header */
-.track-header {
-  background: #1a6b3c;
-  color: white;
-  padding: 14px 40px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  z-index: 10;
-}
-
-.logo-img { height: 35px; object-fit: contain; }
-
-.header-nav { display: flex; gap: 24px; align-items: center; }
-
-.nav-link {
-  color: white;
-  text-decoration: none;
-  font-size: 14px;
-  opacity: 0.85;
-  font-weight: 500;
-}
-
-.nav-link:hover { opacity: 1; }
-
-.nav-link.active {
-  opacity: 1;
-  border-bottom: 2px solid white;
-  padding-bottom: 2px;
-}
 
 /* Hero */
 .track-hero {
   background: #1a6b3c;
-  padding: 40px 40px 60px;
+  padding: 30px 40px 50px;
   display: flex;
   flex-direction: column;
   align-items: center;

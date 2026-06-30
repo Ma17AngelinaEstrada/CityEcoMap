@@ -8,11 +8,13 @@ import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import AdminLayout from "./AdminLayout";
 import "./ExportReports.css";
+import { reverseGeocode } from '../../utils/geocode';
 
 export default function ExportReports() {
   const navigate = useNavigate();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [addresses, setAddresses] = useState({});
 
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterCategory, setFilterCategory] = useState("All");
@@ -44,6 +46,23 @@ export default function ExportReports() {
     };
     fetchReports();
   }, []);
+
+  useEffect(() => {
+    const resolveAddresses = async () => {
+      const newAddresses = {};
+      for (const r of reports) {
+        if (r.location?.lat && r.location?.lng) {
+          const addr = await reverseGeocode(r.location.lat, r.location.lng);
+          newAddresses[r.id] = addr;
+          await new Promise((res) => setTimeout(res, 1100));
+        }
+      }
+      if (Object.keys(newAddresses).length > 0) {
+        setAddresses((prev) => ({ ...prev, ...newAddresses }));
+      }
+    };
+    if (reports.length > 0) resolveAddresses();
+  }, [reports]);
 
   const fetchExportHistory = async () => {
   try {
@@ -86,21 +105,16 @@ export default function ExportReports() {
     });
   };
 
-  const formatLocation = (loc) => {
-    if (!loc) return "—";
-    return `${loc.lat.toFixed(4)}° N, ${loc.lng.toFixed(4)}° E`;
-  };
-
   const buildRows = () =>
     filtered.map((r) => [
       `#${r.reportId || r.id.slice(0, 6).toUpperCase()}`,
-      r.category || "—",
+      r.category || '—',
       formatDate(r.createdAt),
-      formatLocation(r.location),
-      r.assignedTo || "—",
-      r.status || "Pending",
-      r.email || "Not provided",
-      r.description || "—",
+      r.locationDescription || (r.location ? (addresses[r.id] || `${r.location.lat.toFixed(4)}° N, ${r.location.lng.toFixed(4)}° E`) : '—'),
+      r.assignedTo || '—',
+      r.status || 'Pending',
+      r.email || 'Not provided',
+      r.description || '—',
     ]);
 
   const headers = [
@@ -297,7 +311,15 @@ export default function ExportReports() {
                     <td>#{r.reportId || r.id.slice(0, 6).toUpperCase()}</td>
                     <td>{r.category}</td>
                     <td>{formatDate(r.createdAt)}</td>
-                    <td>{formatLocation(r.location)}</td>
+                    <td>
+                      {r.locationDescription && <div>{r.locationDescription}</div>}
+                      {r.location && (
+                        <div style={{ fontSize: '0.78rem', color: '#888' }}>
+                          {addresses[r.id] || 'Resolving...'}
+                        </div>
+                      )}
+                      {!r.locationDescription && !r.location && '—'}
+                    </td>
                     <td>{r.assignedTo || "—"}</td>
                     <td>{r.status || "Pending"}</td>
                   </tr>

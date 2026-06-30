@@ -14,6 +14,7 @@ function SubmitReport() {
   const [photo, setPhoto] = useState(previousForm?.photo || null);
   const [photoPreview, setPhotoPreview] = useState(previousForm?.photoPreview || null);
   const [location2, setLocation2] = useState(null);
+  const [locationDescription, setLocationDescription] = useState(previousForm?.locationDescription || '');
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -57,6 +58,12 @@ function SubmitReport() {
     }
   };
 
+  const isValidEmail = (email) => {
+    if (!email.trim()) return true; // empty is OK since it's optional
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
+
   const handleSubmit = () => {
     if (!selectedCategory) {
       alert('Please select a report category.');
@@ -70,8 +77,12 @@ function SubmitReport() {
       alert('Please write a description of the issue.');
       return;
     }
+    if (!isValidEmail(email)) {
+      alert('Please enter a valid email address, or leave it blank.');
+      return;
+    }
     navigate('/review-report', {
-      state: { form: { selectedCategory, description, email, photo, photoPreview, location: location2 } }
+      state: { form: { selectedCategory, description, email, photo, photoPreview, location: location2, locationDescription } }
     });
   };
 
@@ -181,6 +192,21 @@ function SubmitReport() {
           />
 
           <p className="location-note">📍 Your current location will be automatically detected.</p>
+
+          <div className="section-label">
+            LOCATION DESCRIPTION <span className="optional">(Optional)</span>
+          </div>
+          <p className="notify-note">
+            Help us pinpoint the exact spot — e.g. "Near Jollibee, Brgy. 3" or "Beside the basketball court."
+          </p>
+          <input
+            type="text"
+            className="email-input"
+            placeholder="e.g. Near the public market, Brgy. 5"
+            value={locationDescription}
+            onChange={(e) => setLocationDescription(e.target.value)}
+            maxLength={150}
+          />
 
           <button className="submit-btn" onClick={handleSubmit}>
             Review & Submit

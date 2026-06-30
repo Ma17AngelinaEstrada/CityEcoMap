@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../logowhite2.png';
 import './About.css';
+import '../../styles/CitizenHeader.css';
 
 function About() {
   const navigate = useNavigate();
@@ -9,7 +10,7 @@ function About() {
   return (
     <div className="about-container">
       {/* Header */}
-      <div className="about-header">
+      <div className="citizen-header">
         <div className="header-logo">
           <img src={logo} alt="CityEcoMap" className="logo-img" />
         </div>

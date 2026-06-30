@@ -4,12 +4,24 @@ import logo from '../../logowhite2.png';
 import './ReviewSubmit.css';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
+import { reverseGeocode } from '../../utils/geocode';
 
 function ReviewSubmit() {
   const navigate = useNavigate();
   const location = useLocation();
   const { form } = location.state || {};
   const [submitting, setSubmitting] = useState(false);
+  const [readableAddress, setReadableAddress] = useState('');
+
+  useEffect(() => {
+    const resolveAddress = async () => {
+      if (form?.location?.lat && form?.location?.lng) {
+        const addr = await reverseGeocode(form.location.lat, form.location.lng);
+        setReadableAddress(addr);
+      }
+    };
+    resolveAddress();
+  }, [form]);
 
   useEffect(() => {
     if (!form) {
@@ -47,6 +59,7 @@ function ReviewSubmit() {
       description: form?.description,
       email: form?.email || null,
       location: form?.location || null,
+      locationDescription: form?.locationDescription || null,
       photo: photoBase64,
       status: 'Pending',
       createdAt: serverTimestamp(),
@@ -54,7 +67,7 @@ function ReviewSubmit() {
 
     navigate('/confirmation', {
       replace: true,
-      state: { reportId }
+      state: { reportId, location: form?.location }
     });
 
   } catch (error) {
@@ -96,8 +109,9 @@ const compressPhoto = (file) => {
 };
 
   const getAddress = () => {
+    if (readableAddress) return readableAddress;
     if (form?.location) {
-      return `${form.location.lat.toFixed(4)}° N, ${form.location.lng.toFixed(4)}° E`;
+      return 'Detecting address...';
     }
     return 'Location not detected';
   };
@@ -166,6 +180,11 @@ const compressPhoto = (file) => {
                   {form?.location ? 'Current Location Detected' : 'Location not detected'}
                 </span>
                 <span className="summary-desc">{getAddress()}</span>
+                {form?.locationDescription && (
+                  <span className="summary-desc" style={{ marginTop: '4px', fontStyle: 'italic' }}>
+                    "{form.locationDescription}"
+                  </span>
+                )}
               </div>
             </div>
             <hr />
