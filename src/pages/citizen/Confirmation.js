@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import logowhite from '../../logowhite2.png';
 import './Confirmation.css';
 import { useLocation } from 'react-router-dom';
+import '../../styles/CitizenHeader.css';
 
 function Confirmation() {
   const navigate = useNavigate();
@@ -54,8 +55,8 @@ function Confirmation() {
 
   return (
     <div className="confirm-container">
-      <div className="confirm-header">
-        <img src={logowhite} alt="CityEcoMap" className="confirm-logo" />
+      <div className="citizen-header confirm-header">
+        <img src={logowhite} alt="CityEcoMap" className="logo-img" />
       </div>
 
       <div className="confirm-body">

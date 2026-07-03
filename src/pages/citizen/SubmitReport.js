@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../logowhite2.png';
 import './SubmitReport.css';
+import '../../styles/CitizenHeader.css';
 
 function SubmitReport() {
   const navigate = useNavigate();
@@ -88,7 +89,7 @@ function SubmitReport() {
 
   return (
     <div className="report-container">
-      <div className="report-header">
+      <div className="citizen-header report-header">
         <button className="header-back-btn" onClick={() => {
           const hasProgress = selectedCategory || description || email || photo;
           if (hasProgress) {
@@ -96,7 +97,7 @@ function SubmitReport() {
           }
           navigate('/map');
         }}>←</button>
-        <img src={logo} alt="CityEcoMap" className="report-logo" />
+        <img src={logo} alt="CityEcoMap" className="logo-img" />
         <button className="header-close-btn" onClick={() => {
           const hasProgress = selectedCategory || description || email || photo;
           if (hasProgress) {

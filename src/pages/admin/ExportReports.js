@@ -15,7 +15,7 @@ export default function ExportReports() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [addresses, setAddresses] = useState({});
-
+  const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterCategory, setFilterCategory] = useState("All");
   const [filterAssigned, setFilterAssigned] = useState("All");
@@ -76,24 +76,29 @@ export default function ExportReports() {
 };
 
   const filtered = reports.filter((r) => {
-    const matchStatus = filterStatus === "All" || r.status === filterStatus;
-    const matchCategory = filterCategory === "All" || r.category === filterCategory;
-    const matchAssigned = filterAssigned === "All" || r.assignedTo === filterAssigned;
+      const matchStatus = filterStatus === "All" || r.status === filterStatus;
+      const matchCategory = filterCategory === "All" || r.category === filterCategory;
+      const matchAssigned = filterAssigned === "All" || r.assignedTo === filterAssigned;
 
-    let matchDate = true;
-    if (dateFrom || dateTo) {
-      const reportDate = r.createdAt?.toDate?.();
-      if (reportDate) {
-        if (dateFrom && reportDate < new Date(dateFrom)) matchDate = false;
-        if (dateTo) {
-          const toDate = new Date(dateTo);
-          toDate.setHours(23, 59, 59);
-          if (reportDate > toDate) matchDate = false;
+      const cleanedSearch = searchQuery.replace(/#/g, "").trim().toLowerCase();
+      const matchSearch = cleanedSearch === "" ||
+        (r.reportId && r.reportId.toLowerCase().includes(cleanedSearch)) ||
+        (r.description && r.description.toLowerCase().includes(cleanedSearch));
+
+      let matchDate = true;
+      if (dateFrom || dateTo) {
+        const reportDate = r.createdAt?.toDate?.();
+        if (reportDate) {
+          if (dateFrom && reportDate < new Date(dateFrom)) matchDate = false;
+          if (dateTo) {
+            const toDate = new Date(dateTo);
+            toDate.setHours(23, 59, 59);
+            if (reportDate > toDate) matchDate = false;
+          }
         }
       }
-    }
-    return matchStatus && matchCategory && matchAssigned && matchDate;
-  });
+      return matchStatus && matchCategory && matchAssigned && matchSearch && matchDate;
+    });
 
   const formatDate = (ts) => {
     if (!ts) return "—";
@@ -215,6 +220,15 @@ export default function ExportReports() {
           </select>
         </div>
         <div className="er-filter-group">
+          <label>Search</label>
+          <input
+            type="text"
+            placeholder="Report ID or keyword..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="er-filter-group">
           <label>From</label>
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
         </div>
@@ -228,6 +242,7 @@ export default function ExportReports() {
             setFilterStatus("All");
             setFilterCategory("All");
             setFilterAssigned("All");
+            setSearchQuery("");
             setDateFrom("");
             setDateTo("");
           }}

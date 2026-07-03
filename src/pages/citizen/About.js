@@ -24,7 +24,7 @@ function About() {
       {/* Hero */}
       <div className="about-hero">
         <h2 className="about-title">ABOUT CITYECOMAP</h2>
-        <p className="about-subtitle">A Geo-Tagged Mobile-Web System for Environmental Monitoring and Reporting of Waste and Drainage Issues</p>
+        <p className="about-subtitle">A Geo-Tagged Mobile and Web Monitoring and Reporting System for Environmental Waste and Drainage Issues</p>
       </div>
 
       {/* Body */}
@@ -35,7 +35,7 @@ function About() {
           <div className="section-icon">🌿</div>
           <div className="section-content">
             <h3>What is CityEcoMap?</h3>
-            <p>CityEcoMap is a mobile-web-based environmental monitoring and reporting system developed for Lucena City. It enables residents to report waste and drainage issues using geo-tagged data, photos, and descriptions, while the Environmental Management Bureau (EMB) of the DENR monitors, verifies, and responds to these reports.</p>
+            <p>CityEcoMap is a mobile and web-based environmental monitoring and reporting system developed for Lucena City. It enables residents to report waste and drainage issues using geo-tagged data, photos, and descriptions, while the Environmental Management Bureau (EMB) of the DENR and the Local Government of Lucena City monitor, verify, and respond to these reports.</p>
           </div>
         </div>
 
@@ -51,13 +51,13 @@ function About() {
                 <span className="step-number">1</span>
                 <span className="step-icon">📍</span>
                 <strong>Report</strong>
-                <p>Submit a waste or drainage issue with a photo, description, and your GPS location.</p>
+                <p>Submit a waste or drainage issue with a photo, description, your GPS location, and an optional note to help pinpoint the exact spot.</p>
               </div>
               <div className="step-box">
                 <span className="step-number">2</span>
                 <span className="step-icon">🔔</span>
                 <strong>Notify</strong>
-                <p>The EMB is notified in real-time and reviews your report for action.</p>
+                <p>Our team is notified in real-time and reviews your report. Add your email (optional) to get status updates directly.</p>
               </div>
               <div className="step-box">
                 <span className="step-number">3</span>
@@ -69,7 +69,7 @@ function About() {
                 <span className="step-number">4</span>
                 <span className="step-icon">✅</span>
                 <strong>Resolve</strong>
-                <p>The EMB responds and resolves the issue, keeping the community informed.</p>
+                <p>EMB or LGU resolves the issue based on its type, keeping the community informed.</p>
               </div>
             </div>
           </div>
@@ -86,7 +86,7 @@ function About() {
               <div className="category-box">
                 <span className="cat-icon">🗑️</span>
                 <strong>Waste Issue</strong>
-                <p>Report waste or pollution affecting rivers, waterways, or natural water bodies from infrastructure or business operations.</p>
+                <p>Report illegal dumping, uncollected garbage, or waste affecting rivers, waterways, and natural water bodies in your area.</p>
               </div>
               <div className="category-box">
                 <span className="cat-icon">🌊</span>
@@ -104,7 +104,7 @@ function About() {
           <div className="section-icon">🏛️</div>
           <div className="section-content">
             <h3>Who We Work With</h3>
-            <p>CityEcoMap is developed in coordination with the <strong>Environmental Management Bureau (EMB) of the DENR</strong> — the agency responsible for monitoring and responding to environmental concerns in Lucena City.</p>
+            <p>CityEcoMap is developed for the <strong>Environmental Management Bureau (EMB) of the DENR</strong>, the agency responsible for monitoring and responding to environmental concerns, in coordination with the <strong>Local Government of Lucena City</strong>, which oversees local drainage and waste management operations within the city.</p>
           </div>
         </div>
 

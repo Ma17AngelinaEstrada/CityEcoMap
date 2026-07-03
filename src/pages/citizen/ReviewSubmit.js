@@ -5,6 +5,7 @@ import './ReviewSubmit.css';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import { reverseGeocode } from '../../utils/geocode';
+import '../../styles/CitizenHeader.css';
 
 function ReviewSubmit() {
   const navigate = useNavigate();
@@ -118,11 +119,11 @@ const compressPhoto = (file) => {
 
   return (
     <div className="review-container">
-      <div className="review-header">
+      <div className="citizen-header review-header">
         <button className="header-back-btn" onClick={() =>
           navigate('/submit-report', { state: { previousForm: form } })
         }>←</button>
-        <img src={logo} alt="CityEcoMap" className="review-logo" />
+        <img src={logo} alt="CityEcoMap" className="logo-img" />
         <button className="header-close-btn" onClick={() => {
           if (window.confirm('Are you sure you want to cancel? Your report will not be submitted.')) {
             navigate('/map', { replace: true });

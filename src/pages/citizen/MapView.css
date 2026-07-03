@@ -284,3 +284,23 @@
     font-weight: bold;
   }
 }
+
+.popup-location {
+  font-size: 0.78rem;
+  color: #666;
+  margin-top: 4px;
+}
+
+.popup-assigned {
+  font-size: 0.78rem;
+  color: #666;
+  margin-top: 2px;
+}
+
+.popup-photo {
+  width: 100%;
+  max-width: 180px;
+  border-radius: 6px;
+  margin-top: 6px;
+  display: block;
+}

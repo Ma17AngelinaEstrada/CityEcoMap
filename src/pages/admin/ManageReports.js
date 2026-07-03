@@ -177,9 +177,10 @@ const handleSetResolved = async () => {
   const matchStatus = filterStatus === "All" || r.status === filterStatus;
   const matchCategory = filterCategory === "All" || r.category === filterCategory;
   const matchAssigned = filterAssigned === "All" || r.assignedTo === filterAssigned;
-  const matchSearch = searchQuery === "" ||
-    (r.reportId && r.reportId.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (r.description && r.description.toLowerCase().includes(searchQuery.toLowerCase()));
+  const cleanedSearch = searchQuery.replace(/#/g, "").trim().toLowerCase();
+  const matchSearch = cleanedSearch === "" ||
+      (r.reportId && r.reportId.toLowerCase().includes(cleanedSearch)) ||
+      (r.description && r.description.toLowerCase().includes(cleanedSearch));
   
   let matchDate = true;
   if (dateFrom || dateTo) {

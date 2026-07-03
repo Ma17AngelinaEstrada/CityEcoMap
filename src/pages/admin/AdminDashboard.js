@@ -328,27 +328,49 @@ export default function AdminDashboard() {
                           if (el) adminMarkerRefs.current[report.id] = el;
                         }}
                       >
-                        <Popup>
-                          <div style={{ fontFamily: 'sans-serif', minWidth: '140px' }}>
-                            <p style={{ fontWeight: 700, color: '#1a4a1a', marginBottom: 4 }}>
-                              #{report.reportId || report.id.slice(0, 6).toUpperCase()}
+                      <Popup>
+                        <div style={{ fontFamily: 'sans-serif', minWidth: '160px', maxWidth: '200px' }}>
+                          <p style={{ fontWeight: 700, color: '#1a4a1a', marginBottom: 4 }}>
+                            #{report.reportId || report.id.slice(0, 6).toUpperCase()}
+                          </p>
+                          <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: 4 }}>
+                            {report.category}
+                          </p>
+                          <p style={{ fontSize: '0.78rem', color: '#888', marginBottom: 4 }}>
+                            📅 {formatDate(report.createdAt)}
+                          </p>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '3px 10px',
+                            borderRadius: 20,
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            color: 'white',
+                            background: statusColors[report.status] || '#e53935',
+                            marginBottom: 4,
+                          }}>
+                            {report.status || 'Pending'}
+                          </span>
+                          {report.description && (
+                            <p style={{ fontSize: '0.78rem', color: '#555', marginTop: 4, borderTop: '1px solid #eee', paddingTop: 4 }}>
+                              {report.description}
                             </p>
-                            <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: 4 }}>
-                              {report.category}
+                          )}
+                          {(report.locationDescription || addresses[report.id]) && (
+                            <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 4 }}>
+                              📍 {report.locationDescription || addresses[report.id]}
                             </p>
-                            <span style={{
-                              display: 'inline-block',
-                              padding: '3px 10px',
-                              borderRadius: 20,
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              color: 'white',
-                              background: statusColors[report.status] || '#e53935',
-                            }}>
-                              {report.status || 'Pending'}
-                            </span>
-                          </div>
-                        </Popup>
+                          )}
+                          {report.assignedTo && (
+                            <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 2 }}>
+                              🏢 {report.assignedTo}
+                            </p>
+                          )}
+                          {report.photo && (
+                            <img src={report.photo} alt="Report" style={{ width: '100%', borderRadius: 6, marginTop: 6 }} />
+                          )}
+                        </div>
+                      </Popup>
                       </Marker>
                     ))}
                 </MapContainer>

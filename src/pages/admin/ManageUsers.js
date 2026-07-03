@@ -31,26 +31,33 @@ export default function ManageUsers() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) { navigate("/admin"); return; }
-      fetchAdmins(user.uid);
-    });
-    return () => unsub();
-  }, [navigate]);
+      const unsub = onAuthStateChanged(auth, async (user) => {
+        if (!user) { navigate("/admin"); return; }
+        fetchAdmins(user.uid);
+      });
+      return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [navigate]);
 
   const fetchAdmins = async (currentUid) => {
-    try {
-      const snapshot = await getDocs(collection(db, "admins"));
-      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-      const current = data.find((a) => a.id === currentUid);
-      setCurrentAdmin(current);
-      setAdmins(data);
-    } catch (err) {
-      console.error("Error fetching admins:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        const snapshot = await getDocs(collection(db, "admins"));
+        const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const current = data.find((a) => a.id === currentUid);
+
+        if (!current || current.role !== "Master Admin") {
+          navigate("/admin/dashboard");
+          return;
+        }
+
+        setCurrentAdmin(current);
+        setAdmins(data);
+      } catch (err) {
+        console.error("Error fetching admins:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
   const isMasterAdmin = currentAdmin?.role === "Master Admin";
 

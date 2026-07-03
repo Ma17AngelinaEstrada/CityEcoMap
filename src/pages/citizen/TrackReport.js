@@ -37,6 +37,8 @@ function TrackReport() {
         status: data.status,
         date: data.createdAt?.toDate().toLocaleDateString() || 'N/A',
         photo: data.photo,
+        assignedTo: data.assignedTo || null,
+        rejectionReason: data.rejectionReason || null,
       });
     } else {
       setReport(null);
@@ -49,15 +51,19 @@ function TrackReport() {
 
   const getStatusColor = (status) => {
     if (status === 'Pending') return '#f0a500';
-    if (status === 'In Progress') return '#1a6b3c';
+    if (status === 'Approved') return '#3498db';
+    if (status === 'Ongoing') return '#1a6b3c';
     if (status === 'Resolved') return '#2ecc71';
+    if (status === 'Rejected') return '#e74c3c';
     return '#888';
   };
 
   const getStatusIcon = (status) => {
     if (status === 'Pending') return '⏳';
-    if (status === 'In Progress') return '🔄';
+    if (status === 'Approved') return '👍';
+    if (status === 'Ongoing') return '🔄';
     if (status === 'Resolved') return '✅';
+    if (status === 'Rejected') return '❌';
     return '❓';
   };
 
@@ -134,25 +140,63 @@ function TrackReport() {
               </div>
             </div>
 
+            {report.status === 'Approved' || report.status === 'Ongoing' || report.status === 'Resolved' ? (
+              report.assignedTo && (
+                <div className="details-grid">
+                  <div className="detail-box full-width">
+                    <span className="detail-label">🏢 Assigned To</span>
+                    <span className="detail-value">{report.assignedTo}</span>
+                  </div>
+                </div>
+              )
+            ) : null}
+
+            {report.status === 'Rejected' && (
+              <div className="details-grid">
+                <div className="detail-box full-width">
+                  <span className="detail-label">❌ Rejection Reason</span>
+                  <span className="detail-value">{report.rejectionReason || 'No reason provided.'}</span>
+                </div>
+              </div>
+            )}
+
             {/* Timeline */}
             <div className="timeline-section">
               <h3 className="timeline-title">Report Progress</h3>
-              <div className="status-timeline">
-                <div className={`timeline-step done`}>
-                  <div className="timeline-dot active">⏳</div>
-                  <span>Pending</span>
+
+              {report.status === 'Rejected' ? (
+                <div className="status-timeline status-timeline--rejected">
+                  <div className="timeline-step done rejected">
+                    <div className="timeline-dot active rejected">❌</div>
+                    <span>Rejected</span>
+                  </div>
                 </div>
-                <div className={`timeline-line ${report.status === 'In Progress' || report.status === 'Resolved' ? 'active' : ''}`}></div>
-                <div className={`timeline-step ${report.status === 'In Progress' || report.status === 'Resolved' ? 'done' : ''}`}>
-                  <div className={`timeline-dot ${report.status === 'In Progress' || report.status === 'Resolved' ? 'active' : ''}`}>🔄</div>
-                  <span>In Progress</span>
+              ) : (
+                <div className="status-timeline">
+                  <div className="timeline-step done">
+                    <div className="timeline-dot active">⏳</div>
+                    <span>Pending</span>
+                  </div>
+
+                  <div className={`timeline-line ${['Approved', 'Ongoing', 'Resolved'].includes(report.status) ? 'active' : ''}`}></div>
+                  <div className={`timeline-step ${['Approved', 'Ongoing', 'Resolved'].includes(report.status) ? 'done' : ''}`}>
+                    <div className={`timeline-dot ${['Approved', 'Ongoing', 'Resolved'].includes(report.status) ? 'active' : ''}`}>👍</div>
+                    <span>Approved</span>
+                  </div>
+
+                  <div className={`timeline-line ${['Ongoing', 'Resolved'].includes(report.status) ? 'active' : ''}`}></div>
+                  <div className={`timeline-step ${['Ongoing', 'Resolved'].includes(report.status) ? 'done' : ''}`}>
+                    <div className={`timeline-dot ${['Ongoing', 'Resolved'].includes(report.status) ? 'active' : ''}`}>🔄</div>
+                    <span>Ongoing</span>
+                  </div>
+
+                  <div className={`timeline-line ${report.status === 'Resolved' ? 'active' : ''}`}></div>
+                  <div className={`timeline-step ${report.status === 'Resolved' ? 'done' : ''}`}>
+                    <div className={`timeline-dot ${report.status === 'Resolved' ? 'active' : ''}`}>✅</div>
+                    <span>Resolved</span>
+                  </div>
                 </div>
-                <div className={`timeline-line ${report.status === 'Resolved' ? 'active' : ''}`}></div>
-                <div className={`timeline-step ${report.status === 'Resolved' ? 'done' : ''}`}>
-                  <div className={`timeline-dot ${report.status === 'Resolved' ? 'active' : ''}`}>✅</div>
-                  <span>Resolved</span>
-                </div>
-              </div>
+              )}
             </div>
 
           </div>

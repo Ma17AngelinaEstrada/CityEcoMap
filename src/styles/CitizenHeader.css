@@ -53,3 +53,19 @@
     height: 34px;
   }
 }
+
+.citizen-header .header-back-btn,
+.citizen-header .header-close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+.citizen-header .header-back-btn:hover,
+.citizen-header .header-close-btn:hover {
+  opacity: 0.8;
+}

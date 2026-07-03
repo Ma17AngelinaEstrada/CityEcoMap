@@ -177,6 +177,15 @@ function MapView() {
                   {report.description && (
                     <p className="popup-desc">{report.description}</p>
                   )}
+                  {report.locationDescription && (
+                    <p className="popup-location">📍 {report.locationDescription}</p>
+                  )}
+                  {report.assignedTo && (
+                    <p className="popup-assigned">🏢 Assigned to: {report.assignedTo}</p>
+                  )}
+                  {report.photo && (
+                    <img src={report.photo} alt="Report" className="popup-photo" />
+                  )}
                 </div>
               </Popup>
             </Marker>
