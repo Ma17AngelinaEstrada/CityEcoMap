@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import AdminLayout from "./AdminLayout";
 import "./ManageReports.css";
@@ -37,6 +37,8 @@ export default function ManageReports() {
   const [assignModal, setAssignModal] = useState(false);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [addresses, setAddresses] = useState({});
+  const [statusHistory, setStatusHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -84,26 +86,37 @@ export default function ManageReports() {
   }, [reports]);
 
   const updateStatus = async (reportId, newStatus, extraFields = {}) => {
-    setUpdatingId(reportId);
-    try {
-      await updateDoc(doc(db, "reports", reportId), {
-        status: newStatus,
-        ...extraFields,
-      });
-      setReports((prev) =>
-        prev.map((r) =>
-          r.id === reportId ? { ...r, status: newStatus, ...extraFields } : r
-        )
-      );
-      if (selectedReport?.id === reportId) {
-        setSelectedReport((prev) => ({ ...prev, status: newStatus, ...extraFields }));
+      setUpdatingId(reportId);
+      try {
+        await updateDoc(doc(db, "reports", reportId), {
+          status: newStatus,
+          ...extraFields,
+        });
+
+        await addDoc(collection(db, "reports", reportId, "statusHistory"), {
+          status: newStatus,
+          timestamp: serverTimestamp(),
+          adminEmail: auth.currentUser?.email || "unknown",
+          notes: extraFields.rejectionReason || extraFields.assignedTo
+            ? `Assigned to ${extraFields.assignedTo || "N/A"}${extraFields.rejectionReason ? `, Reason: ${extraFields.rejectionReason}` : ""}`
+            : null,
+        });
+
+        setReports((prev) =>
+          prev.map((r) =>
+            r.id === reportId ? { ...r, status: newStatus, ...extraFields } : r
+          )
+        );
+        if (selectedReport?.id === reportId) {
+          setSelectedReport((prev) => ({ ...prev, status: newStatus, ...extraFields }));
+          fetchStatusHistory(reportId);
+        }
+      } catch (err) {
+        alert("Failed to update. Please try again.");
+      } finally {
+        setUpdatingId(null);
       }
-    } catch (err) {
-      alert("Failed to update. Please try again.");
-    } finally {
-      setUpdatingId(null);
-    }
-  };
+    };
 
   // Approve → open assign office modal
   const handleApprove = () => setAssignModal(true);
@@ -172,6 +185,33 @@ const handleSetResolved = async () => {
      <p>— CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>`
   );
 };
+
+  const fetchStatusHistory = async (reportId) => {
+    setLoadingHistory(true);
+    try {
+      const q = query(
+        collection(db, "reports", reportId, "statusHistory"),
+        orderBy("timestamp", "asc")
+      );
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setStatusHistory(data);
+    } catch (err) {
+      console.error("Error fetching status history:", err);
+      setStatusHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedReport?.id) {
+      fetchStatusHistory(selectedReport.id);
+    } else {
+      setStatusHistory([]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedReport?.id]);
 
   const filtered = reports.filter((r) => {
   const matchStatus = filterStatus === "All" || r.status === filterStatus;
@@ -462,6 +502,26 @@ const handleSetResolved = async () => {
                 <div className="mr-status-actions">
                   <p className="mr-detail-label">Actions</p>
                   {renderActions()}
+                </div>
+
+                <div className="mr-history-section">
+                  <p className="mr-detail-label">Status History</p>
+                  {loadingHistory ? (
+                    <p className="mr-history-loading">Loading history...</p>
+                  ) : statusHistory.length === 0 ? (
+                    <p className="mr-history-empty">No history recorded yet.</p>
+                  ) : (
+                    <div className="mr-history-list">
+                      {statusHistory.map((h) => (
+                        <div key={h.id} className="mr-history-item">
+                          <span className={getStatusClass(h.status)}>{h.status}</span>
+                          <span className="mr-history-admin">{h.adminEmail}</span>
+                          <span className="mr-history-date">{formatDate(h.timestamp)}</span>
+                          {h.notes && <p className="mr-history-notes">{h.notes}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

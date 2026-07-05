@@ -117,6 +117,7 @@ export default function ManageUsers() {
           role: formData.role,
           status: "Active",
           createdAt: serverTimestamp(),
+          createdBy: auth.currentUser?.email || "unknown",
         });
         setAdmins((prev) => [...prev, {
           id: userCred.user.uid,
@@ -124,6 +125,7 @@ export default function ManageUsers() {
           email: formData.email.toLowerCase(),
           role: formData.role,
           status: "Active",
+          createdBy: auth.currentUser?.email || "unknown",
         }]);
       }
       setShowModal(false);
@@ -194,6 +196,7 @@ export default function ManageUsers() {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Status</th>
+                <th>Created By</th>
                 {isMasterAdmin && <th>Actions</th>}
               </tr>
             </thead>
@@ -212,6 +215,7 @@ export default function ManageUsers() {
                     <td>{admin.email}</td>
                     <td><span className={getRoleClass(admin.role)}>{admin.role}</span></td>
                     <td><span className={getStatusClass(admin.status)}>{admin.status}</span></td>
+                    <td className="mu-created-by">{admin.createdBy || "—"}</td>
                     {isMasterAdmin && (
                       <td>
                         <div className="mu-actions">

@@ -445,3 +445,60 @@
   cursor: pointer;
   padding: 4px 8px;
 }
+
+.mr-history-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.mr-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.mr-history-item {
+  background: #fafaf8;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+.mr-history-admin {
+  color: #555;
+  font-weight: 600;
+}
+
+.mr-history-date {
+  color: #888;
+  margin-left: auto;
+  font-size: 0.75rem;
+}
+
+.mr-history-notes {
+  width: 100%;
+  font-size: 0.78rem;
+  color: #666;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.mr-history-loading,
+.mr-history-empty {
+  font-size: 0.82rem;
+  color: #999;
+  margin-top: 6px;
+}
+
+.mr-title,
+.mr-detail-header h3,
+.mr-modal h3 {
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: #1a4a1a;
+}

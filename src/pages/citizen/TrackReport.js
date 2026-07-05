@@ -5,6 +5,7 @@ import './TrackReport.css';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import '../../styles/CitizenHeader.css';
+import { SearchIcon, HourglassIcon, ThumbsUpIcon, RefreshIcon, CheckCircleIcon, XCircleIcon, IdIcon, TrashIcon, ClipboardIcon, BuildingIcon, HomeIcon, TrackIcon, AboutIcon } from '../../components/Icons';
 
 function TrackReport() {
 // eslint-disable-next-line no-unused-vars
@@ -59,12 +60,12 @@ function TrackReport() {
   };
 
   const getStatusIcon = (status) => {
-    if (status === 'Pending') return '⏳';
-    if (status === 'Approved') return '👍';
-    if (status === 'Ongoing') return '🔄';
-    if (status === 'Resolved') return '✅';
-    if (status === 'Rejected') return '❌';
-    return '❓';
+    if (status === 'Pending') return <HourglassIcon />;
+    if (status === 'Approved') return <ThumbsUpIcon />;
+    if (status === 'Ongoing') return <RefreshIcon />;
+    if (status === 'Resolved') return <CheckCircleIcon />;
+    if (status === 'Rejected') return <XCircleIcon />;
+    return null;
   };
 
   return (
@@ -86,16 +87,19 @@ function TrackReport() {
         <h2 className="track-title">TRACK YOUR REPORT</h2>
         <p className="track-subtitle">Enter your Report ID to check the status of your submitted report.</p>
         <div className="search-section">
-          <input
-            type="text"
-            className="report-id-input"
-            placeholder="Enter Report ID (e.g. #WI12345)"
-            value={reportId}
-            onChange={(e) => setReportId(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          />
+          <div className="report-id-input-wrapper">
+            <span className="search-icon"><SearchIcon /></span>
+            <input
+              type="text"
+              className="report-id-input"
+              placeholder="Enter Report ID (e.g. #WI12345)"
+              value={reportId}
+              onChange={(e) => setReportId(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            />
+          </div>
           <button className="search-btn" onClick={handleSearch}>
-            🔍 Search
+            Search
           </button>
         </div>
       </div>
@@ -105,7 +109,7 @@ function TrackReport() {
 
         {!searched && (
           <div className="empty-state">
-            <div className="empty-icon">📋</div>
+            <span className="empty-icon"><ClipboardIcon /></span>
             <h3>No report searched yet</h3>
             <p>Enter your Report ID above to track the status of your report.</p>
           </div>
@@ -116,26 +120,26 @@ function TrackReport() {
 
             {/* Status Banner */}
             <div className="status-banner" style={{ background: getStatusColor(report.status) }}>
-              <span>{getStatusIcon(report.status)}</span>
+              <span className="status-icon">{getStatusIcon(report.status)}</span>
               <span>Status: <strong>{report.status}</strong></span>
             </div>
 
             {/* Details Grid */}
             <div className="details-grid">
               <div className="detail-box">
-                <span className="detail-label">🆔 Report ID</span>
+                <span className="detail-label"><IdIcon /> Report ID</span>
                 <span className="detail-value">#{report.id}</span>
               </div>
               <div className="detail-box">
-                <span className="detail-label">🗑️ Category</span>
+                <span className="detail-label"><TrashIcon /> Category</span>
                 <span className="detail-value">{report.category}</span>
               </div>
               <div className="detail-box">
-                <span className="detail-label">📅 Date Submitted</span>
+                <span className="detail-label"><HourglassIcon /> Date Submitted</span>
                 <span className="detail-value">{report.date}</span>
               </div>
               <div className="detail-box full-width">
-                <span className="detail-label">📋 Description</span>
+                <span className="detail-label"><ClipboardIcon /> Description</span>
                 <span className="detail-value">{report.description}</span>
               </div>
             </div>
@@ -144,7 +148,7 @@ function TrackReport() {
               report.assignedTo && (
                 <div className="details-grid">
                   <div className="detail-box full-width">
-                    <span className="detail-label">🏢 Assigned To</span>
+                    <span className="detail-label"><BuildingIcon /> Assigned To</span>
                     <span className="detail-value">{report.assignedTo}</span>
                   </div>
                 </div>
@@ -154,7 +158,7 @@ function TrackReport() {
             {report.status === 'Rejected' && (
               <div className="details-grid">
                 <div className="detail-box full-width">
-                  <span className="detail-label">❌ Rejection Reason</span>
+                  <span className="detail-label"><XCircleIcon /> Rejection Reason</span>
                   <span className="detail-value">{report.rejectionReason || 'No reason provided.'}</span>
                 </div>
               </div>
@@ -167,32 +171,32 @@ function TrackReport() {
               {report.status === 'Rejected' ? (
                 <div className="status-timeline status-timeline--rejected">
                   <div className="timeline-step done rejected">
-                    <div className="timeline-dot active rejected">❌</div>
+                    <div className="timeline-dot active rejected"><XCircleIcon /></div>
                     <span>Rejected</span>
                   </div>
                 </div>
               ) : (
                 <div className="status-timeline">
                   <div className="timeline-step done">
-                    <div className="timeline-dot active">⏳</div>
+                    <div className="timeline-dot active"><HourglassIcon /></div>
                     <span>Pending</span>
                   </div>
 
                   <div className={`timeline-line ${['Approved', 'Ongoing', 'Resolved'].includes(report.status) ? 'active' : ''}`}></div>
                   <div className={`timeline-step ${['Approved', 'Ongoing', 'Resolved'].includes(report.status) ? 'done' : ''}`}>
-                    <div className={`timeline-dot ${['Approved', 'Ongoing', 'Resolved'].includes(report.status) ? 'active' : ''}`}>👍</div>
+                    <div className={`timeline-dot ${['Approved', 'Ongoing', 'Resolved'].includes(report.status) ? 'active' : ''}`}><ThumbsUpIcon /></div>
                     <span>Approved</span>
                   </div>
 
                   <div className={`timeline-line ${['Ongoing', 'Resolved'].includes(report.status) ? 'active' : ''}`}></div>
                   <div className={`timeline-step ${['Ongoing', 'Resolved'].includes(report.status) ? 'done' : ''}`}>
-                    <div className={`timeline-dot ${['Ongoing', 'Resolved'].includes(report.status) ? 'active' : ''}`}>🔄</div>
+                    <div className={`timeline-dot ${['Ongoing', 'Resolved'].includes(report.status) ? 'active' : ''}`}><RefreshIcon /></div>
                     <span>Ongoing</span>
                   </div>
 
                   <div className={`timeline-line ${report.status === 'Resolved' ? 'active' : ''}`}></div>
                   <div className={`timeline-step ${report.status === 'Resolved' ? 'done' : ''}`}>
-                    <div className={`timeline-dot ${report.status === 'Resolved' ? 'active' : ''}`}>✅</div>
+                    <div className={`timeline-dot ${report.status === 'Resolved' ? 'active' : ''}`}><CheckCircleIcon /></div>
                     <span>Resolved</span>
                   </div>
                 </div>
@@ -204,7 +208,7 @@ function TrackReport() {
 
         {searched && !report && (
           <div className="not-found">
-            <p>❌ Report not found. Please check your Report ID and try again.</p>
+            <p><XCircleIcon /> Report not found. Please check your Report ID and try again.</p>
           </div>
         )}
 
@@ -213,15 +217,15 @@ function TrackReport() {
       {/* Bottom Nav - Mobile Only */}
       <div className="bottom-nav">
         <a href="/map" className="bottom-nav-item">
-          <span>🏠</span>
+          <span className="nav-icon"><HomeIcon /></span>
           <span>Home</span>
         </a>
         <a href="/track-report" className="bottom-nav-item active">
-          <span>📋</span>
+          <span className="nav-icon"><TrackIcon /></span>
           <span>Track Report</span>
         </a>
         <a href="/about" className="bottom-nav-item">
-          <span>ℹ️</span>
+          <span className="nav-icon"><AboutIcon /></span>
           <span>About</span>
         </a>
       </div>

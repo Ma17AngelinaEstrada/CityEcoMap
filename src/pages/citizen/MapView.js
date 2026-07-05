@@ -8,6 +8,8 @@ import 'leaflet/dist/leaflet.css';
 import logo from '../../logowhite2.png';
 import './MapView.css';
 import '../../styles/CitizenHeader.css';
+import { SearchIcon, CalendarIcon, PinIcon, BuildingIcon, PlusIcon, HomeIcon, TrackIcon, AboutIcon } from '../../components/Icons';
+
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -167,7 +169,7 @@ function MapView() {
                 <div className="map-popup">
                   <p className="popup-id">#{report.reportId || report.id.slice(0, 6).toUpperCase()}</p>
                   <p className="popup-type">{report.category}</p>
-                  <p className="popup-date">📅 {formatDate(report.createdAt)}</p>
+                  <p className="popup-date"><CalendarIcon /> {formatDate(report.createdAt)}</p>
                   <span
                     className="popup-status"
                     style={{ background: statusColors[report.status] || '#e53935' }}
@@ -178,10 +180,10 @@ function MapView() {
                     <p className="popup-desc">{report.description}</p>
                   )}
                   {report.locationDescription && (
-                    <p className="popup-location">📍 {report.locationDescription}</p>
+                    <p className="popup-location"><PinIcon /> {report.locationDescription}</p>
                   )}
                   {report.assignedTo && (
-                    <p className="popup-assigned">🏢 Assigned to: {report.assignedTo}</p>
+                    <p className="popup-assigned"><BuildingIcon /> Assigned to: {report.assignedTo}</p>
                   )}
                   {report.photo && (
                     <img src={report.photo} alt="Report" className="popup-photo" />
@@ -194,10 +196,11 @@ function MapView() {
 
         {/* Floating Search Bar */}
         <div className="floating-search">
+          <span className="search-icon"><SearchIcon /></span>
           <input
             type="text"
             className="search-bar"
-            placeholder="🔍 Search location..."
+            placeholder="Search location..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearch}
@@ -243,22 +246,22 @@ function MapView() {
         {/* Floating Submit Button */}
         <button className="fab-btn" onClick={() => navigate('/submit-report')}>
           <span className="fab-text">+ Submit Report</span>
-          <span className="fab-icon">+</span>
+          <span className="fab-icon"><PlusIcon /></span>
         </button>
       </div>
 
       {/* Bottom Nav - Mobile Only */}
       <div className="bottom-nav">
         <a href="/map" className="bottom-nav-item active">
-          <span>🏠</span>
+          <span className="nav-icon"><HomeIcon /></span>
           <span>Home</span>
         </a>
         <a href="/track-report" className="bottom-nav-item">
-          <span>📋</span>
+          <span className="nav-icon"><TrackIcon /></span>
           <span>Track Report</span>
         </a>
         <a href="/about" className="bottom-nav-item">
-          <span>ℹ️</span>
+          <span className="nav-icon"><AboutIcon /></span>
           <span>About</span>
         </a>
       </div>

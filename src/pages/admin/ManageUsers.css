@@ -272,3 +272,14 @@
 
 .mu-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .mu-save-btn:hover:not(:disabled) { background: #2d6a2d; }
+
+.mu-created-by {
+  font-size: 0.82rem;
+  color: #666;
+}
+
+.mu-title,
+.mu-modal-header h3 {
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: #1a4a1a;
+}

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 * {
   margin: 0;
   padding: 0;
@@ -8,19 +10,19 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   overflow: hidden;
 }
 
 /* Topbar */
 .al2-topbar {
   width: 100%;
-  background-color: #f5f0e8;
+  background-color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   padding: 0.5rem 1.5rem;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #eee;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -32,8 +34,6 @@
   width: auto;
   object-fit: contain;
 }
-
-
 
 /* Body */
 .al2-body {
@@ -47,57 +47,166 @@
   width: 270px;
   min-width: 270px;
   background-color: #1a4a1a;
+  border-right: none;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
+  position: relative;
+  transition: width 0.25s ease;
 }
 
+.al2-sidebar--collapsed {
+  width: 72px;
+  min-width: 72px;
+}
+
+.al2-collapse-btn {
+  position: absolute;
+  top: 12px;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #1a6b3c;
+  border: 1px solid #ddd;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.al2-collapse-btn:hover {
+  background: #f5f5f5;
+}
+
+/* Profile */
+.al2-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+.al2-sidebar--collapsed .al2-profile {
+  justify-content: center;
+  padding: 1.25rem 0.5rem;
+}
+
+.al2-avatar {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 50%;
+  background-color: #7eb87e;
+  color: #1a4a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.al2-profile-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.al2-profile-name {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.al2-profile-role {
+  color: rgba(255,255,255,0.65);
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+/* Nav */
 .al2-nav {
   display: flex;
   flex-direction: column;
   flex: 1;
+  padding: 0.5rem 0;
 }
 
 .al2-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   background: none;
   border: none;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  color: #ffffff;
-  font-family: Georgia, serif;
-  font-size: 0.95rem;
-  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
   text-align: left;
-  padding: 1.1rem 1.5rem;
+  padding: 0.85rem 1.5rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.15s, color 0.15s;
+}
+
+.al2-sidebar--collapsed .al2-nav-item,
+.al2-sidebar--collapsed .al2-logout {
+  justify-content: center;
+  padding: 0.85rem 0.5rem;
 }
 
 .al2-nav-item:hover {
   background-color: rgba(255,255,255,0.08);
+  color: #ffffff;
 }
 
 .al2-nav-item--active {
-  background-color: rgba(255,255,255,0.15);
-  border-left: 4px solid #7eb87e;
+  background-color: rgba(255,255,255,0.12);
+  color: #ffffff;
+  font-weight: 600;
+  border-left: 3px solid #7eb87e;
+}
+
+.al2-nav-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  display: flex;
+}
+
+.al2-nav-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .al2-logout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   background: none;
   border: none;
-  border-top: 1px solid rgba(255,255,255,0.1);
-  color: #ffffff;
-  font-family: Georgia, serif;
-  font-size: 0.95rem;
-  font-weight: 600;
+  border-top: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.85);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
   text-align: left;
-  padding: 1.1rem 1.5rem;
+  padding: 0.85rem 1.5rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.15s, color 0.15s;
 }
 
 .al2-logout:hover {
-  background-color: rgba(255,255,255,0.08);
+  background-color: rgba(255,80,60,0.15);
+  color: #ffb3a7;
 }
 
 /* Main content area */
@@ -105,7 +214,7 @@
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
-  background-color: #ede8dc;
+  background-color: #fafafa;
   height: 100%;
 }
 
@@ -153,4 +262,67 @@
   font-family: sans-serif;
   font-size: 0.75rem;
   margin-top: 2px;
+}
+
+.al2-sidebar {
+  position: relative;
+  transition: width 0.25s ease;
+}
+
+.al2-sidebar--collapsed {
+  width: 72px;
+  min-width: 72px;
+}
+
+.al2-collapse-btn {
+  position: absolute;
+  top: 12px;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #1a4a1a;
+  border: 1px solid #ddd;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+.al2-collapse-btn:hover {
+  background: #f0f0f0;
+}
+
+.al2-sidebar--collapsed .al2-profile {
+  justify-content: center;
+  padding: 1.25rem 0.5rem;
+}
+
+.al2-sidebar--collapsed .al2-nav-item,
+.al2-sidebar--collapsed .al2-logout {
+  justify-content: center;
+  padding: 1.1rem 0.5rem;
+}
+
+.al2-nav-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.al2-nav-item,
+.al2-logout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.al2-nav-icon svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }

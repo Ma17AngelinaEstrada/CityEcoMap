@@ -186,3 +186,24 @@
   font-family: Georgia, serif;
   margin-bottom: 0.75rem;
 }
+
+.er-title,
+.er-history-title {
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: #1a4a1a;
+}
+
+.er-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: sans-serif;
+}
+
+.er-badge--pending   { background: #e53935; color: #fff; }
+.er-badge--approved  { background: #1565c0; color: #fff; }
+.er-badge--ongoing   { background: #f9a825; color: #fff; }
+.er-badge--resolved  { background: #2e7d32; color: #fff; }
+.er-badge--rejected  { background: #757575; color: #fff; }

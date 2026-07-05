@@ -69,3 +69,10 @@
 .citizen-header .header-close-btn:hover {
   opacity: 0.8;
 }
+
+.citizen-header .header-back-btn svg,
+.citizen-header .header-close-btn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}

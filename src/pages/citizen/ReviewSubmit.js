@@ -6,6 +6,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import { reverseGeocode } from '../../utils/geocode';
 import '../../styles/CitizenHeader.css';
+import { TrashIcon, CameraIcon, ClipboardIcon, PinIcon, MailIcon, XIcon, ArrowLeftIcon } from '../../components/Icons';
 
 function ReviewSubmit() {
   const navigate = useNavigate();
@@ -122,13 +123,13 @@ const compressPhoto = (file) => {
       <div className="citizen-header review-header">
         <button className="header-back-btn" onClick={() =>
           navigate('/submit-report', { state: { previousForm: form } })
-        }>←</button>
+        }><ArrowLeftIcon /></button>
         <img src={logo} alt="CityEcoMap" className="logo-img" />
         <button className="header-close-btn" onClick={() => {
           if (window.confirm('Are you sure you want to cancel? Your report will not be submitted.')) {
             navigate('/map', { replace: true });
           }
-        }}>✕</button>
+        }}><XIcon /></button>
       </div>
 
       <div className="review-body">
@@ -140,7 +141,7 @@ const compressPhoto = (file) => {
             <h3 className="summary-title">Report Summary</h3>
             <hr />
             <div className="summary-row">
-              <div className="summary-icon">🗑️</div>
+              <div className="summary-icon"><TrashIcon /></div>
               <div className="summary-info">
                 <span className="summary-label">Report Type</span>
                 <span className="summary-value">{form?.selectedCategory || 'Not selected'}</span>
@@ -153,7 +154,7 @@ const compressPhoto = (file) => {
             </div>
             <hr />
             <div className="summary-row">
-              <div className="summary-icon">📷</div>
+              <div className="summary-icon"><CameraIcon /></div>
               <div className="summary-info">
                 <span className="summary-label">Photo</span>
                 <span className="summary-value">
@@ -166,7 +167,7 @@ const compressPhoto = (file) => {
             </div>
             <hr />
             <div className="summary-row">
-              <div className="summary-icon">📋</div>
+              <div className="summary-icon"><ClipboardIcon /></div>
               <div className="summary-info">
                 <span className="summary-label">Description</span>
                 <span className="summary-value">{form?.description || 'No description provided'}</span>
@@ -174,7 +175,7 @@ const compressPhoto = (file) => {
             </div>
             <hr />
             <div className="summary-row">
-              <div className="summary-icon">📍</div>
+              <div className="summary-icon"><PinIcon /></div>
               <div className="summary-info">
                 <span className="summary-label">Location</span>
                 <span className="summary-value">
@@ -190,7 +191,7 @@ const compressPhoto = (file) => {
             </div>
             <hr />
             <div className="summary-row">
-              <div className="summary-icon">✉️</div>
+              <div className="summary-icon"><MailIcon /></div>
               <div className="summary-info">
                 <span className="summary-label">Email</span>
                 <span className="summary-value">

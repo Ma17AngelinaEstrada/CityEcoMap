@@ -47,6 +47,15 @@ export default function ExportReports() {
     fetchReports();
   }, []);
 
+  const getStatusClass = (status) => {
+    if (status === "Pending") return "er-badge er-badge--pending";
+    if (status === "Approved") return "er-badge er-badge--approved";
+    if (status === "Ongoing" || status === "In Progress") return "er-badge er-badge--ongoing";
+    if (status === "Resolved") return "er-badge er-badge--resolved";
+    if (status === "Rejected") return "er-badge er-badge--rejected";
+    return "er-badge";
+  };
+
   useEffect(() => {
     const resolveAddresses = async () => {
       const newAddresses = {};
@@ -336,7 +345,7 @@ export default function ExportReports() {
                       {!r.locationDescription && !r.location && '—'}
                     </td>
                     <td>{r.assignedTo || "—"}</td>
-                    <td>{r.status || "Pending"}</td>
+                    <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
                   </tr>
                 ))
               )}

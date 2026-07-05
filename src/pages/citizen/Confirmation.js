@@ -4,6 +4,7 @@ import logowhite from '../../logowhite2.png';
 import './Confirmation.css';
 import { useLocation } from 'react-router-dom';
 import '../../styles/CitizenHeader.css';
+import { CheckIcon, CopyIcon, AlertTriangleIcon } from '../../components/Icons';
 
 function Confirmation() {
   const navigate = useNavigate();
@@ -65,7 +66,7 @@ function Confirmation() {
           <h2 className="confirm-title">REPORT SUBMITTED</h2>
 
           <div className="check-circle">
-            <span className="check-icon">✔</span>
+            <span className="check-icon"><CheckIcon /></span>
           </div>
 
           <h3 className="thank-you">Thank you!</h3>
@@ -75,12 +76,12 @@ function Confirmation() {
           <p className="report-id-text">Report ID: <strong>#{reportId}</strong></p>
 
           <div className="warning-box">
-            <span className="warning-icon">⚠️</span>
+            <span className="warning-icon"><AlertTriangleIcon /></span>
             <p>Please save or copy your Report ID to track your report status.</p>
           </div>
 
           <button className="copy-btn" onClick={handleCopy}>
-            📋 {copied ? 'Copied!' : 'Copy Report ID'}
+            <CopyIcon /> {copied ? 'Copied!' : 'Copy Report ID'}
           </button>
 
           <button className="map-btn" onClick={goToMap}>

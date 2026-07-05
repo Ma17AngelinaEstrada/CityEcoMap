@@ -148,3 +148,12 @@
 @media (max-width: 767px) {
   .confirm-body { padding: 16px; align-items: flex-start; }
 }
+
+.check-icon svg { width: 42px; height: 42px; }
+.warning-icon svg { width: 18px; height: 18px; flex-shrink: 0; }
+.copy-btn { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.copy-btn svg { width: 16px; height: 16px; }
+
+.confirm-header.citizen-header {
+  justify-content: center;
+}

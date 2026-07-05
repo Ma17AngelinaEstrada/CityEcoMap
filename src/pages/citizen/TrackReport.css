@@ -288,6 +288,85 @@
     gap: 4px;
   }
 
-  .bottom-nav-item span:first-child { font-size: 22px; }
   .bottom-nav-item.active { color: #1a6b3c; font-weight: bold; }
+}
+
+.nav-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.status-icon svg,
+.detail-label svg,
+.empty-icon svg,
+.not-found svg {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.status-banner {
+  display: flex;
+  align-items: center;
+}
+
+.status-icon {
+  display: flex;
+  align-items: center;
+}
+
+.detail-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.empty-icon {
+  display: flex;
+  justify-content: center;
+}
+
+.empty-icon svg {
+  width: 48px;
+  height: 48px;
+}
+
+.not-found p {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.report-id-input-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.report-id-input-wrapper .search-icon {
+  position: absolute;
+  left: 16px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.report-id-input-wrapper .search-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.report-id-input {
+  padding-left: 42px;
+  width: 100%;
+}
+
+.timeline-dot svg {
+  width: 20px;
+  height: 20px;
 }

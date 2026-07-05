@@ -292,3 +292,12 @@
   cursor: pointer;
   color: #666;
 }
+
+.category-icon svg { width: 28px; height: 28px; }
+.check svg { width: 12px; height: 12px; }
+.photo-option-btn { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.photo-option-btn svg { width: 18px; height: 18px; }
+.photo-remove-btn { display: flex; align-items: center; gap: 5px; }
+.photo-remove-btn svg { width: 12px; height: 12px; }
+.location-note { display: flex; align-items: center; justify-content: center; gap: 5px; }
+.location-note svg { width: 14px; height: 14px; }

@@ -13,6 +13,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { reverseGeocode } from '../../utils/geocode';
+import { SearchIcon, CalendarIcon, PinIcon, BuildingIcon } from '../../components/Icons';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -297,10 +298,11 @@ export default function AdminDashboard() {
               </div>
               <div className="ad-map-wrapper" id="admin-map-wrapper">
                 <div className="ad-map-search">
+                  <span className="ad-map-search-icon"><SearchIcon /></span>
                   <input
                     type="text"
                     className="ad-map-search-input"
-                    placeholder="🔍 Search Report ID or location..."
+                    placeholder="Search Report ID or location..."
                     value={mapSearchQuery}
                     onChange={(e) => setMapSearchQuery(e.target.value)}
                     onKeyDown={handleMapSearch}
@@ -336,8 +338,8 @@ export default function AdminDashboard() {
                           <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: 4 }}>
                             {report.category}
                           </p>
-                          <p style={{ fontSize: '0.78rem', color: '#888', marginBottom: 4 }}>
-                            📅 {formatDate(report.createdAt)}
+                          <p style={{ fontSize: '0.78rem', color: '#888', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <CalendarIcon /> {formatDate(report.createdAt)}
                           </p>
                           <span style={{
                             display: 'inline-block',
@@ -357,13 +359,13 @@ export default function AdminDashboard() {
                             </p>
                           )}
                           {(report.locationDescription || addresses[report.id]) && (
-                            <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 4 }}>
-                              📍 {report.locationDescription || addresses[report.id]}
+                            <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <PinIcon /> {report.locationDescription || addresses[report.id]}
                             </p>
                           )}
                           {report.assignedTo && (
-                            <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 2 }}>
-                              🏢 {report.assignedTo}
+                            <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <BuildingIcon /> {report.assignedTo}
                             </p>
                           )}
                           {report.photo && (

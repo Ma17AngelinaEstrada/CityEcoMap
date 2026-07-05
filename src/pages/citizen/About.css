@@ -122,6 +122,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 8px;
 }
 
 .step-icon { font-size: 28px; }
@@ -265,6 +273,29 @@
     gap: 4px;
   }
 
-  .bottom-nav-item span:first-child { font-size: 22px; }
   .bottom-nav-item.active { color: #1a6b3c; font-weight: bold; }
+}
+
+.nav-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.section-icon svg {
+  width: 30px;
+  height: 30px;
+}
+
+.step-icon svg,
+.cat-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.section-icon,
+.step-icon,
+.cat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

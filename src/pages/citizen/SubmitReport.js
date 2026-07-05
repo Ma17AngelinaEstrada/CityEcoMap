@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../logowhite2.png';
 import './SubmitReport.css';
 import '../../styles/CitizenHeader.css';
+import { TrashIcon, WaveIcon, CheckIcon, CameraIcon, ImageIcon, XIcon, PinIcon, ArrowLeftIcon } from '../../components/Icons';
 
 function SubmitReport() {
   const navigate = useNavigate();
@@ -96,7 +97,7 @@ function SubmitReport() {
             if (!window.confirm('You have unsaved progress. Are you sure you want to leave?')) return;
           }
           navigate('/map');
-        }}>←</button>
+        }}><ArrowLeftIcon /></button>
         <img src={logo} alt="CityEcoMap" className="logo-img" />
         <button className="header-close-btn" onClick={() => {
           const hasProgress = selectedCategory || description || email || photo;
@@ -104,7 +105,7 @@ function SubmitReport() {
             if (!window.confirm('You have unsaved progress. Are you sure you want to leave?')) return;
           }
           navigate('/map');
-        }}>✕</button>
+        }}><XIcon /></button>
       </div>
 
       <div className="report-body">
@@ -118,8 +119,8 @@ function SubmitReport() {
               className={`category-card ${selectedCategory === 'Waste Issue' ? 'selected' : ''}`}
               onClick={() => setSelectedCategory('Waste Issue')}
             >
-              {selectedCategory === 'Waste Issue' && <span className="check">✔</span>}
-              <span className="category-icon">🗑️</span>
+              {selectedCategory === 'Waste Issue' && <span className="check"><CheckIcon /></span>}
+              <span className="category-icon"><TrashIcon /></span>
               <strong>Waste Issue</strong>
               <p>Report problems related to garbage and litter.</p>
             </div>
@@ -127,8 +128,8 @@ function SubmitReport() {
               className={`category-card ${selectedCategory === 'Drainage Issue' ? 'selected' : ''}`}
               onClick={() => setSelectedCategory('Drainage Issue')}
             >
-              {selectedCategory === 'Drainage Issue' && <span className="check">✔</span>}
-              <span className="category-icon">🌊</span>
+              {selectedCategory === 'Drainage Issue' && <span className="check"><CheckIcon /></span>}
+              <span className="category-icon"><WaveIcon /></span>
               <strong>Drainage Issue</strong>
               <p>Report problems related to drainage and flooding.</p>
             </div>
@@ -137,7 +138,7 @@ function SubmitReport() {
           <div className="section-label">ADD PHOTO</div>
 <div className="photo-options">
   <label className="photo-option-btn" htmlFor="photo-camera">
-    📷 Take a Photo
+    <CameraIcon /> Take a Photo
   </label>
   <input
     id="photo-camera"
@@ -148,7 +149,7 @@ function SubmitReport() {
     style={{ display: 'none' }}
   />
   <label className="photo-option-btn" htmlFor="photo-gallery">
-    🖼️ Upload from Gallery
+    <ImageIcon /> Upload from Gallery
   </label>
   <input
     id="photo-gallery"
@@ -166,7 +167,7 @@ function SubmitReport() {
       className="photo-remove-btn"
       onClick={() => { setPhoto(null); setPhotoPreview(null); }}
     >
-      ✕ Remove photo
+      <XIcon /> Remove photo
     </button>
   </div>
 )}
@@ -192,7 +193,7 @@ function SubmitReport() {
             onChange={(e) => setEmail(e.target.value)}
           />
 
-          <p className="location-note">📍 Your current location will be automatically detected.</p>
+          <p className="location-note"><PinIcon /> Your current location will be automatically detected.</p>
 
           <div className="section-label">
             LOCATION DESCRIPTION <span className="optional">(Optional)</span>
