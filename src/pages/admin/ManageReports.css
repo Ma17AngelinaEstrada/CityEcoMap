@@ -502,3 +502,23 @@
   font-family: 'Inter', -apple-system, sans-serif;
   color: #1a4a1a;
 }
+
+.mr-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #1a4a1a;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  z-index: 1000;
+  animation: mr-toast-in 0.3s ease;
+}
+
+@keyframes mr-toast-in {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

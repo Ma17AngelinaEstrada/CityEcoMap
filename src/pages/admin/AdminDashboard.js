@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import {
@@ -62,13 +61,6 @@ export default function AdminDashboard() {
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const adminMapRef = useRef(null);
   const adminMarkerRefs = useRef({});
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) navigate("/admin");
-    });
-    return () => unsub();
-  }, [navigate]);
 
   useEffect(() => {
     const fetchReports = async () => {

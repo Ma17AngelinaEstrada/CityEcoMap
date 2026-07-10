@@ -326,3 +326,149 @@
   height: 18px;
   flex-shrink: 0;
 }
+
+.al2-nav-item {
+  position: relative;
+}
+
+.al2-nav-badge {
+  background: #e53935;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  margin-left: auto;
+}
+
+.al2-sidebar--collapsed .al2-nav-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  margin-left: 0;
+}
+
+.al2-topbar {
+  width: 100%;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1.5rem;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 56px;
+}
+
+.al2-notif-wrapper {
+  position: relative;
+}
+
+.al2-notif-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #444;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 6px;
+}
+
+.al2-notif-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.al2-notif-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #e53935;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.al2-notif-dropdown {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  width: 300px;
+  max-height: 360px;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  border: 1px solid #eee;
+  z-index: 200;
+}
+
+.al2-notif-header {
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #1a4a1a;
+  border-bottom: 1px solid #eee;
+}
+
+.al2-notif-empty {
+  padding: 20px 16px;
+  font-size: 0.82rem;
+  color: #999;
+  text-align: center;
+}
+
+.al2-notif-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 10px 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.al2-notif-item:last-child {
+  border-bottom: none;
+}
+
+.al2-notif-item:hover {
+  background: #f5faf6;
+}
+
+.al2-notif-id {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #1a4a1a;
+}
+
+.al2-notif-desc {
+  font-size: 0.78rem;
+  color: #666;
+}
+
+.al2-notif-time {
+  font-size: 0.72rem;
+  color: #999;
+  margin-top: 2px;
+}

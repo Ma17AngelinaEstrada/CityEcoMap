@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import "./AdminLayout.css";
+import { BellIcon } from "../../components/Icons";
 
 export default function AdminLayout({ children }) {
   const navigate = useNavigate();
@@ -11,6 +12,56 @@ export default function AdminLayout({ children }) {
   const [isMasterAdmin, setIsMasterAdmin] = useState(false);
   const [currentAdmin, setCurrentAdmin] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [pendingReports, setPendingReports] = useState([]);
+  const [showNotifs, setShowNotifs] = useState(false);
+
+  useEffect(() => {
+    let unsubSnapshot = () => {};
+
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      unsubSnapshot();
+      if (!user) {
+        setPendingReports([]);
+        return;
+      }
+      const q = query(
+        collection(db, "reports"),
+        where("status", "==", "Pending"),
+        orderBy("createdAt", "desc")
+      );
+      unsubSnapshot = onSnapshot(
+        q,
+        (snapshot) => {
+          const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+          setPendingReports(data);
+        },
+        (err) => {
+          console.error("Notification listener error:", err);
+        }
+      );
+    });
+
+    return () => {
+      unsubAuth();
+      unsubSnapshot();
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest(".al2-notif-wrapper")) {
+        setShowNotifs(false);
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
+  const formatNotifDate = (ts) => {
+    const date = ts?.toDate?.();
+    if (!date) return "";
+    return date.toLocaleDateString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
 
   const icons = {
     dashboard: (
@@ -53,7 +104,10 @@ export default function AdminLayout({ children }) {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) return;
+      if (!user) {
+        navigate("/admin");
+        return;
+      }
       try {
         const snapshot = await getDocs(collection(db, "admins"));
         const current = snapshot.docs.find((d) => d.id === user.uid);
@@ -65,7 +119,7 @@ export default function AdminLayout({ children }) {
       }
     });
     return () => unsub();
-  }, []);
+  }, [navigate]);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -93,6 +147,39 @@ export default function AdminLayout({ children }) {
       {/* Top navbar */}
       <header className="al2-topbar">
         <img src="/logogreen2.png" alt="CityEcoMap" className="al2-logo" />
+
+        <div className="al2-notif-wrapper">
+          <button className="al2-notif-btn" onClick={(e) => { e.stopPropagation(); setShowNotifs(!showNotifs); }}>
+            <BellIcon />
+            {pendingReports.length > 0 && (
+              <span className="al2-notif-count">{pendingReports.length}</span>
+            )}
+          </button>
+
+          {showNotifs && (
+            <div className="al2-notif-dropdown">
+              <div className="al2-notif-header">New Reports</div>
+              {pendingReports.length === 0 ? (
+                <p className="al2-notif-empty">No new reports.</p>
+              ) : (
+                pendingReports.slice(0, 10).map((r) => (
+                  <button
+                    key={r.id}
+                    className="al2-notif-item"
+                    onClick={() => {
+                      setShowNotifs(false);
+                      navigate(`/admin/reports?report=${r.id}`);
+                    }}
+                  >
+                    <span className="al2-notif-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</span>
+                    <span className="al2-notif-desc">{r.category}</span>
+                    <span className="al2-notif-time">{formatNotifDate(r.createdAt)}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </header>
 
       <div className="al2-body">
@@ -128,6 +215,9 @@ export default function AdminLayout({ children }) {
               >
                 <span className="al2-nav-icon">{item.icon}</span>
                 {!collapsed && <span>{item.label}</span>}
+                {item.path === "/admin/reports" && pendingReports.length > 0 && (
+                  <span className="al2-nav-badge">{pendingReports.length}</span>
+                )}
               </button>
             ))}
           </nav>

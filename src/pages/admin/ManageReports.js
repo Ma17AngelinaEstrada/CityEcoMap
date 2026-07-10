@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import AdminLayout from "./AdminLayout";
 import "./ManageReports.css";
@@ -39,6 +39,11 @@ export default function ManageReports() {
   const [addresses, setAddresses] = useState({});
   const [statusHistory, setStatusHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [toast, setToast] = useState(null);
+  const isFirstLoad = useRef(true);
+  const prevIdsRef = useRef(new Set());
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -48,21 +53,58 @@ export default function ManageReports() {
   }, [navigate]);
 
   useEffect(() => {
-    fetchReports();
-  }, []);
-
-  const fetchReports = async () => {
-    try {
-      const snapshot = await getDocs(collection(db, "reports"));
+    const unsub = onSnapshot(collection(db, "reports"), (snapshot) => {
       const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
       data.sort((a, b) => (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0));
+
+      if (!isFirstLoad.current) {
+        const newOnes = data.filter(
+          (r) => !prevIdsRef.current.has(r.id) && r.status === "Pending"
+        );
+        if (newOnes.length > 0) {
+          setToast(`🔔 ${newOnes.length} new report${newOnes.length > 1 ? "s" : ""} received`);
+          setTimeout(() => setToast(null), 5000);
+        }
+      }
+
+      prevIdsRef.current = new Set(data.map((r) => r.id));
+      isFirstLoad.current = false;
       setReports(data);
-    } catch (err) {
-      console.error("Error fetching reports:", err);
-    } finally {
       setLoading(false);
+    }, (err) => {
+      console.error("Error fetching reports:", err);
+      setLoading(false);
+    });
+
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    console.log("location.state:", location.state);
+    const targetId = location.state?.openReportId;
+    console.log("targetId:", targetId);
+    console.log("reports.length:", reports.length);
+    if (targetId && reports.length > 0) {
+      const target = reports.find((r) => r.id === targetId);
+      console.log("target found:", target);
+      if (target) {
+        setSelectedReport(target);
+      }
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, reports]);
+
+  useEffect(() => {
+    const targetId = searchParams.get("report");
+    if (targetId && reports.length > 0) {
+      const target = reports.find((r) => r.id === targetId);
+      if (target) {
+        setSelectedReport(target);
+        setSearchParams({}, { replace: true });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, reports]);
 
   useEffect(() => {
     const resolveAddresses = async () => {
@@ -296,6 +338,11 @@ const handleSetResolved = async () => {
 
   return (
     <AdminLayout>
+      {toast && (
+        <div className="mr-toast">
+          {toast}
+        </div>
+      )}
       <div className="mr-header">
         <h2 className="mr-title">Manage & Resolve Reports</h2>
         <p className="mr-subtitle">Review, approve, reject, and resolve citizen-submitted reports.</p>
