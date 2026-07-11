@@ -11,7 +11,9 @@ export default function AdminLayout({ children }) {
   const location = useLocation();
   const [isMasterAdmin, setIsMasterAdmin] = useState(false);
   const [currentAdmin, setCurrentAdmin] = useState(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    return localStorage.getItem("al2-sidebar-collapsed") === "true";
+  });
   const [pendingReports, setPendingReports] = useState([]);
   const [showNotifs, setShowNotifs] = useState(false);
 
@@ -162,20 +164,33 @@ export default function AdminLayout({ children }) {
               {pendingReports.length === 0 ? (
                 <p className="al2-notif-empty">No new reports.</p>
               ) : (
-                pendingReports.slice(0, 10).map((r) => (
-                  <button
-                    key={r.id}
-                    className="al2-notif-item"
-                    onClick={() => {
-                      setShowNotifs(false);
-                      navigate(`/admin/reports?report=${r.id}`);
-                    }}
-                  >
-                    <span className="al2-notif-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</span>
-                    <span className="al2-notif-desc">{r.category}</span>
-                    <span className="al2-notif-time">{formatNotifDate(r.createdAt)}</span>
-                  </button>
-                ))
+                <>
+                  {pendingReports.slice(0, 10).map((r) => (
+                    <button
+                      key={r.id}
+                      className="al2-notif-item"
+                      onClick={() => {
+                        setShowNotifs(false);
+                        navigate(`/admin/reports?report=${r.id}`);
+                      }}
+                    >
+                      <span className="al2-notif-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</span>
+                      <span className="al2-notif-desc">{r.category}</span>
+                      <span className="al2-notif-time">{formatNotifDate(r.createdAt)}</span>
+                    </button>
+                  ))}
+                  {pendingReports.length > 10 && (
+                    <button
+                      className="al2-notif-viewall"
+                      onClick={() => {
+                        setShowNotifs(false);
+                        navigate("/admin/reports?status=Pending");
+                      }}
+                    >
+                      View all {pendingReports.length} pending reports →
+                    </button>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -187,7 +202,11 @@ export default function AdminLayout({ children }) {
         <aside className={`al2-sidebar ${collapsed ? "al2-sidebar--collapsed" : ""}`}>
           <button
             className="al2-collapse-btn"
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => {
+              const next = !collapsed;
+              setCollapsed(next);
+              localStorage.setItem("al2-sidebar-collapsed", next);
+            }}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? "»" : "«"}

@@ -472,3 +472,19 @@
   color: #999;
   margin-top: 2px;
 }
+
+.al2-notif-viewall {
+  width: 100%;
+  background: #f5faf6;
+  border: none;
+  padding: 10px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1a4a1a;
+  cursor: pointer;
+  text-align: center;
+}
+
+.al2-notif-viewall:hover {
+  background: #e8f5ee;
+}

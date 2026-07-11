@@ -96,12 +96,21 @@ export default function ManageReports() {
 
   useEffect(() => {
     const targetId = searchParams.get("report");
+    const statusParam = searchParams.get("status");
+
+    if (statusParam) {
+      setFilterStatus(statusParam);
+    }
+
     if (targetId && reports.length > 0) {
       const target = reports.find((r) => r.id === targetId);
       if (target) {
         setSelectedReport(target);
-        setSearchParams({}, { replace: true });
       }
+    }
+
+    if (targetId || statusParam) {
+      setSearchParams({}, { replace: true });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, reports]);

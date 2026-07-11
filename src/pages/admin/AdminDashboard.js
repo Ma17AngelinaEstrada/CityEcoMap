@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, getDocs } from "firebase/firestore";
-import { auth, db } from "../../firebase/firebase";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../../firebase/firebase";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer
@@ -63,21 +63,22 @@ export default function AdminDashboard() {
   const adminMarkerRefs = useRef({});
 
   useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "reports"));
+    const unsub = onSnapshot(
+      collection(db, "reports"),
+      (snapshot) => {
         const data = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
         setReports(data);
-      } catch (err) {
+        setLoading(false);
+      },
+      (err) => {
         console.error("Error fetching reports:", err);
-      } finally {
         setLoading(false);
       }
-    };
-    fetchReports();
+    );
+    return () => unsub();
   }, []);
 
   useEffect(() => {
