@@ -8,7 +8,7 @@ import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import AdminLayout from "./AdminLayout";
 import "./ExportReports.css";
-import { reverseGeocode } from '../../utils/geocode';
+import { reverseGeocode, isCached } from '../../utils/geocode';
 
 export default function ExportReports() {
   const navigate = useNavigate();
@@ -61,9 +61,15 @@ export default function ExportReports() {
       const newAddresses = {};
       for (const r of reports) {
         if (r.location?.lat && r.location?.lng) {
-          const addr = await reverseGeocode(r.location.lat, r.location.lng);
-          newAddresses[r.id] = addr;
-          await new Promise((res) => setTimeout(res, 1100));
+          const key = r.id;
+          if (!addresses[key]) {
+            const wasCached = isCached(r.location.lat, r.location.lng);
+            const addr = await reverseGeocode(r.location.lat, r.location.lng);
+            newAddresses[key] = addr;
+            if (!wasCached) {
+              await new Promise((res) => setTimeout(res, 1100)); // only throttle real API calls
+            }
+          }
         }
       }
       if (Object.keys(newAddresses).length > 0) {
@@ -71,6 +77,7 @@ export default function ExportReports() {
       }
     };
     if (reports.length > 0) resolveAddresses();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reports]);
 
   const fetchExportHistory = async () => {

@@ -5,7 +5,7 @@ import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, or
 import { auth, db } from "../../firebase/firebase";
 import AdminLayout from "./AdminLayout";
 import "./ManageReports.css";
-import { reverseGeocode } from '../../utils/geocode';
+import { reverseGeocode, isCached } from '../../utils/geocode';
 
 const sendEmailNotification = async (to, subject, body) => {
   if (!to) return;
@@ -122,9 +122,12 @@ export default function ManageReports() {
         if (r.location?.lat && r.location?.lng) {
           const key = r.id;
           if (!addresses[key]) {
+            const wasCached = isCached(r.location.lat, r.location.lng);
             const addr = await reverseGeocode(r.location.lat, r.location.lng);
             newAddresses[key] = addr;
-            await new Promise((res) => setTimeout(res, 1100)); // respect 1 req/sec limit
+            if (!wasCached) {
+              await new Promise((res) => setTimeout(res, 1100)); // only throttle real API calls
+            }
           }
         }
       }
