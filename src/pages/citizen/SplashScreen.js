@@ -23,7 +23,7 @@ function SplashScreen() {
         <div className="splash-owner">
           <span className="splash-owner-label">DEVELOPED FOR</span>
           <p className="splash-owner-names">
-            Environmental Management Bureau (EMB) &amp; the Local Government of Lucena City
+            Environmental Management Bureau (EMB) &amp; the Local Government Unit of Lucena City
           </p>
         </div>
 

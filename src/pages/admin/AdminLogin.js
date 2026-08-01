@@ -78,7 +78,7 @@ export default function AdminLogin() {
           </form>
 
           <p className="al-footer">
-            Environmental Management Bureau (EMB) Official Access
+            Environmental Management Bureau (EMB) and Local Government Unit of Lucena City — Official Access Only
           </p>
         </div>
       </div>
