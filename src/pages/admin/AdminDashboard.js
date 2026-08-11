@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/firebase";
@@ -8,32 +8,11 @@ import {
 } from "recharts";
 import AdminLayout from "./AdminLayout";
 import "./AdminDashboard.css";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { GoogleMap, MarkerF, InfoWindowF } from '@react-google-maps/api';
+import { GOOGLE_MAPS_LIBRARIES } from '../../utils/googleMapsLibraries';
 import { reverseGeocode, isCached } from '../../utils/geocode';
 import { SearchIcon, CalendarIcon, PinIcon, BuildingIcon } from '../../components/Icons';
-
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
-  iconUrl: require('leaflet/dist/images/marker-icon.png'),
-  shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
-});
-
-const createIcon = (color) => L.divIcon({
-  className: '',
-  html: `<div style="
-    width: 14px; height: 14px;
-    background: ${color};
-    border: 2px solid white;
-    border-radius: 50%;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-  "></div>`,
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-  popupAnchor: [0, -10],
-});
+import { useGoogleMapsLoaded } from "../../context/GoogleMapsLoaderContext";
 
 const statusColors = {
   'Pending':  '#e53935',
@@ -43,15 +22,8 @@ const statusColors = {
   'Rejected': '#757575',
 };
 
-const LUCENA_CENTER = [13.9394, 121.6169];
-
-function AdminMapController({ mapRef }) {
-  const map = useMap();
-  useEffect(() => {
-    mapRef.current = map;
-  }, [map, mapRef]);
-  return null;
-}
+const LUCENA_CENTER = { lat: 13.9394, lng: 121.6169 };
+const adminMapContainerStyle = { width: '100%', height: '100%' };
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -59,8 +31,10 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [addresses, setAddresses] = useState({});
   const [mapSearchQuery, setMapSearchQuery] = useState('');
+  const [activeInfoWindow, setActiveInfoWindow] = useState(null);
   const adminMapRef = useRef(null);
-  const adminMarkerRefs = useRef({});
+
+  const { isLoaded } = useGoogleMapsLoaded();
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -92,7 +66,7 @@ export default function AdminDashboard() {
             const addr = await reverseGeocode(r.location.lat, r.location.lng);
             newAddresses[key] = addr;
             if (!wasCached) {
-              await new Promise((res) => setTimeout(res, 1100)); // only throttle real API calls
+              await new Promise((res) => setTimeout(res, 1100));
             }
           }
         }
@@ -149,30 +123,43 @@ export default function AdminDashboard() {
     });
   };
 
+  const onAdminMapLoad = useCallback((map) => {
+    adminMapRef.current = map;
+    map.addListener('heading_changed', () => {
+      if (map.getHeading() !== 0) map.setHeading(0);
+    });
+    map.addListener('tilt_changed', () => {
+      if (map.getTilt() !== 0) map.setTilt(0);
+    });
+  }, []);
+
+  const getMarkerIcon = (color) => ({
+    path: window.google.maps.SymbolPath.CIRCLE,
+    fillColor: color,
+    fillOpacity: 1,
+    strokeColor: 'white',
+    strokeWeight: 2,
+    scale: 10,
+  });
+
   const handleMapSearch = async (e) => {
     if (e.key !== 'Enter') return;
     if (!mapSearchQuery.trim()) return;
 
-    // Check if it looks like a Report ID first
     const cleanQuery = mapSearchQuery.trim().replace('#', '').toUpperCase();
     const matchedReport = reports.find(
       (r) => r.reportId?.toUpperCase() === cleanQuery
     );
 
     if (matchedReport && matchedReport.location?.lat && matchedReport.location?.lng) {
-      adminMapRef.current?.flyTo(
-        [matchedReport.location.lat, matchedReport.location.lng],
-        17,
-        { duration: 1.5 }
-      );
+      adminMapRef.current?.panTo({ lat: matchedReport.location.lat, lng: matchedReport.location.lng });
+      adminMapRef.current?.setZoom(17);
       setTimeout(() => {
-        const marker = adminMarkerRefs.current[matchedReport.id];
-        if (marker) marker.openPopup();
-      }, 1600);
+        setActiveInfoWindow(matchedReport.id);
+      }, 800);
       return;
     }
 
-    // Otherwise treat as a location search
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(mapSearchQuery)}&format=json&limit=1&countrycodes=ph`,
@@ -181,7 +168,8 @@ export default function AdminDashboard() {
       const data = await res.json();
       if (data.length > 0) {
         const { lat, lon } = data[0];
-        adminMapRef.current?.flyTo([parseFloat(lat), parseFloat(lon)], 16, { duration: 1.5 });
+        adminMapRef.current?.panTo({ lat: parseFloat(lat), lng: parseFloat(lon) });
+        adminMapRef.current?.setZoom(16);
       } else {
         alert('No matching report or location found.');
       }
@@ -308,74 +296,83 @@ export default function AdminDashboard() {
                     onKeyDown={handleMapSearch}
                   />
                 </div>
-                <MapContainer
-                  center={LUCENA_CENTER}
-                  zoom={14}
-                  style={{ width: '100%', height: '100%' }}
-                  zoomControl={true}
-                >
-                  <AdminMapController mapRef={adminMapRef} />
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  {reports
-                    .filter((r) => r.location?.lat && r.location?.lng)
-                    .map((report) => (
-                      <Marker
-                        key={report.id}
-                        position={[report.location.lat, report.location.lng]}
-                        icon={createIcon(statusColors[report.status] || '#e53935')}
-                        ref={(el) => {
-                          if (el) adminMarkerRefs.current[report.id] = el;
-                        }}
-                      >
-                      <Popup>
-                        <div style={{ fontFamily: 'sans-serif', minWidth: '160px', maxWidth: '200px' }}>
-                          <p style={{ fontWeight: 700, color: '#1a4a1a', marginBottom: 4 }}>
-                            #{report.reportId || report.id.slice(0, 6).toUpperCase()}
-                          </p>
-                          <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: 4 }}>
-                            {report.category}
-                          </p>
-                          <p style={{ fontSize: '0.78rem', color: '#888', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <CalendarIcon /> {formatDate(report.createdAt)}
-                          </p>
-                          <span style={{
-                            display: 'inline-block',
-                            padding: '3px 10px',
-                            borderRadius: 20,
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            color: 'white',
-                            background: statusColors[report.status] || '#e53935',
-                            marginBottom: 4,
-                          }}>
-                            {report.status || 'Pending'}
-                          </span>
-                          {report.description && (
-                            <p style={{ fontSize: '0.78rem', color: '#555', marginTop: 4, borderTop: '1px solid #eee', paddingTop: 4 }}>
-                              {report.description}
-                            </p>
+                {isLoaded && (
+                  <GoogleMap
+                    mapContainerStyle={adminMapContainerStyle}
+                    center={LUCENA_CENTER}
+                    zoom={14}
+                    onLoad={onAdminMapLoad}
+                    onClick={() => setActiveInfoWindow(null)}
+                    options={{
+                      zoomControl: false,
+                      panControl: false,
+                      cameraControl: false,
+                      streetViewControl: false,
+                      mapTypeControl: false,
+                      fullscreenControl: false,
+                      rotateControl: false,
+                      keyboardShortcuts: false,
+                      gestureHandling: 'greedy',
+                    }}
+                  >
+                    {reports
+                      .filter((r) => r.location?.lat && r.location?.lng)
+                      .map((report) => (
+                        <MarkerF
+                          key={report.id}
+                          position={{ lat: report.location.lat, lng: report.location.lng }}
+                          icon={getMarkerIcon(statusColors[report.status] || '#e53935')}
+                          onClick={() => setActiveInfoWindow(report.id)}
+                        >
+                          {activeInfoWindow === report.id && (
+                            <InfoWindowF onCloseClick={() => setActiveInfoWindow(null)}>
+                              <div className="admin-info-popup" style={{ fontFamily: 'sans-serif', minWidth: '160px', maxWidth: '200px' }}>
+                                <p style={{ fontWeight: 700, color: '#1a4a1a', marginBottom: 4 }}>
+                                  #{report.reportId || report.id.slice(0, 6).toUpperCase()}
+                                </p>
+                                <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: 4 }}>
+                                  {report.category}
+                                </p>
+                                <p style={{ fontSize: '0.78rem', color: '#888', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                  <CalendarIcon /> {formatDate(report.createdAt)}
+                                </p>
+                                <span style={{
+                                  display: 'inline-block',
+                                  padding: '3px 10px',
+                                  borderRadius: 20,
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  color: 'white',
+                                  background: statusColors[report.status] || '#e53935',
+                                  marginBottom: 4,
+                                }}>
+                                  {report.status || 'Pending'}
+                                </span>
+                                {report.description && (
+                                  <p style={{ fontSize: '0.78rem', color: '#555', marginTop: 4, borderTop: '1px solid #eee', paddingTop: 4 }}>
+                                    {report.description}
+                                  </p>
+                                )}
+                                {(report.locationDescription || addresses[report.id]) && (
+                                  <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <PinIcon /> {report.locationDescription || addresses[report.id]}
+                                  </p>
+                                )}
+                                {report.assignedTo && (
+                                  <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <BuildingIcon /> {report.assignedTo}
+                                  </p>
+                                )}
+                                {report.photo && (
+                                  <img src={report.photo} alt="Report" style={{ width: '100%', borderRadius: 6, marginTop: 6 }} />
+                                )}
+                              </div>
+                            </InfoWindowF>
                           )}
-                          {(report.locationDescription || addresses[report.id]) && (
-                            <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                              <PinIcon /> {report.locationDescription || addresses[report.id]}
-                            </p>
-                          )}
-                          {report.assignedTo && (
-                            <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
-                              <BuildingIcon /> {report.assignedTo}
-                            </p>
-                          )}
-                          {report.photo && (
-                            <img src={report.photo} alt="Report" style={{ width: '100%', borderRadius: 6, marginTop: 6 }} />
-                          )}
-                        </div>
-                      </Popup>
-                      </Marker>
-                    ))}
-                </MapContainer>
+                        </MarkerF>
+                      ))}
+                  </GoogleMap>
+                )}
 
                 <div className="ad-map-legend">
                   {Object.entries(statusColors).map(([status, color]) => (

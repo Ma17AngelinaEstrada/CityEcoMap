@@ -12,28 +12,31 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageReports from './pages/admin/ManageReports';
 import ExportReports from './pages/admin/ExportReports';
 import ManageUsers from './pages/admin/ManageUsers';
+import { GoogleMapsProvider } from './context/GoogleMapsLoaderContext';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<SplashScreen />} />
-        <Route path="/map" element={<MapView />} />
-        <Route path="/submit-report" element={<SubmitReport />} />
-        <Route path="/review-report" element={<ReviewSubmit />} />
-        <Route path="/confirmation" element={<Confirmation />} />
-        <Route path="/track-report" element={<TrackReport />} />
-        <Route path="/about" element={<About />} />
+    <GoogleMapsProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<SplashScreen />} />
+          <Route path="/map" element={<MapView />} />
+          <Route path="/submit-report" element={<SubmitReport />} />
+          <Route path="/review-report" element={<ReviewSubmit />} />
+          <Route path="/confirmation" element={<Confirmation />} />
+          <Route path="/track-report" element={<TrackReport />} />
+          <Route path="/about" element={<About />} />
 
-        {/* Admin Routes */}
-        <Route path="/admin" element={<AdminLogin />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin/reports" element={<ManageReports />} />
-        <Route path="/admin/export" element={<ExportReports />} />
-        <Route path="/admin/users" element={<ManageUsers />} />
-        
-      </Routes>
-    </Router>
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/reports" element={<ManageReports />} />
+          <Route path="/admin/export" element={<ExportReports />} />
+          <Route path="/admin/users" element={<ManageUsers />} />
+          
+        </Routes>
+      </Router>
+    </GoogleMapsProvider>
   );
 }
 

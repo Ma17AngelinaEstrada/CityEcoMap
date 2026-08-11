@@ -1,43 +1,63 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Autocomplete } from '@react-google-maps/api';
+import { GOOGLE_MAPS_LIBRARIES } from '../../utils/googleMapsLibraries';
 import logo from '../../logowhite2.png';
 import './SubmitReport.css';
 import '../../styles/CitizenHeader.css';
 import { TrashIcon, WaveIcon, CheckIcon, CameraIcon, ImageIcon, XIcon, PinIcon, ArrowLeftIcon } from '../../components/Icons';
+import { useGoogleMapsLoaded } from '../../context/GoogleMapsLoaderContext';
+
+const SUB_CATEGORIES = {
+  'Waste Issue': [
+    'Illegal Dumping',
+    'Uncollected Garbage',
+    'Waste Affecting Rivers, Waterways, and Natural Water Bodies',
+    'Other',
+  ],
+  'Drainage Issue': [
+    'Blocked Drainage',
+    'Damaged Drainage',
+    'Flooding',
+    'Other',
+  ],
+};
 
 function SubmitReport() {
   const navigate = useNavigate();
   const location = useLocation();
   const previousForm = location.state?.previousForm;
 
+  const [fullName, setFullName] = useState(previousForm?.fullName || '');
   const [selectedCategory, setSelectedCategory] = useState(previousForm?.selectedCategory || '');
+  const [subCategory, setSubCategory] = useState(previousForm?.subCategory || '');
+  const [otherSubCategory, setOtherSubCategory] = useState(previousForm?.otherSubCategory || '');
   const [description, setDescription] = useState(previousForm?.description || '');
   const [email, setEmail] = useState(previousForm?.email || '');
   const [photo, setPhoto] = useState(previousForm?.photo || null);
   const [photoPreview, setPhotoPreview] = useState(previousForm?.photoPreview || null);
-  const [location2, setLocation2] = useState(null);
+  const [location2, setLocation2] = useState(previousForm?.location || null);
+  const [addressInput, setAddressInput] = useState(previousForm?.addressInput || '');
   const [locationDescription, setLocationDescription] = useState(previousForm?.locationDescription || '');
+  const [autocompleteInstance, setAutocompleteInstance] = useState(null);
 
+  const { isLoaded } = useGoogleMapsLoaded();
+
+  // Reset sub-category whenever the parent category changes
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setLocation2({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-        },
-        () => setLocation2(null)
-      );
+    if (!previousForm) {
+      setSubCategory('');
+      setOtherSubCategory('');
     }
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory]);
 
   // Block browser back button if there's progress
   useEffect(() => {
     window.history.pushState(null, '', window.location.href);
 
     const handlePopState = () => {
-      const hasProgress = selectedCategory || description || email || photo;
+      const hasProgress = fullName || selectedCategory || description || email || photo;
       if (hasProgress) {
         window.history.pushState(null, '', window.location.href);
         if (window.confirm('You have unsaved progress. Are you sure you want to leave?')) {
@@ -50,7 +70,7 @@ function SubmitReport() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [selectedCategory, description, email, photo, navigate]);
+  }, [fullName, selectedCategory, description, email, photo, navigate]);
 
   const handlePhoto = (e) => {
     const file = e.target.files[0];
@@ -61,14 +81,70 @@ function SubmitReport() {
   };
 
   const isValidEmail = (email) => {
-    if (!email.trim()) return true; // empty is OK since it's optional
+    if (!email.trim()) return true;
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
   };
 
+  const onAutocompleteLoad = (autocomplete) => {
+    autocomplete.setComponentRestrictions({ country: 'ph' });
+    setAutocompleteInstance(autocomplete);
+  };
+
+  const onPlaceChanged = () => {
+    if (!autocompleteInstance) return;
+    const place = autocompleteInstance.getPlace();
+    if (!place.geometry || !place.geometry.location) {
+      alert('Please select an address from the dropdown suggestions.');
+      return;
+    }
+    setLocation2({
+      lat: place.geometry.location.lat(),
+      lng: place.geometry.location.lng(),
+    });
+    setAddressInput(place.formatted_address || place.name);
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Location services are not supported by your browser.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setLocation2(coords);
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${coords.lat}&lon=${coords.lng}&format=json`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          const data = await res.json();
+          setAddressInput(data.display_name || `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`);
+        } catch {
+          setAddressInput(`${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`);
+        }
+      },
+      () => alert('Unable to get your current location. Please type your address instead.'),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   const handleSubmit = () => {
+    if (!fullName.trim()) {
+      alert('Please enter your name.');
+      return;
+    }
     if (!selectedCategory) {
       alert('Please select a report category.');
+      return;
+    }
+    if (!subCategory) {
+      alert('Please select a specific issue type.');
+      return;
+    }
+    if (subCategory === 'Other' && !otherSubCategory.trim()) {
+      alert('Please specify the issue type.');
       return;
     }
     if (!photo) {
@@ -79,33 +155,51 @@ function SubmitReport() {
       alert('Please write a description of the issue.');
       return;
     }
+    if (!location2) {
+      alert('Please enter and select an address for this report.');
+      return;
+    }
+    if (!locationDescription.trim()) {
+      alert('Please specify the exact spot of the issue.');
+      return;
+    }
     if (!isValidEmail(email)) {
       alert('Please enter a valid email address, or leave it blank.');
       return;
     }
     navigate('/review-report', {
-      state: { form: { selectedCategory, description, email, photo, photoPreview, location: location2, locationDescription } }
+      state: {
+        form: {
+          fullName,
+          selectedCategory,
+          subCategory: subCategory === 'Other' ? otherSubCategory : subCategory,
+          description,
+          email,
+          photo,
+          photoPreview,
+          location: location2,
+          addressInput,
+          locationDescription,
+        }
+      }
     });
+  };
+
+  const hasProgress = fullName || selectedCategory || description || email || photo;
+
+  const handleLeave = () => {
+    if (hasProgress) {
+      if (!window.confirm('You have unsaved progress. Are you sure you want to leave?')) return;
+    }
+    navigate('/map');
   };
 
   return (
     <div className="report-container">
       <div className="citizen-header report-header">
-        <button className="header-back-btn" onClick={() => {
-          const hasProgress = selectedCategory || description || email || photo;
-          if (hasProgress) {
-            if (!window.confirm('You have unsaved progress. Are you sure you want to leave?')) return;
-          }
-          navigate('/map');
-        }}><ArrowLeftIcon /></button>
+        <button className="header-back-btn" onClick={handleLeave}><ArrowLeftIcon /></button>
         <img src={logo} alt="CityEcoMap" className="logo-img" />
-        <button className="header-close-btn" onClick={() => {
-          const hasProgress = selectedCategory || description || email || photo;
-          if (hasProgress) {
-            if (!window.confirm('You have unsaved progress. Are you sure you want to leave?')) return;
-          }
-          navigate('/map');
-        }}><XIcon /></button>
+        <button className="header-close-btn" onClick={handleLeave}><XIcon /></button>
       </div>
 
       <div className="report-body">
@@ -113,6 +207,16 @@ function SubmitReport() {
 
           <h2 className="form-title">REPORT AN ISSUE</h2>
           <p className="form-subtitle">Choose a report type, add a photo, and describe the issue.</p>
+
+          <div className="section-label">YOUR NAME <span className="required">(Required)</span></div>
+          <input
+            type="text"
+            className="email-input"
+            placeholder="Juan Dela Cruz"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            maxLength={100}
+          />
 
           <div className="category-section">
             <div
@@ -135,42 +239,69 @@ function SubmitReport() {
             </div>
           </div>
 
-          <div className="section-label">ADD PHOTO</div>
-<div className="photo-options">
-  <label className="photo-option-btn" htmlFor="photo-camera">
-    <CameraIcon /> Take a Photo
-  </label>
-  <input
-    id="photo-camera"
-    type="file"
-    accept="image/*"
-    capture="environment"
-    onChange={handlePhoto}
-    style={{ display: 'none' }}
-  />
-  <label className="photo-option-btn" htmlFor="photo-gallery">
-    <ImageIcon /> Upload from Gallery
-  </label>
-  <input
-    id="photo-gallery"
-    type="file"
-    accept="image/*"
-    onChange={handlePhoto}
-    style={{ display: 'none' }}
-  />
-</div>
+          {selectedCategory && (
+            <>
+              <div className="section-label">SPECIFIC ISSUE <span className="required">(Required)</span></div>
+              <select
+                className="email-input"
+                value={subCategory}
+                onChange={(e) => setSubCategory(e.target.value)}
+              >
+                <option value="">Select the specific issue...</option>
+                {SUB_CATEGORIES[selectedCategory].map((sub) => (
+                  <option key={sub} value={sub}>{sub}</option>
+                ))}
+              </select>
+              {subCategory === 'Other' && (
+                <input
+                  type="text"
+                  className="email-input"
+                  placeholder="Please specify the issue"
+                  value={otherSubCategory}
+                  onChange={(e) => setOtherSubCategory(e.target.value)}
+                  maxLength={100}
+                  style={{ marginTop: '8px' }}
+                />
+              )}
+            </>
+          )}
 
-{photoPreview && (
-  <div className="photo-preview-wrapper">
-    <img src={photoPreview} alt="Preview" className="photo-preview" />
-    <button
-      className="photo-remove-btn"
-      onClick={() => { setPhoto(null); setPhotoPreview(null); }}
-    >
-      <XIcon /> Remove photo
-    </button>
-  </div>
-)}
+          <div className="section-label">ADD PHOTO</div>
+          <div className="photo-options">
+            <label className="photo-option-btn" htmlFor="photo-camera">
+              <CameraIcon /> Take a Photo
+            </label>
+            <input
+              id="photo-camera"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhoto}
+              style={{ display: 'none' }}
+            />
+            <label className="photo-option-btn" htmlFor="photo-gallery">
+              <ImageIcon /> Upload from Gallery
+            </label>
+            <input
+              id="photo-gallery"
+              type="file"
+              accept="image/*"
+              onChange={handlePhoto}
+              style={{ display: 'none' }}
+            />
+          </div>
+
+          {photoPreview && (
+            <div className="photo-preview-wrapper">
+              <img src={photoPreview} alt="Preview" className="photo-preview" />
+              <button
+                className="photo-remove-btn"
+                onClick={() => { setPhoto(null); setPhotoPreview(null); }}
+              >
+                <XIcon /> Remove photo
+              </button>
+            </div>
+          )}
 
           <div className="section-label">DESCRIPTION</div>
           <textarea
@@ -193,13 +324,30 @@ function SubmitReport() {
             onChange={(e) => setEmail(e.target.value)}
           />
 
-          <p className="location-note"><PinIcon /> Your current location will be automatically detected.</p>
+          <div className="section-label">ADDRESS <span className="required">(Required)</span></div>
+          <p className="notify-note">Enter the address of the issue. Start typing and select from the suggestions.</p>
+          {isLoaded ? (
+            <Autocomplete onLoad={onAutocompleteLoad} onPlaceChanged={onPlaceChanged}>
+              <input
+                type="text"
+                className="email-input"
+                placeholder="e.g. Quezon Avenue, Ibabang Dupay, Lucena City"
+                value={addressInput}
+                onChange={(e) => setAddressInput(e.target.value)}
+              />
+            </Autocomplete>
+          ) : (
+            <input type="text" className="email-input" placeholder="Loading address search..." disabled />
+          )}
+          <button type="button" className="use-location-btn" onClick={handleUseCurrentLocation}>
+            <PinIcon /> Use my current location instead
+          </button>
 
           <div className="section-label">
-            LOCATION DESCRIPTION <span className="optional">(Optional)</span>
+            EXACT SPOT <span className="required">(Required)</span>
           </div>
           <p className="notify-note">
-            Help us pinpoint the exact spot — e.g. "Near Jollibee, Brgy. 3" or "Beside the basketball court."
+            If the address above is a large area (e.g. a subdivision or campus), tell us exactly where — e.g. "Beside the basketball court" or "Near Gate 2."
           </p>
           <input
             type="text"

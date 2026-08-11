@@ -169,3 +169,40 @@
 }
 
 .summary-icon svg { width: 22px; height: 22px; }
+
+/* Larger fonts for readability */
+.review-title {
+  font-size: 22px;
+}
+
+.review-subtitle {
+  font-size: 15px;
+}
+
+.summary-title {
+  font-size: 18px;
+}
+
+.summary-label {
+  font-size: 12.5px;
+}
+
+.summary-value {
+  font-size: 15.5px;
+}
+
+.summary-desc {
+  font-size: 14px;
+}
+
+.review-note {
+  font-size: 14.5px;
+}
+
+.submit-btn {
+  font-size: 17px;
+}
+
+.back-btn {
+  font-size: 15px;
+}

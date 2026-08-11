@@ -8,6 +8,7 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   z-index: 1000;
   position: relative;
+  flex-shrink: 0;
 }
 
 .citizen-header .header-logo {
@@ -75,4 +76,19 @@
   width: 20px;
   height: 20px;
   display: block;
+}
+
+/* Larger fonts for readability */
+.citizen-header .logo-img {
+  height: 44px;
+}
+
+.citizen-header .nav-link {
+  font-size: 16px;
+}
+
+@media (max-width: 767px) {
+  .citizen-header .logo-img {
+    height: 36px;
+  }
 }

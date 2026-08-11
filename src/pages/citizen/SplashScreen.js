@@ -6,6 +6,11 @@ import './SplashScreen.css';
 function SplashScreen() {
   const navigate = useNavigate();
 
+  const handleGetStarted = () => {
+    const tourSeen = localStorage.getItem('cityecomap_tour_seen');
+    navigate('/map', { state: { showTour: !tourSeen } });
+  };
+
   return (
     <div className="splash-container">
       <div className="splash-hero">
@@ -38,7 +43,7 @@ function SplashScreen() {
           </div>
         </div>
 
-        <button className="splash-button" onClick={() => navigate('/map')}>
+        <button className="splash-button" onClick={handleGetStarted}>
           Get Started
         </button>
       </div>

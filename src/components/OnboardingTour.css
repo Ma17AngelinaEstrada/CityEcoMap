@@ -1,0 +1,103 @@
+.tour-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5000;
+  background: transparent;
+}
+
+.tour-spotlight {
+  position: fixed;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65);
+  border: 2px solid white;
+  z-index: 5001;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.tour-tooltip {
+  position: fixed;
+  width: 280px;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  z-index: 5002;
+  transition: all 0.3s ease;
+}
+
+.tour-step-count {
+  font-size: 0.72rem;
+  color: #999;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.tour-tooltip-title {
+  font-size: 0.98rem;
+  color: #1a4a1a;
+  margin-bottom: 6px;
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.tour-tooltip-desc {
+  font-size: 0.82rem;
+  color: #555;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.tour-tooltip-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tour-skip-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.tour-next-btn {
+  background: #1a6b3c;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tour-next-btn:hover {
+  background: #145a32;
+}
+
+/* Larger fonts for readability */
+.tour-step-count {
+  font-size: 13px;
+}
+
+.tour-tooltip-title {
+  font-size: 17px;
+}
+
+.tour-tooltip-desc {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.tour-skip-btn {
+  font-size: 14px;
+}
+
+.tour-next-btn {
+  font-size: 14.5px;
+}

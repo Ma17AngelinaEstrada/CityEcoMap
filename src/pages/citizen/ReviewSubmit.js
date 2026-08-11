@@ -4,26 +4,14 @@ import logo from '../../logowhite2.png';
 import './ReviewSubmit.css';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
-import { reverseGeocode } from '../../utils/geocode';
 import '../../styles/CitizenHeader.css';
-import { TrashIcon, CameraIcon, ClipboardIcon, PinIcon, MailIcon, XIcon, ArrowLeftIcon } from '../../components/Icons';
+import { TrashIcon, CameraIcon, ClipboardIcon, PinIcon, MailIcon, XIcon, ArrowLeftIcon, UserIcon } from '../../components/Icons';
 
 function ReviewSubmit() {
   const navigate = useNavigate();
   const location = useLocation();
   const { form } = location.state || {};
   const [submitting, setSubmitting] = useState(false);
-  const [readableAddress, setReadableAddress] = useState('');
-
-  useEffect(() => {
-    const resolveAddress = async () => {
-      if (form?.location?.lat && form?.location?.lng) {
-        const addr = await reverseGeocode(form.location.lat, form.location.lng);
-        setReadableAddress(addr);
-      }
-    };
-    resolveAddress();
-  }, [form]);
 
   useEffect(() => {
     if (!form) {
@@ -43,79 +31,76 @@ function ReviewSubmit() {
   }, [form, navigate]);
 
   const handleSubmit = async () => {
-  setSubmitting(true);
-  try {
-    // Generate Report ID
-    const reportId = 'WI' + Math.random().toString(36).substring(2, 7).toUpperCase();
+    setSubmitting(true);
+    try {
+      const reportId = 'WI' + Math.random().toString(36).substring(2, 7).toUpperCase();
 
-    // Compress photo to base64 if exists
-    let photoBase64 = null;
-    if (form?.photo) {
-      photoBase64 = await compressPhoto(form.photo);
+      let photoBase64 = null;
+      if (form?.photo) {
+        photoBase64 = await compressPhoto(form.photo);
+      }
+
+      const savedReports = JSON.parse(localStorage.getItem('cityecomap_my_reports') || '[]');
+
+      await addDoc(collection(db, 'reports'), {
+        reportId,
+        fullName: form?.fullName || null,
+        category: form?.selectedCategory,
+        subCategory: form?.subCategory || null,
+        description: form?.description,
+        email: form?.email || null,
+        location: form?.location || null,
+        addressInput: form?.addressInput || null,
+        locationDescription: form?.locationDescription || null,
+        photo: photoBase64,
+        status: 'Pending',
+        createdAt: serverTimestamp(),
+      });
+
+      savedReports.unshift({ reportId, submittedAt: new Date().toISOString() });
+      localStorage.setItem('cityecomap_my_reports', JSON.stringify(savedReports.slice(0, 50)));
+
+      navigate('/confirmation', {
+        replace: true,
+        state: { reportId, location: form?.location }
+      });
+
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      alert('Failed to submit report. Please try again.');
+      setSubmitting(false);
     }
+  };
 
-    // Save to Firestore
-    await addDoc(collection(db, 'reports'), {
-      reportId,
-      category: form?.selectedCategory,
-      description: form?.description,
-      email: form?.email || null,
-      location: form?.location || null,
-      locationDescription: form?.locationDescription || null,
-      photo: photoBase64,
-      status: 'Pending',
-      createdAt: serverTimestamp(),
-    });
+  const compressPhoto = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxSize = 500;
+          let width = img.width;
+          let height = img.height;
 
-    navigate('/confirmation', {
-      replace: true,
-      state: { reportId, location: form?.location }
-    });
+          if (width > height && width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          } else if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
 
-  } catch (error) {
-    console.error('Error submitting report:', error);
-    alert('Failed to submit report. Please try again.');
-    setSubmitting(false);
-  }
-};
-
-const compressPhoto = (file) => {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxSize = 500;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height && width > maxSize) {
-          height = (height * maxSize) / width;
-          width = maxSize;
-        } else if (height > maxSize) {
-          width = (width * maxSize) / height;
-          height = maxSize;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.5));
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.5));
+        };
+        img.src = e.target.result;
       };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-};
-
-  const getAddress = () => {
-    if (readableAddress) return readableAddress;
-    if (form?.location) {
-      return 'Detecting address...';
-    }
-    return 'Location not detected';
+      reader.readAsDataURL(file);
+    });
   };
 
   return (
@@ -141,15 +126,19 @@ const compressPhoto = (file) => {
             <h3 className="summary-title">Report Summary</h3>
             <hr />
             <div className="summary-row">
+              <div className="summary-icon"><UserIcon /></div>
+              <div className="summary-info">
+                <span className="summary-label">Name</span>
+                <span className="summary-value">{form?.fullName || 'Not provided'}</span>
+              </div>
+            </div>
+            <hr />
+            <div className="summary-row">
               <div className="summary-icon"><TrashIcon /></div>
               <div className="summary-info">
                 <span className="summary-label">Report Type</span>
                 <span className="summary-value">{form?.selectedCategory || 'Not selected'}</span>
-                <span className="summary-desc">
-                  {form?.selectedCategory === 'Waste Issue'
-                    ? 'Report problems related to garbage and litter.'
-                    : 'Report problems related to drainage and flooding.'}
-                </span>
+                <span className="summary-desc">{form?.subCategory || ''}</span>
               </div>
             </div>
             <hr />
@@ -177,11 +166,8 @@ const compressPhoto = (file) => {
             <div className="summary-row">
               <div className="summary-icon"><PinIcon /></div>
               <div className="summary-info">
-                <span className="summary-label">Location</span>
-                <span className="summary-value">
-                  {form?.location ? 'Current Location Detected' : 'Location not detected'}
-                </span>
-                <span className="summary-desc">{getAddress()}</span>
+                <span className="summary-label">Address</span>
+                <span className="summary-desc">{form?.addressInput || 'Not provided'}</span>
                 {form?.locationDescription && (
                   <span className="summary-desc" style={{ marginTop: '4px', fontStyle: 'italic' }}>
                     "{form.locationDescription}"

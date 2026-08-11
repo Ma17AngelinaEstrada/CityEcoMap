@@ -370,3 +370,58 @@
   width: 20px;
   height: 20px;
 }
+
+/* Larger fonts for readability */
+.track-title {
+  font-size: 28px;
+}
+
+.track-subtitle {
+  font-size: 15px;
+}
+
+.report-id-input {
+  font-size: 16px;
+}
+
+.search-btn {
+  font-size: 16px;
+}
+
+.status-banner {
+  font-size: 17px;
+}
+
+.detail-label {
+  font-size: 13px;
+}
+
+.detail-value {
+  font-size: 16px;
+}
+
+.timeline-title {
+  font-size: 16px;
+}
+
+.timeline-step span {
+  font-size: 14px;
+}
+
+.empty-state h3 {
+  font-size: 19px;
+}
+
+.empty-state p {
+  font-size: 15px;
+}
+
+.not-found {
+  font-size: 15px;
+}
+
+@media (max-width: 767px) {
+  .bottom-nav-item {
+    font-size: 14px !important;
+  }
+}

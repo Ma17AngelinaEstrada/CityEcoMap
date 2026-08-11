@@ -301,3 +301,86 @@
 .photo-remove-btn svg { width: 12px; height: 12px; }
 .location-note { display: flex; align-items: center; justify-content: center; gap: 5px; }
 .location-note svg { width: 14px; height: 14px; }
+
+.required {
+  color: #e53935;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.use-location-btn {
+  background: none;
+  border: none;
+  color: #1a6b3c;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 6px 0 12px;
+  text-decoration: underline;
+}
+
+.use-location-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Larger fonts for readability */
+.form-title {
+  font-size: 22px;
+}
+
+.form-subtitle {
+  font-size: 15px;
+}
+
+.category-card strong {
+  font-size: 16px;
+}
+
+.category-card p {
+  font-size: 13.5px;
+}
+
+.section-label {
+  font-size: 15px !important;
+  letter-spacing: 0.5px;
+}
+
+.optional,
+.required {
+  font-size: 13px !important;
+}
+
+.notify-note {
+  font-size: 14px !important;
+  line-height: 1.6;
+}
+
+.photo-option-btn {
+  font-size: 0.95rem;
+}
+
+.description-input,
+.email-input {
+  font-size: 16px;
+}
+
+.description-input::placeholder,
+.email-input::placeholder {
+  font-size: 15px;
+}
+
+.char-count {
+  font-size: 13px;
+}
+
+.submit-btn {
+  font-size: 17px;
+}
+
+.use-location-btn {
+  font-size: 15px !important;
+}

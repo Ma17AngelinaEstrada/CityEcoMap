@@ -349,7 +349,7 @@
   padding-left: 36px;
 }
 
-.leaflet-popup-content svg {
+.admin-info-popup svg {
   width: 12px;
   height: 12px;
   flex-shrink: 0;

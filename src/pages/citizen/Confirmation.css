@@ -157,3 +157,37 @@
 .confirm-header.citizen-header {
   justify-content: center;
 }
+
+/* Larger fonts for readability */
+.confirm-title {
+  font-size: 22px;
+}
+
+.thank-you {
+  font-size: 28px;
+}
+
+.thank-you-sub {
+  font-size: 15px;
+}
+
+.report-id-text {
+  font-size: 16px;
+}
+
+.report-id-text strong {
+  font-size: 19px;
+}
+
+.warning-box p {
+  font-size: 14px;
+}
+
+.copy-btn,
+.map-btn {
+  font-size: 16px;
+}
+
+.home-link {
+  font-size: 15px;
+}

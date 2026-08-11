@@ -299,3 +299,54 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Larger fonts for readability */
+.about-title {
+  font-size: 28px;
+}
+
+.about-subtitle {
+  font-size: 15px;
+}
+
+.section-content h3 {
+  font-size: 19px;
+}
+
+.section-content p {
+  font-size: 15px;
+}
+
+.step-box strong {
+  font-size: 15px;
+}
+
+.step-box p {
+  font-size: 13px;
+}
+
+.category-box strong {
+  font-size: 16px;
+}
+
+.category-box p {
+  font-size: 14px;
+}
+
+.about-cta h3 {
+  font-size: 23px;
+}
+
+.about-cta p {
+  font-size: 15px;
+}
+
+.cta-btn {
+  font-size: 16px;
+}
+
+@media (max-width: 767px) {
+  .bottom-nav-item {
+    font-size: 14px !important;
+  }
+}

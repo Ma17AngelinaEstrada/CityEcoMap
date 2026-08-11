@@ -15,17 +15,17 @@
 
 /* Top hero area */
 .splash-hero {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 24px 60px;
-    min-height: 200px;
-    background-image: url('../../splash-bg.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-  }
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px 60px;
+  min-height: 200px;
+  background-image: url('../../splash-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
 
 .splash-logo {
   height: 70px;
@@ -58,14 +58,14 @@
 }
 
 .splash-title {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: bold;
   color: #1a3c1a;
   line-height: 1.25;
 }
 
 .splash-subtitle {
-  font-size: 14px;
+  font-size: 16px;
   color: #555;
   line-height: 1.6;
 }
@@ -75,7 +75,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 10px 0;
+  padding: 6px 0;
   border-top: 1px solid #f0f0f0;
   border-bottom: 1px solid #f0f0f0;
 }
@@ -88,7 +88,7 @@
 }
 
 .splash-owner-names {
-  font-size: 13px;
+  font-size: 14px;
   color: #444;
   line-height: 1.4;
 }
@@ -106,7 +106,7 @@
   gap: 10px;
   background: #f4faf5;
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 8px 10px;
 }
 
 .splash-notice-icon {
@@ -116,7 +116,7 @@
 }
 
 .splash-notice-item p {
-  font-size: 12px;
+  font-size: 13.5px;
   color: #444;
   line-height: 1.4;
 }
@@ -128,7 +128,7 @@
   color: white;
   border: none;
   border-radius: 14px;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: bold;
   cursor: pointer;
   margin-top: 6px;
@@ -148,15 +148,10 @@
 
   .splash-hero {
     flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    height: auto;
+    max-height: none;
     padding: 40px 24px 60px;
     min-height: 200px;
-    background-image: url('../../splash-bg.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
   }
 
   .splash-sheet {
@@ -173,6 +168,26 @@
   }
 
   .splash-title {
-    font-size: 34px;
+    font-size: 36px;
+  }
+}
+
+/* Safety net for short mobile screens */
+@media (max-height: 700px) {
+  .splash-hero {
+    flex-basis: 16vh;
+    min-height: 80px;
+  }
+
+  .splash-title {
+    font-size: 24px;
+  }
+
+  .splash-notices {
+    gap: 6px;
+  }
+
+  .splash-notice-item p {
+    font-size: 12.5px;
   }
 }
