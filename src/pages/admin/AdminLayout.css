@@ -212,8 +212,10 @@
 /* Main content area */
 .al2-main {
   flex: 1;
+  min-width: 0;
   padding: 2rem;
   overflow-y: auto;
+  overflow-x: hidden;
   background-color: #fafafa;
   height: 100%;
 }
@@ -274,28 +276,37 @@
   min-width: 72px;
 }
 
+.al2-sidebar-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 12px 0;
+}
+
+.al2-sidebar--collapsed .al2-sidebar-toolbar {
+  justify-content: center;
+  padding: 10px 0 0;
+}
+
 .al2-collapse-btn {
-  position: absolute;
-  top: 12px;
-  right: -12px;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: #ffffff;
-  color: #1a4a1a;
-  border: 1px solid #ddd;
-  font-size: 0.85rem;
+  background: rgba(255,255,255,0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.3);
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.15s;
 }
 
 .al2-collapse-btn:hover {
-  background: #f0f0f0;
+  background: rgba(255,255,255,0.22);
+  transform: scale(1.06);
 }
 
 .al2-sidebar--collapsed .al2-profile {

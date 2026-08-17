@@ -23,6 +23,19 @@ export default function ExportReports() {
   const [dateTo, setDateTo] = useState("");
   const [exportHistory, setExportHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [filterSubCategory, setFilterSubCategory] = useState("All");
+  const [quickRange, setQuickRange] = useState("custom");
+  const [specificMonth, setSpecificMonth] = useState("");
+  
+  const WASTE_SUBCATEGORIES = ["Illegal Dumping", "Uncollected Garbage", "Waste Affecting Rivers, Waterways, and Natural Water Bodies", "Other"];
+  const DRAINAGE_SUBCATEGORIES = ["Blocked Drainage", "Damaged Drainage", "Flooding", "Other"];
+
+  const KNOWN_SUBCATEGORIES = new Set([
+    ...WASTE_SUBCATEGORIES.filter((s) => s !== "Other"),
+    ...DRAINAGE_SUBCATEGORIES.filter((s) => s !== "Other"),
+  ]);
+  const isOtherSubCategory = (subCategory) =>
+    Boolean(subCategory) && !KNOWN_SUBCATEGORIES.has(subCategory);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -92,11 +105,17 @@ export default function ExportReports() {
 };
 
   const filtered = reports.filter((r) => {
-      const matchStatus = filterStatus === "All" || r.status === filterStatus;
-      const matchCategory = filterCategory === "All" || r.category === filterCategory;
-      const matchAssigned = filterAssigned === "All" || r.assignedTo === filterAssigned;
+    const matchStatus = filterStatus === "All" || r.status === filterStatus;
+    const matchCategory = filterCategory === "All" || r.category === filterCategory;
+    const matchSubCategory = (() => {
+      if (filterSubCategory === "All") return true;
+      if (filterSubCategory === "Other::Waste") return r.category === "Waste Issue" && isOtherSubCategory(r.subCategory);
+      if (filterSubCategory === "Other::Drainage") return r.category === "Drainage Issue" && isOtherSubCategory(r.subCategory);
+      return r.subCategory === filterSubCategory;
+    })();
+  const matchAssigned = filterAssigned === "All" || r.assignedTo === filterAssigned;
 
-      const cleanedSearch = searchQuery.replace(/#/g, "").trim().toLowerCase();
+    const cleanedSearch = searchQuery.replace(/#/g, "").trim().toLowerCase();
       const matchSearch = cleanedSearch === "" ||
         (r.reportId && r.reportId.toLowerCase().includes(cleanedSearch)) ||
         (r.description && r.description.toLowerCase().includes(cleanedSearch));
@@ -113,7 +132,7 @@ export default function ExportReports() {
           }
         }
       }
-      return matchStatus && matchCategory && matchAssigned && matchSearch && matchDate;
+      return matchStatus && matchCategory && matchSubCategory && matchAssigned && matchSearch && matchDate;
     });
 
   const formatDate = (ts) => {
@@ -129,18 +148,22 @@ export default function ExportReports() {
   const buildRows = () =>
     filtered.map((r) => [
       `#${r.reportId || r.id.slice(0, 6).toUpperCase()}`,
+      r.fullName || '—',
+      r.email || 'Not provided',
       r.category || '—',
+      r.subCategory === "Other" ? (r.subCategoryOther || "Other") : (r.subCategory || '—'),
       formatDate(r.createdAt),
-      r.locationDescription || (r.location ? (addresses[r.id] || `${r.location.lat.toFixed(4)}° N, ${r.location.lng.toFixed(4)}° E`) : '—'),
+      r.description || '—',
+      [r.locationDescription, r.addressInput || (r.location ? (addresses[r.id] || `${r.location.lat.toFixed(4)}° N, ${r.location.lng.toFixed(4)}° E`) : null)]
+        .filter(Boolean)
+        .join(' — ') || '—',
       r.assignedTo || '—',
       r.status || 'Pending',
-      r.email || 'Not provided',
-      r.description || '—',
     ]);
 
   const headers = [
-    "Report ID", "Type", "Date Submitted", "Location",
-    "Assigned To", "Status", "Email", "Description"
+    "Report ID", "Submitted By", "Email", "Category", "Sub-Category",
+    "Date Submitted", "Description", "Location", "Assigned To", "Status"
   ];
 
   const logExport = async (format) => {
@@ -180,7 +203,7 @@ export default function ExportReports() {
     body: buildRows(),
     styles: { fontSize: 7, cellPadding: 2 },
     headStyles: { fillColor: [26, 74, 26], textColor: 255 },
-    columnStyles: { 7: { cellWidth: 60 } },
+    columnStyles: { 6: { cellWidth: 40 }, 7: { cellWidth: 45 } },
   });
 
   docPdf.save(`CityEcoMap_Reports_${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -191,14 +214,69 @@ export default function ExportReports() {
   const wsData = [headers, ...buildRows()];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws["!cols"] = [
-    { wch: 12 }, { wch: 14 }, { wch: 20 }, { wch: 24 },
-    { wch: 10 }, { wch: 12 }, { wch: 22 }, { wch: 40 },
+    { wch: 12 }, { wch: 16 }, { wch: 22 }, { wch: 14 }, { wch: 18 },
+    { wch: 20 }, { wch: 35 }, { wch: 30 }, { wch: 10 }, { wch: 12 },
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Reports");
   XLSX.writeFile(wb, `CityEcoMap_Reports_${new Date().toISOString().slice(0, 10)}.xlsx`);
   logExport("Excel");
 };
+
+  const applyQuickRange = (value) => {
+    setQuickRange(value);
+    const today = new Date();
+
+    if (value === "all") {
+      setDateFrom("");
+      setDateTo("");
+      setSpecificMonth("");
+      return;
+    }
+
+    if (value === "last1") {
+      const from = new Date(today);
+      from.setMonth(from.getMonth() - 1);
+      setDateFrom(from.toISOString().slice(0, 10));
+      setDateTo(today.toISOString().slice(0, 10));
+      setSpecificMonth("");
+      return;
+    }
+
+    if (value === "last3") {
+      const from = new Date(today);
+      from.setMonth(from.getMonth() - 3);
+      setDateFrom(from.toISOString().slice(0, 10));
+      setDateTo(today.toISOString().slice(0, 10));
+      setSpecificMonth("");
+      return;
+    }
+
+    if (value === "quarter") {
+      const q = Math.floor(today.getMonth() / 3);
+      const from = new Date(today.getFullYear(), q * 3, 1);
+      const to = new Date(today.getFullYear(), q * 3 + 3, 0);
+      setDateFrom(from.toISOString().slice(0, 10));
+      setDateTo(to.toISOString().slice(0, 10));
+      setSpecificMonth("");
+      return;
+    }
+
+    if (value === "month") {
+      setDateFrom("");
+      setDateTo("");
+    }
+  };
+
+  const applySpecificMonth = (monthValue) => {
+    setSpecificMonth(monthValue);
+    if (!monthValue) return;
+    const [year, month] = monthValue.split("-").map(Number);
+    const from = new Date(year, month - 1, 1);
+    const to = new Date(year, month, 0);
+    setDateFrom(from.toISOString().slice(0, 10));
+    setDateTo(to.toISOString().slice(0, 10));
+  };
 
   return (
     <AdminLayout>
@@ -227,6 +305,38 @@ export default function ExportReports() {
             <option>Drainage Issue</option>
           </select>
         </div>
+        <div className="mr-filter-group">
+          <label>Sub-Category</label>
+          <select
+            className="mr-subcat-select"
+            value={filterSubCategory}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setFilterSubCategory(raw);
+              if (raw === "All") return;
+              if (raw === "Other::Waste") { setFilterCategory("Waste Issue"); return; }
+              if (raw === "Other::Drainage") { setFilterCategory("Drainage Issue"); return; }
+              if (WASTE_SUBCATEGORIES.includes(raw)) setFilterCategory("Waste Issue");
+              else if (DRAINAGE_SUBCATEGORIES.includes(raw)) setFilterCategory("Drainage Issue");
+            }}
+          >
+            <option value="All">All</option>
+            <optgroup label="Waste Issue">
+              {WASTE_SUBCATEGORIES.map((s) =>
+                s === "Other"
+                  ? <option key="w-other" value="Other::Waste">Other</option>
+                  : <option key={s} value={s}>{s}</option>
+              )}
+            </optgroup>
+            <optgroup label="Drainage Issue">
+              {DRAINAGE_SUBCATEGORIES.map((s) =>
+                s === "Other"
+                  ? <option key="d-other" value="Other::Drainage">Other</option>
+                  : <option key={`d-${s}`} value={s}>{s}</option>
+              )}
+            </optgroup>
+          </select>
+        </div>
         <div className="er-filter-group">
           <label>Assigned To</label>
           <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
@@ -244,27 +354,59 @@ export default function ExportReports() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="er-filter-group">
-          <label>From</label>
-          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        <div className="mr-filters-tail">
+          <div className="er-filter-group">
+            <label>Time Range</label>
+            <select value={quickRange} onChange={(e) => applyQuickRange(e.target.value)}>
+              <option value="custom">Custom Range</option>
+              <option value="all">All Time</option>
+              <option value="last1">Last 1 Month</option>
+              <option value="last3">Last 3 Months</option>
+              <option value="quarter">This Quarter</option>
+              <option value="month">Specific Month</option>
+            </select>
+          </div>
+          {quickRange === "month" && (
+            <div className="er-filter-group">
+              <label>Month</label>
+              <input type="month" value={specificMonth} onChange={(e) => applySpecificMonth(e.target.value)} />
+            </div>
+          )}
+          <div className="er-daterange-group">
+            <div className="er-filter-group">
+              <label>From</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setQuickRange("custom"); }}
+              />
+            </div>
+            <div className="er-filter-group">
+              <label>To</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setQuickRange("custom"); }}
+              />
+            </div>
+          </div>
+          <button
+            className="er-clear-btn"
+            onClick={() => {
+              setFilterStatus("All");
+              setFilterCategory("All");
+              setFilterSubCategory("All");
+              setFilterAssigned("All");
+              setSearchQuery("");
+              setDateFrom("");
+              setDateTo("");
+              setQuickRange("custom");
+              setSpecificMonth("");
+            }}
+          >
+            Clear Filters
+          </button>
         </div>
-        <div className="er-filter-group">
-          <label>To</label>
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-        </div>
-        <button
-          className="er-clear-btn"
-          onClick={() => {
-            setFilterStatus("All");
-            setFilterCategory("All");
-            setFilterAssigned("All");
-            setSearchQuery("");
-            setDateFrom("");
-            setDateTo("");
-          }}
-        >
-          Clear Filters
-        </button>
       </div>
 
       <div className="er-summary-bar">
@@ -323,11 +465,27 @@ export default function ExportReports() {
       ) : (
         <div className="er-table-card">
           <table className="er-table">
+            <colgroup>
+              <col style={{ width: "7%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "6%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "20%" }} />
+              <col style={{ width: "6%" }} />
+              <col style={{ width: "8%" }} />
+            </colgroup>
             <thead>
               <tr>
                 <th>Report ID</th>
-                <th>Type</th>
+                <th>Submitted By</th>
+                <th>Email</th>
+                <th>Category</th>
+                <th>Sub-Category</th>
                 <th>Date Submitted</th>
+                <th>Description</th>
                 <th>Location</th>
                 <th>Assigned To</th>
                 <th>Status</th>
@@ -335,27 +493,37 @@ export default function ExportReports() {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan="6" className="er-empty">No reports match the selected filters.</td></tr>
-              ) : (
-                filtered.map((r) => (
-                  <tr key={r.id}>
-                    <td>#{r.reportId || r.id.slice(0, 6).toUpperCase()}</td>
-                    <td>{r.category}</td>
-                    <td>{formatDate(r.createdAt)}</td>
-                    <td>
-                      {r.locationDescription && <div>{r.locationDescription}</div>}
-                      {r.location && (
-                        <div style={{ fontSize: '0.78rem', color: '#888' }}>
-                          {addresses[r.id] || 'Resolving...'}
-                        </div>
-                      )}
-                      {!r.locationDescription && !r.location && '—'}
-                    </td>
-                    <td>{r.assignedTo || "—"}</td>
-                    <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
-                  </tr>
-                ))
-              )}
+                <tr><td colSpan="10" className="er-empty">No reports match the selected filters.</td></tr>
+                ) : (
+                  filtered.map((r) => (
+                    <tr key={r.id}>
+                      <td>#{r.reportId || r.id.slice(0, 6).toUpperCase()}</td>
+                      <td>{r.fullName || "—"}</td>
+                      <td>{r.email || "—"}</td>
+                      <td>{r.category}</td>
+                      <td>
+                        {r.subCategory === "Other"
+                          ? (r.subCategoryOther || "Other")
+                          : (r.subCategory || "—")}
+                      </td>
+                      <td>{formatDate(r.createdAt)}</td>
+                      <td>{r.description || "—"}</td>
+                      <td>
+                        {r.locationDescription && <div>{r.locationDescription}</div>}
+                        {r.addressInput ? (
+                          <div style={{ fontSize: '0.78rem', color: '#888' }}>{r.addressInput}</div>
+                        ) : r.location ? (
+                          <div style={{ fontSize: '0.78rem', color: '#888' }}>
+                            {addresses[r.id] || 'Resolving...'}
+                          </div>
+                        ) : null}
+                        {!r.locationDescription && !r.addressInput && !r.location && '—'}
+                      </td>
+                      <td>{r.assignedTo || "—"}</td>
+                      <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
+                    </tr>
+                  ))
+                )}
             </tbody>
           </table>
         </div>

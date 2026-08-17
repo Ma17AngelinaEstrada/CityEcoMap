@@ -200,17 +200,19 @@ export default function AdminLayout({ children }) {
       <div className="al2-body">
         {/* Sidebar */}
         <aside className={`al2-sidebar ${collapsed ? "al2-sidebar--collapsed" : ""}`}>
-          <button
-            className="al2-collapse-btn"
-            onClick={() => {
-              const next = !collapsed;
-              setCollapsed(next);
-              localStorage.setItem("al2-sidebar-collapsed", next);
-            }}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? "»" : "«"}
-          </button>
+          <div className="al2-sidebar-toolbar">
+            <button
+              className="al2-collapse-btn"
+              onClick={() => {
+                const next = !collapsed;
+                setCollapsed(next);
+                localStorage.setItem("al2-sidebar-collapsed", next);
+              }}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {collapsed ? "»" : "«"}
+            </button>
+          </div>
 
           {currentAdmin && (
             <div className="al2-profile">

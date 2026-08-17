@@ -4,12 +4,11 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/firebase";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer
+  Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
 import AdminLayout from "./AdminLayout";
 import "./AdminDashboard.css";
 import { GoogleMap, MarkerF, InfoWindowF } from '@react-google-maps/api';
-import { GOOGLE_MAPS_LIBRARIES } from '../../utils/googleMapsLibraries';
 import { reverseGeocode, isCached } from '../../utils/geocode';
 import { SearchIcon, CalendarIcon, PinIcon, BuildingIcon } from '../../components/Icons';
 import { useGoogleMapsLoaded } from "../../context/GoogleMapsLoaderContext";
@@ -33,7 +32,9 @@ export default function AdminDashboard() {
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [activeInfoWindow, setActiveInfoWindow] = useState(null);
   const adminMapRef = useRef(null);
-
+  const [chartView, setChartView] = useState("category"); // "category" | "subcategory"
+  const [chartParentCategory, setChartParentCategory] = useState("Waste Issue");
+  const [chartTimeRange, setChartTimeRange] = useState("year"); // "year" | "quarter" | "last3" | "last1"
   const { isLoaded } = useGoogleMapsLoaded();
 
   useEffect(() => {
@@ -88,17 +89,130 @@ export default function AdminDashboard() {
 
   const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const currentYear = new Date().getFullYear();
-  const chartData = monthNames.map((month, i) => {
+
+  const RANGE_LABELS = {
+    year: `This Year (${currentYear})`,
+    quarter: "This Quarter",
+    last3: "Last 3 Months",
+    last1: "Last 4 Weeks",
+  };
+
+  const getTimeBuckets = (range) => {
+    const now = new Date();
+
+    if (range === "year") {
+      return monthNames.map((label, m) => ({
+        label,
+        start: new Date(currentYear, m, 1),
+        end: new Date(currentYear, m + 1, 1),
+      }));
+    }
+
+    if (range === "quarter") {
+      const q = Math.floor(now.getMonth() / 3);
+      return [0, 1, 2].map((i) => {
+        const m = q * 3 + i;
+        return {
+          label: monthNames[m],
+          start: new Date(now.getFullYear(), m, 1),
+          end: new Date(now.getFullYear(), m + 1, 1),
+        };
+      });
+    }
+
+    if (range === "last3") {
+      return [2, 1, 0].map((i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        return {
+          label: monthNames[d.getMonth()],
+          start: d,
+          end: new Date(d.getFullYear(), d.getMonth() + 1, 1),
+        };
+      });
+    }
+
+    // last1: last 4 weeks, weekly buckets
+    const rangeStart = new Date(now);
+    rangeStart.setHours(0, 0, 0, 0);
+    rangeStart.setDate(rangeStart.getDate() - 27);
+    return [0, 1, 2, 3].map((i) => {
+      const wStart = new Date(rangeStart);
+      wStart.setDate(rangeStart.getDate() + i * 7);
+      const wEnd = new Date(wStart);
+      wEnd.setDate(wStart.getDate() + 7);
+      return { label: `Wk ${i + 1}`, start: wStart, end: wEnd };
+    });
+  };
+
+  const timeBuckets = getTimeBuckets(chartTimeRange);
+  const rangeStart = timeBuckets[0]?.start;
+  const rangeEnd = timeBuckets[timeBuckets.length - 1]?.end;
+
+  const inSelectedRange = (r) => {
+    const date = r.createdAt?.toDate?.();
+    return Boolean(date) && rangeStart && rangeEnd && date >= rangeStart && date < rangeEnd;
+  };
+
+  const chartData = timeBuckets.map(({ label, start, end }) => {
     const waste = reports.filter((r) => {
       const date = r.createdAt?.toDate?.();
-      return date && date.getMonth() === i && date.getFullYear() === currentYear && r.category === "Waste Issue";
+      return date && date >= start && date < end && r.category === "Waste Issue";
     }).length;
     const drainage = reports.filter((r) => {
       const date = r.createdAt?.toDate?.();
-      return date && date.getMonth() === i && date.getFullYear() === currentYear && r.category === "Drainage Issue";
+      return date && date >= start && date < end && r.category === "Drainage Issue";
     }).length;
-    return { month, "Waste Issues": waste, "Drainage Issues": drainage };
+    return { month: label, "Waste Issues": waste, "Drainage Issues": drainage };
   });
+
+  const WASTE_SUBCATEGORIES = ["Illegal Dumping", "Uncollected Garbage", "Waste Affecting Rivers, Waterways, and Natural Water Bodies", "Other"];
+  const DRAINAGE_SUBCATEGORIES = ["Blocked Drainage", "Damaged Drainage", "Flooding", "Other"];
+  const KNOWN_SUBCATEGORIES = new Set([
+    ...WASTE_SUBCATEGORIES.filter((s) => s !== "Other"),
+    ...DRAINAGE_SUBCATEGORIES.filter((s) => s !== "Other"),
+  ]);
+  const isOtherSubCategory = (subCategory) =>
+    Boolean(subCategory) && !KNOWN_SUBCATEGORIES.has(subCategory);
+
+  const activeSubCategories = chartParentCategory === "Waste Issue" ? WASTE_SUBCATEGORIES : DRAINAGE_SUBCATEGORIES;
+
+  const subCategoryChartData = timeBuckets.map(({ label, start, end }) => {
+    const row = { month: label };
+    activeSubCategories.forEach((sub) => {
+      row[sub] = reports.filter((r) => {
+        const date = r.createdAt?.toDate?.();
+        const inBucket = date && date >= start && date < end;
+        if (!inBucket || r.category !== chartParentCategory) return false;
+        return sub === "Other" ? isOtherSubCategory(r.subCategory) : r.subCategory === sub;
+      }).length;
+    });
+    return row;
+  });
+
+  const SUBCATEGORY_SHORT_LABELS = {
+    "Waste Affecting Rivers, Waterways, and Natural Water Bodies": "Rivers/Waterways",
+  };
+
+  const shortenLabel = (label) => SUBCATEGORY_SHORT_LABELS[label] || label;
+
+  const subCategoryColors = ["#1a4a1a", "#2e7d32", "#7eb87e", "#a5d6a7"];
+  const categoryColors = ["#1a4a1a", "#7eb87e"];
+
+  const pieData = chartView === "category"
+    ? ["Waste Issue", "Drainage Issue"].map((cat) => ({
+        name: cat,
+        value: reports.filter((r) => inSelectedRange(r) && r.category === cat).length,
+      }))
+    : activeSubCategories.map((sub) => ({
+        name: shortenLabel(sub),
+        value: reports.filter((r) => {
+          if (!inSelectedRange(r) || r.category !== chartParentCategory) return false;
+          return sub === "Other" ? isOtherSubCategory(r.subCategory) : r.subCategory === sub;
+        }).length,
+      }));
+
+  const pieColors = chartView === "category" ? categoryColors : subCategoryColors;
+  const pieTotal = pieData.reduce((sum, d) => sum + d.value, 0);
 
   const recent = [...reports]
     .sort((a, b) => (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0))
@@ -186,7 +300,7 @@ export default function AdminDashboard() {
         <>
           {/* 6 Stat cards */}
           <div className="ad-stats">
-            <div className="ad-stat-card">
+            <div className="ad-stat-card ad-stat-card--total">
               <span className="ad-stat-label">Total Reports</span>
               <span className="ad-stat-number">{total}</span>
             </div>
@@ -212,60 +326,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Recent reports table */}
-          <div className="ad-table-card">
-            <div className="ad-table-header">
-              <h3 className="ad-table-title">Recent Reports</h3>
-              <button
-                className="ad-view-all"
-                onClick={() => navigate("/admin/reports")}
-              >
-                View all →
-              </button>
-            </div>
-            <table className="ad-table">
-              <thead>
-                <tr>
-                  <th>Report ID</th>
-                  <th>Type</th>
-                  <th>Date Submitted</th>
-                  <th>Location</th>
-                  <th>Assigned To</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recent.length === 0 ? (
-                  <tr><td colSpan="5" className="ad-empty">No reports yet.</td></tr>
-                ) : (
-                  recent.map((r) => (
-                    <tr key={r.id}>
-                      <td>#{r.reportId || r.id.slice(0, 6).toUpperCase()}</td>
-                      <td>{r.category}</td>
-                      <td>{formatDate(r.createdAt)}</td>
-                      <td>
-                        {r.locationDescription && <div>{r.locationDescription}</div>}
-                        {r.location && (
-                          <div style={{ fontSize: '0.78rem', color: '#888' }}>
-                            {addresses[r.id] || 'Resolving...'}
-                          </div>
-                        )}
-                        {!r.locationDescription && !r.location && '—'}
-                      </td>
-                      <td>{r.assignedTo || "—"}</td>
-                      <td>
-                        <span className={getStatusClass(r.status)}>
-                          {r.status || "Pending"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Bottom row: map + chart */}
+          {/* Map + chart row — now first */}
           <div className="ad-bottom">
             <div className="ad-map-card">
               <div className="ad-map-header">
@@ -330,8 +391,21 @@ export default function AdminDashboard() {
                                 <p style={{ fontWeight: 700, color: '#1a4a1a', marginBottom: 4 }}>
                                   #{report.reportId || report.id.slice(0, 6).toUpperCase()}
                                 </p>
-                                <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: 4 }}>
+                                <p style={{ fontSize: '0.78rem', color: '#666', marginBottom: 2 }}>
+                                  {report.fullName || "—"}
+                                </p>
+                                {report.email && (
+                                  <p style={{ fontSize: '0.75rem', color: '#888', marginBottom: 4 }}>
+                                    {report.email}
+                                  </p>
+                                )}
+                                <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: 2 }}>
                                   {report.category}
+                                </p>
+                                <p style={{ fontSize: '0.78rem', color: '#777', marginBottom: 4 }}>
+                                  {report.subCategory === "Other"
+                                    ? (report.subCategoryOther || "Other")
+                                    : (report.subCategory || "—")}
                                 </p>
                                 <p style={{ fontSize: '0.78rem', color: '#888', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
                                   <CalendarIcon /> {formatDate(report.createdAt)}
@@ -353,9 +427,9 @@ export default function AdminDashboard() {
                                     {report.description}
                                   </p>
                                 )}
-                                {(report.locationDescription || addresses[report.id]) && (
+                                {(report.locationDescription || report.addressInput || addresses[report.id]) && (
                                   <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                                    <PinIcon /> {report.locationDescription || addresses[report.id]}
+                                    <PinIcon /> {report.locationDescription || report.addressInput || addresses[report.id]}
                                   </p>
                                 )}
                                 {report.assignedTo && (
@@ -386,19 +460,196 @@ export default function AdminDashboard() {
             </div>
 
             <div className="ad-chart-card">
-              <h3 className="ad-chart-title">Report Statistics — {currentYear}</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip />
-                  <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="Waste Issues" fill="#1a4a1a" radius={[3,3,0,0]} />
-                  <Bar dataKey="Drainage Issues" fill="#7eb87e" radius={[3,3,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="ad-chart-header">
+                <h3 className="ad-chart-title">Report Statistics — {RANGE_LABELS[chartTimeRange]}</h3>
+                <div className="ad-chart-filters">
+                  <div className="ad-chart-filter-group">
+                    <label>Time Range</label>
+                    <select
+                      className="ad-chart-select"
+                      value={chartTimeRange}
+                      onChange={(e) => setChartTimeRange(e.target.value)}
+                    >
+                      <option value="last1">Last 4 Weeks</option>
+                      <option value="last3">Last 3 Months</option>
+                      <option value="quarter">This Quarter</option>
+                      <option value="year">This Year</option>
+                    </select>
+                  </div>
+                  <div className="ad-chart-filter-group">
+                    <label>View</label>
+                    <select
+                      className="ad-chart-select"
+                      value={chartView}
+                      onChange={(e) => setChartView(e.target.value)}
+                    >
+                      <option value="category">By Category</option>
+                      <option value="subcategory">By Sub-Category</option>
+                    </select>
+                  </div>
+                  {chartView === "subcategory" && (
+                    <div className="ad-chart-filter-group">
+                      <label>Category</label>
+                      <select
+                        className="ad-chart-select"
+                        value={chartParentCategory}
+                        onChange={(e) => setChartParentCategory(e.target.value)}
+                      >
+                        <option value="Waste Issue">Waste Issue</option>
+                        <option value="Drainage Issue">Drainage Issue</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="ad-chart-body">
+                <div className="ad-chart-bar">
+                  <ResponsiveContainer width="100%" height={220}>
+                    {chartView === "category" ? (
+                      <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                        <Tooltip />
+                        <Legend
+                          iconSize={9}
+                          wrapperStyle={{ fontSize: 10.5 }}
+                          formatter={(value) => shortenLabel(value)}
+                        />
+                        <Bar dataKey="Waste Issues" fill="#1a4a1a" radius={[3,3,0,0]} />
+                        <Bar dataKey="Drainage Issues" fill="#7eb87e" radius={[3,3,0,0]} />
+                      </BarChart>
+                    ) : (
+                      <BarChart data={subCategoryChartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                        <Tooltip />
+                        <Legend iconSize={9} wrapperStyle={{ fontSize: 10.5 }} />
+                        {activeSubCategories.map((sub, i) => (
+                          <Bar key={sub} dataKey={sub} fill={subCategoryColors[i % subCategoryColors.length]} radius={[3,3,0,0]} />
+                        ))}
+                      </BarChart>
+                    )}
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="ad-donut-wrap">
+                  {pieTotal === 0 ? (
+                    <p className="ad-donut-empty">No reports in this range yet.</p>
+                  ) : (
+                    <>
+                      <ResponsiveContainer width="100%" height={180}>
+                        <PieChart>
+                          <Pie
+                            data={pieData}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={45}
+                            outerRadius={70}
+                            paddingAngle={2}
+                          >
+                            {pieData.map((entry, i) => (
+                              <Cell key={entry.name} fill={pieColors[i % pieColors.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="ad-donut-legend">
+                        {pieData.filter((d) => d.value > 0).map((d, i) => (
+                          <div key={d.name} className="ad-donut-legend-item">
+                            <span className="ad-donut-dot" style={{ background: pieColors[pieData.indexOf(d) % pieColors.length] }}></span>
+                            <span>{d.name}</span>
+                            <span className="ad-donut-pct">{Math.round((d.value / pieTotal) * 100)}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
+          </div>
+
+          {/* Recent reports table */}
+          <div className="ad-table-card">
+            <div className="ad-table-header">
+              <h3 className="ad-table-title">Recent Reports</h3>
+              <button
+                className="ad-view-all"
+                onClick={() => navigate("/admin/reports")}
+              >
+                View all →
+              </button>
+            </div>
+            <table className="ad-table">
+              <colgroup>
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "15%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "9%" }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Report ID</th>
+                  <th>Submitted By</th>
+                  <th>Email</th>
+                  <th>Category</th>
+                  <th>Sub-Category</th>
+                  <th>Date Submitted</th>
+                  <th>Description</th>
+                  <th>Location</th>
+                  <th>Assigned To</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.length === 0 ? (
+                  <tr><td colSpan="10" className="ad-empty">No reports yet.</td></tr>
+                ) : (
+                  recent.map((r) => (
+                    <tr key={r.id}>
+                      <td>#{r.reportId || r.id.slice(0, 6).toUpperCase()}</td>
+                      <td>{r.fullName || "—"}</td>
+                      <td>{r.email || "—"}</td>
+                      <td>{r.category}</td>
+                      <td>
+                        {r.subCategory === "Other"
+                          ? (r.subCategoryOther || "Other")
+                          : (r.subCategory || "—")}
+                      </td>
+                      <td>{formatDate(r.createdAt)}</td>
+                      <td>{r.description || "—"}</td>
+                      <td>
+                        {r.locationDescription && <div>{r.locationDescription}</div>}
+                        {r.addressInput ? (
+                          <div style={{ fontSize: '0.78rem', color: '#888' }}>{r.addressInput}</div>
+                        ) : r.location ? (
+                          <div style={{ fontSize: '0.78rem', color: '#888' }}>
+                            {addresses[r.id] || 'Resolving...'}
+                          </div>
+                        ) : null}
+                        {!r.locationDescription && !r.addressInput && !r.location && '—'}
+                      </td>
+                      <td>{r.assignedTo || "—"}</td>
+                      <td>
+                        <span className={getStatusClass(r.status)}>
+                          {r.status || "Pending"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </>
       )}

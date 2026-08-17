@@ -20,6 +20,13 @@ const sendEmailNotification = async (to, subject, body) => {
   }
 };
 
+const RIVER_SUBCATEGORY = "Waste Affecting Rivers, Waterways, and Natural Water Bodies";
+
+const getSuggestedAssignee = (subCategory) => {
+  if (subCategory === RIVER_SUBCATEGORY) return "EMB";
+  return "LGU";
+};
+
 export default function ManageReports() {
   const navigate = useNavigate();
   const [reports, setReports] = useState([]);
@@ -34,7 +41,9 @@ export default function ManageReports() {
   const [updatingId, setUpdatingId] = useState(null);
   const [rejectModal, setRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [rejectConfirming, setRejectConfirming] = useState(false);
   const [assignModal, setAssignModal] = useState(false);
+  const [pendingOffice, setPendingOffice] = useState(null);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [addresses, setAddresses] = useState({});
   const [statusHistory, setStatusHistory] = useState([]);
@@ -44,6 +53,69 @@ export default function ManageReports() {
   const prevIdsRef = useRef(new Set());
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [filterSubCategory, setFilterSubCategory] = useState("All");
+  const [quickRange, setQuickRange] = useState("custom");
+  const [specificMonth, setSpecificMonth] = useState("");
+
+  const WASTE_SUBCATEGORIES = ["Illegal Dumping", "Uncollected Garbage", "Waste Affecting Rivers, Waterways, and Natural Water Bodies", "Other"];
+  const DRAINAGE_SUBCATEGORIES = ["Blocked Drainage", "Damaged Drainage", "Flooding", "Other"];
+  const KNOWN_SUBCATEGORIES = new Set([
+    ...WASTE_SUBCATEGORIES.filter((s) => s !== "Other"),
+    ...DRAINAGE_SUBCATEGORIES.filter((s) => s !== "Other"),
+  ]);
+  const isOtherSubCategory = (subCategory) =>
+    Boolean(subCategory) && !KNOWN_SUBCATEGORIES.has(subCategory);
+
+  const applyQuickRange = (value) => {
+    setQuickRange(value);
+    const today = new Date();
+
+    if (value === "all") {
+      setDateFrom("");
+      setDateTo("");
+      setSpecificMonth("");
+      return;
+    }
+    if (value === "last1") {
+      const from = new Date(today);
+      from.setMonth(from.getMonth() - 1);
+      setDateFrom(from.toISOString().slice(0, 10));
+      setDateTo(today.toISOString().slice(0, 10));
+      setSpecificMonth("");
+      return;
+    }
+    if (value === "last3") {
+      const from = new Date(today);
+      from.setMonth(from.getMonth() - 3);
+      setDateFrom(from.toISOString().slice(0, 10));
+      setDateTo(today.toISOString().slice(0, 10));
+      setSpecificMonth("");
+      return;
+    }
+    if (value === "quarter") {
+      const q = Math.floor(today.getMonth() / 3);
+      const from = new Date(today.getFullYear(), q * 3, 1);
+      const to = new Date(today.getFullYear(), q * 3 + 3, 0);
+      setDateFrom(from.toISOString().slice(0, 10));
+      setDateTo(to.toISOString().slice(0, 10));
+      setSpecificMonth("");
+      return;
+    }
+    if (value === "month") {
+      setDateFrom("");
+      setDateTo("");
+    }
+  };
+
+  const applySpecificMonth = (monthValue) => {
+    setSpecificMonth(monthValue);
+    if (!monthValue) return;
+    const [year, month] = monthValue.split("-").map(Number);
+    const from = new Date(year, month - 1, 1);
+    const to = new Date(year, month, 0);
+    setDateFrom(from.toISOString().slice(0, 10));
+    setDateTo(to.toISOString().slice(0, 10));
+  };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -173,10 +245,14 @@ export default function ManageReports() {
     };
 
   // Approve → open assign office modal
-  const handleApprove = () => setAssignModal(true);
+  const handleApprove = () => {
+    setPendingOffice(null);
+    setAssignModal(true);
+  };
 
   const handleAssignOffice = async (office) => {
   setAssignModal(false);
+  setPendingOffice(null);
   await updateStatus(selectedReport.id, "Approved", { assignedTo: office });
   await sendEmailNotification(
     selectedReport.email,
@@ -190,12 +266,31 @@ export default function ManageReports() {
   );
 };
 
-const handleRejectConfirm = async () => {
+const handleSelectOffice = (office) => {
+  setPendingOffice(office);
+};
+
+const handleConfirmAssign = async () => {
+  const office = pendingOffice;
+  await handleAssignOffice(office);
+};
+
+const handleCancelAssign = () => {
+  setAssignModal(false);
+  setPendingOffice(null);
+};
+
+const handleRejectReasonNext = () => {
   if (!rejectReason.trim()) {
     alert("Please enter a reason for rejection.");
     return;
   }
+  setRejectConfirming(true);
+};
+
+const handleRejectConfirm = async () => {
   setRejectModal(false);
+  setRejectConfirming(false);
   await updateStatus(selectedReport.id, "Rejected", { rejectionReason: rejectReason });
   await sendEmailNotification(
     selectedReport.email,
@@ -211,7 +306,13 @@ const handleRejectConfirm = async () => {
 
 const handleRejectClick = () => {
   setRejectReason("");
+  setRejectConfirming(false);
   setRejectModal(true);
+};
+
+const handleRejectCancel = () => {
+  setRejectModal(false);
+  setRejectConfirming(false);
 };
 
 const handleSetOngoing = async () => {
@@ -270,6 +371,12 @@ const handleSetResolved = async () => {
   const filtered = reports.filter((r) => {
   const matchStatus = filterStatus === "All" || r.status === filterStatus;
   const matchCategory = filterCategory === "All" || r.category === filterCategory;
+  const matchSubCategory = (() => {
+    if (filterSubCategory === "All") return true;
+    if (filterSubCategory === "Other::Waste") return r.category === "Waste Issue" && isOtherSubCategory(r.subCategory);
+    if (filterSubCategory === "Other::Drainage") return r.category === "Drainage Issue" && isOtherSubCategory(r.subCategory);
+    return r.subCategory === filterSubCategory;
+  })();
   const matchAssigned = filterAssigned === "All" || r.assignedTo === filterAssigned;
   const cleanedSearch = searchQuery.replace(/#/g, "").trim().toLowerCase();
   const matchSearch = cleanedSearch === "" ||
@@ -289,7 +396,7 @@ const handleSetResolved = async () => {
     }
   }
 
-  return matchStatus && matchCategory && matchAssigned && matchSearch && matchDate;
+  return matchStatus && matchCategory && matchSubCategory && matchAssigned && matchSearch && matchDate;
 });
 
   const getStatusClass = (status) => {
@@ -355,83 +462,139 @@ const handleSetResolved = async () => {
           {toast}
         </div>
       )}
-      <div className="mr-header">
-        <h2 className="mr-title">Manage & Resolve Reports</h2>
-        <p className="mr-subtitle">Review, approve, reject, and resolve citizen-submitted reports.</p>
-      </div>
+        <div className="mr-header">
+          <h2 className="mr-title">Manage & Resolve Reports</h2>
+          <p className="mr-subtitle">Review, approve, reject, and resolve citizen-submitted reports.</p>
+        </div>
 
-      {/* Filters */}
-      <div className="mr-filters">
-  <div className="mr-filter-group">
-    <label>Status</label>
-    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-      <option>All</option>
-      <option>Pending</option>
-      <option>Approved</option>
-      <option>Ongoing</option>
-      <option>Resolved</option>
-      <option>Rejected</option>
-    </select>
-  </div>
-  <div className="mr-filter-group">
-    <label>Category</label>
-    <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-      <option>All</option>
-      <option>Waste Issue</option>
-      <option>Drainage Issue</option>
-    </select>
-  </div>
-  <div className="mr-filter-group">
-    <label>Assigned To</label>
-    <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
-      <option>All</option>
-      <option>EMB</option>
-      <option>LGU</option>
-    </select>
-  </div>
-  <div className="mr-filter-group">
-    <label>Search</label>
-    <input
-      type="text"
-      className="mr-search"
-      placeholder="Report ID or keyword..."
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-    />
-  </div>
-  <div className="mr-filter-group">
-  <label>From</label>
-  <input
-    type="date"
-    className="mr-search"
-    value={dateFrom}
-    onChange={(e) => setDateFrom(e.target.value)}
-  />
-</div>
-<div className="mr-filter-group">
-  <label>To</label>
-  <input
-    type="date"
-    className="mr-search"
-    value={dateTo}
-    onChange={(e) => setDateTo(e.target.value)}
-  />
-</div>
-<button
-  className="mr-clear-btn"
-  onClick={() => {
-    setFilterStatus("All");
-    setFilterCategory("All");
-    setFilterAssigned("All");
-    setSearchQuery("");
-    setDateFrom("");
-    setDateTo("");
-  }}
->
-  Clear Filters
-</button>
-  <span className="mr-count">{filtered.length} report{filtered.length !== 1 ? "s" : ""}</span>
-</div>
+        {/* Filters */}
+        <div className="mr-filters">
+          <div className="mr-filter-group">
+            <label>Status</label>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+              <option>All</option>
+              <option>Pending</option>
+              <option>Approved</option>
+              <option>Ongoing</option>
+              <option>Resolved</option>
+              <option>Rejected</option>
+            </select>
+          </div>
+          <div className="mr-filter-group">
+            <label>Category</label>
+            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+              <option>All</option>
+              <option>Waste Issue</option>
+              <option>Drainage Issue</option>
+            </select>
+          </div>
+          <div className="mr-filter-group">
+            <label>Sub-Category</label>
+            <select
+              className="mr-subcat-select"
+              value={filterSubCategory}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setFilterSubCategory(raw);
+                if (raw === "All") return;
+                if (raw === "Other::Waste") { setFilterCategory("Waste Issue"); return; }
+                if (raw === "Other::Drainage") { setFilterCategory("Drainage Issue"); return; }
+                if (WASTE_SUBCATEGORIES.includes(raw)) setFilterCategory("Waste Issue");
+                else if (DRAINAGE_SUBCATEGORIES.includes(raw)) setFilterCategory("Drainage Issue");
+              }}
+            >
+              <option value="All">All</option>
+              <optgroup label="Waste Issue">
+                {WASTE_SUBCATEGORIES.map((s) =>
+                  s === "Other"
+                    ? <option key="w-other" value="Other::Waste">Other</option>
+                    : <option key={s} value={s}>{s}</option>
+                )}
+              </optgroup>
+              <optgroup label="Drainage Issue">
+                {DRAINAGE_SUBCATEGORIES.map((s) =>
+                  s === "Other"
+                    ? <option key="d-other" value="Other::Drainage">Other</option>
+                    : <option key={`d-${s}`} value={s}>{s}</option>
+                )}
+              </optgroup>
+            </select>
+          </div>
+          <div className="mr-filter-group">
+            <label>Assigned To</label>
+            <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
+              <option>All</option>
+              <option>EMB</option>
+              <option>LGU</option>
+            </select>
+          </div>
+          <div className="mr-filter-group">
+            <label>Search</label>
+            <input
+              type="text"
+              className="mr-search"
+              placeholder="Report ID or keyword..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="mr-filters-tail">
+            <div className="mr-filter-group">
+              <label>Time Range</label>
+              <select value={quickRange} onChange={(e) => applyQuickRange(e.target.value)}>
+                <option value="custom">Custom Range</option>
+                <option value="all">All Time</option>
+                <option value="last1">Last 1 Month</option>
+                <option value="last3">Last 3 Months</option>
+                <option value="quarter">This Quarter</option>
+                <option value="month">Specific Month</option>
+              </select>
+            </div>
+            {quickRange === "month" && (
+              <div className="mr-filter-group">
+                <label>Month</label>
+                <input type="month" className="mr-search" value={specificMonth} onChange={(e) => applySpecificMonth(e.target.value)} />
+              </div>
+            )}
+            <div className="mr-daterange-group">
+              <div className="mr-filter-group">
+                <label>From</label>
+                <input
+                  type="date"
+                  className="mr-search"
+                  value={dateFrom}
+                  onChange={(e) => { setDateFrom(e.target.value); setQuickRange("custom"); }}
+                />
+              </div>
+              <div className="mr-filter-group">
+                <label>To</label>
+                <input
+                  type="date"
+                  className="mr-search"
+                  value={dateTo}
+                  onChange={(e) => { setDateTo(e.target.value); setQuickRange("custom"); }}
+                />
+              </div>
+            </div>
+            <button
+              className="mr-clear-btn"
+              onClick={() => {
+                setFilterStatus("All");
+                setFilterCategory("All");
+                setFilterSubCategory("All");
+                setFilterAssigned("All");
+                setSearchQuery("");
+                setDateFrom("");
+                setDateTo("");
+                setQuickRange("custom");
+                setSpecificMonth("");
+              }}
+            >
+              Clear Filters
+            </button>
+          </div>
+          <span className="mr-count">{filtered.length} report{filtered.length !== 1 ? "s" : ""}</span>
+        </div> 
 
       {loading ? (
         <p className="mr-loading">Loading reports...</p>
@@ -440,11 +603,28 @@ const handleSetResolved = async () => {
           {/* Table */}
           <div className="mr-table-card">
             <table className="mr-table">
+              <colgroup>
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "7%" }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Report ID</th>
-                  <th>Type</th>
+                  <th>Submitted By</th>
+                  <th>Email</th>
+                  <th>Category</th>
+                  <th>Sub-Category</th>
                   <th>Date Submitted</th>
+                  <th>Description</th>
                   <th>Location</th>
                   <th>Assigned To</th>
                   <th>Status</th>
@@ -453,7 +633,7 @@ const handleSetResolved = async () => {
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan="5" className="mr-empty">No reports found.</td></tr>
+                  <tr><td colSpan="11" className="mr-empty">No reports found.</td></tr>
                 ) : (
                   filtered.map((r) => (
                     <tr
@@ -462,16 +642,26 @@ const handleSetResolved = async () => {
                       onClick={() => setSelectedReport(r)}
                     >
                       <td>#{r.reportId || r.id.slice(0, 6).toUpperCase()}</td>
+                      <td>{r.fullName || "—"}</td>
+                      <td>{r.email || "—"}</td>
                       <td>{r.category}</td>
+                      <td>
+                        {r.subCategory === "Other"
+                          ? (r.subCategoryOther || "Other")
+                          : (r.subCategory || "—")}
+                      </td>
                       <td>{formatDate(r.createdAt)}</td>
+                      <td>{r.description || "—"}</td>
                       <td>
                         {r.locationDescription && <div>{r.locationDescription}</div>}
-                        {r.location && (
+                        {r.addressInput ? (
+                          <div style={{ fontSize: '0.78rem', color: '#888' }}>{r.addressInput}</div>
+                        ) : r.location ? (
                           <div style={{ fontSize: '0.78rem', color: '#888' }}>
                             {addresses[r.id] || 'Resolving...'}
                           </div>
-                        )}
-                        {!r.locationDescription && !r.location && '—'}
+                        ) : null}
+                        {!r.locationDescription && !r.addressInput && !r.location && '—'}
                       </td>
                       <td>{r.assignedTo || "—"}</td>
                       <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
@@ -489,102 +679,118 @@ const handleSetResolved = async () => {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
 
-          {/* Detail panel */}
-          {selectedReport && (
-            <div className="mr-detail">
-              <div className="mr-detail-header">
-                <h3>#{selectedReport.reportId || selectedReport.id.slice(0, 6).toUpperCase()}</h3>
-                <button className="mr-close" onClick={() => setSelectedReport(null)}>✕</button>
+      {/* Detail modal — centered popup, same pattern as Assign Office */}
+      {selectedReport && (
+        <div className="mr-modal-overlay" onClick={() => setSelectedReport(null)}>
+          <div className="mr-detail mr-detail--modal" onClick={(e) => e.stopPropagation()}>
+            <div className="mr-detail-header">
+              <h3>#{selectedReport.reportId || selectedReport.id.slice(0, 6).toUpperCase()}</h3>
+              <button className="mr-close" onClick={() => setSelectedReport(null)}>✕</button>
+            </div>
+            <div className="mr-detail-body">
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Submitted By</span>
+                <span className="mr-detail-value">{selectedReport.fullName || "—"}</span>
               </div>
-              <div className="mr-detail-body">
-                <div className="mr-detail-row">
-                  <span className="mr-detail-label">Type</span>
-                  <span className="mr-detail-value">{selectedReport.category}</span>
-                </div>
-                <div className="mr-detail-row">
-                  <span className="mr-detail-label">Date Submitted</span>
-                  <span className="mr-detail-value">{formatDate(selectedReport.createdAt)}</span>
-                </div>
-                <div className="mr-detail-row">
-                  <span className="mr-detail-label">Description</span>
-                  <span className="mr-detail-value">{selectedReport.description || "—"}</span>
-                </div>
-                <div className="mr-detail-row">
-                  <span className="mr-detail-label">Email</span>
-                  <span className="mr-detail-value">{selectedReport.email || "Not provided"}</span>
-                </div>
-                <div className="mr-detail-row">
-                  <span className="mr-detail-label">Assigned To</span>
-                  <span className="mr-detail-value">{selectedReport.assignedTo || "—"}</span>
-                </div>
-                <div className="mr-detail-row">
-                  <span className="mr-detail-label">Location Description</span>
-                  <span className="mr-detail-value">
-                    {selectedReport.locationDescription || 'Not provided by citizen'}
-                  </span>
-                </div>
-                <div className="mr-detail-row">
-                  <span className="mr-detail-label">Detected Address</span>
-                  <span className="mr-detail-value">
-                    {selectedReport.location
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Email</span>
+                <span className="mr-detail-value">{selectedReport.email || "Not provided"}</span>
+              </div>
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Category</span>
+                <span className="mr-detail-value">{selectedReport.category}</span>
+              </div>
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Sub-Category</span>
+                <span className="mr-detail-value">
+                  {selectedReport.subCategory === "Other"
+                    ? (selectedReport.subCategoryOther || "Other")
+                    : (selectedReport.subCategory || "—")}
+                </span>
+              </div>
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Date Submitted</span>
+                <span className="mr-detail-value">{formatDate(selectedReport.createdAt)}</span>
+              </div>
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Description</span>
+                <span className="mr-detail-value">{selectedReport.description || "—"}</span>
+              </div>
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Location Description</span>
+                <span className="mr-detail-value">
+                  {selectedReport.locationDescription || 'Not provided by citizen'}
+                </span>
+              </div>
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Address</span>
+                <span className="mr-detail-value">
+                  {selectedReport.addressInput
+                    ? selectedReport.addressInput
+                    : selectedReport.location
                       ? (addresses[selectedReport.id] || 'Resolving...')
                       : '—'}
-                  </span>
-                </div>
-                {selectedReport.status === "Rejected" && (
-                  <div className="mr-detail-row">
-                    <span className="mr-detail-label">Rejection Reason</span>
-                    <span className="mr-detail-value mr-detail-value--rejected">
-                      {selectedReport.rejectionReason || "—"}
-                    </span>
-                  </div>
-                )}
-                {selectedReport.photo && (
-                  <div className="mr-detail-photo">
-                    <span className="mr-detail-label">Photo</span>
-                    <img
-                      src={selectedReport.photo}
-                      alt="Report"
-                      className="mr-photo"
-                      onClick={() => setLightboxPhoto(selectedReport.photo)}
-                    />
-                    <span className="mr-photo-hint">Click photo to enlarge</span>
-                  </div>
-                )}
+                </span>
+              </div>
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Assigned To</span>
+                <span className="mr-detail-value">{selectedReport.assignedTo || "—"}</span>
+              </div>
+              {selectedReport.status === "Rejected" && (
                 <div className="mr-detail-row">
-                  <span className="mr-detail-label">Current Status</span>
-                  <span className={getStatusClass(selectedReport.status)}>
-                    {selectedReport.status || "Pending"}
+                  <span className="mr-detail-label">Rejection Reason</span>
+                  <span className="mr-detail-value mr-detail-value--rejected">
+                    {selectedReport.rejectionReason || "—"}
                   </span>
                 </div>
-                <div className="mr-status-actions">
-                  <p className="mr-detail-label">Actions</p>
-                  {renderActions()}
+              )}
+              {selectedReport.photo && (
+                <div className="mr-detail-photo">
+                  <span className="mr-detail-label">Photo</span>
+                  <img
+                    src={selectedReport.photo}
+                    alt="Report"
+                    className="mr-photo"
+                    onClick={() => setLightboxPhoto(selectedReport.photo)}
+                  />
+                  <span className="mr-photo-hint">Click photo to enlarge</span>
                 </div>
+              )}
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Current Status</span>
+                <span className={getStatusClass(selectedReport.status)}>
+                  {selectedReport.status || "Pending"}
+                </span>
+              </div>
+              <div className="mr-status-actions">
+                <p className="mr-detail-label">Actions</p>
+                {renderActions()}
+              </div>
 
-                <div className="mr-history-section">
-                  <p className="mr-detail-label">Status History</p>
-                  {loadingHistory ? (
-                    <p className="mr-history-loading">Loading history...</p>
-                  ) : statusHistory.length === 0 ? (
-                    <p className="mr-history-empty">No history recorded yet.</p>
-                  ) : (
-                    <div className="mr-history-list">
-                      {statusHistory.map((h) => (
-                        <div key={h.id} className="mr-history-item">
-                          <span className={getStatusClass(h.status)}>{h.status}</span>
-                          <span className="mr-history-admin">{h.adminEmail}</span>
-                          <span className="mr-history-date">{formatDate(h.timestamp)}</span>
-                          {h.notes && <p className="mr-history-notes">{h.notes}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              <div className="mr-history-section">
+                <p className="mr-detail-label">Status History</p>
+                {loadingHistory ? (
+                  <p className="mr-history-loading">Loading history...</p>
+                ) : statusHistory.length === 0 ? (
+                  <p className="mr-history-empty">No history recorded yet.</p>
+                ) : (
+                  <div className="mr-history-list">
+                    {statusHistory.map((h) => (
+                      <div key={h.id} className="mr-history-item">
+                        <span className={getStatusClass(h.status)}>{h.status}</span>
+                        <span className="mr-history-admin">{h.adminEmail}</span>
+                        <span className="mr-history-date">{formatDate(h.timestamp)}</span>
+                        {h.notes && <p className="mr-history-notes">{h.notes}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </div>
         </div>
       )}
 
@@ -592,17 +798,44 @@ const handleSetResolved = async () => {
       {assignModal && (
         <div className="mr-modal-overlay">
           <div className="mr-modal">
-            <h3>Select Office to Assign</h3>
-            <p>Assign this report to the appropriate office for action.</p>
-            <div className="mr-modal-btns">
-              <button className="mr-modal-btn mr-modal-btn--emb" onClick={() => handleAssignOffice("EMB")}>
-                EMB
-              </button>
-              <button className="mr-modal-btn mr-modal-btn--lgu" onClick={() => handleAssignOffice("LGU")}>
-                LGU
-              </button>
-            </div>
-            <button className="mr-modal-cancel" onClick={() => setAssignModal(false)}>Cancel</button>
+            {!pendingOffice ? (
+              <>
+                <h3>Select Office to Assign</h3>
+                <p>Assign this report to the appropriate office for action.</p>
+                <p className="mr-modal-suggestion">
+                  Suggested: <strong>{getSuggestedAssignee(selectedReport?.subCategory)}</strong>
+                  {" "}(based on sub-category — you may still choose either office)
+                </p>
+                <div className="mr-modal-btns">
+                  <button
+                    className={`mr-modal-btn mr-modal-btn--emb${getSuggestedAssignee(selectedReport?.subCategory) === "EMB" ? " mr-modal-btn--suggested" : ""}`}
+                    onClick={() => handleSelectOffice("EMB")}
+                  >
+                    EMB{getSuggestedAssignee(selectedReport?.subCategory) === "EMB" ? " ✓ Suggested" : ""}
+                  </button>
+                  <button
+                    className={`mr-modal-btn mr-modal-btn--lgu${getSuggestedAssignee(selectedReport?.subCategory) === "LGU" ? " mr-modal-btn--suggested" : ""}`}
+                    onClick={() => handleSelectOffice("LGU")}
+                  >
+                    LGU{getSuggestedAssignee(selectedReport?.subCategory) === "LGU" ? " ✓ Suggested" : ""}
+                  </button>
+                </div>
+                <button className="mr-modal-cancel" onClick={handleCancelAssign}>Cancel</button>
+              </>
+            ) : (
+              <>
+                <h3>Confirm Assignment</h3>
+                <p>
+                  Assign report <strong>#{selectedReport?.reportId || selectedReport?.id?.slice(0, 6).toUpperCase()}</strong> to <strong>{pendingOffice}</strong>?
+                </p>
+                <div className="mr-modal-btns">
+                  <button className="mr-modal-btn mr-modal-btn--emb" onClick={handleConfirmAssign}>
+                    ✔ Confirm
+                  </button>
+                </div>
+                <button className="mr-modal-cancel" onClick={() => setPendingOffice(null)}>← Back</button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -611,21 +844,39 @@ const handleSetResolved = async () => {
       {rejectModal && (
         <div className="mr-modal-overlay">
           <div className="mr-modal">
-            <h3>Reason for Rejection</h3>
-            <p>Please provide a reason why this report is being rejected.</p>
-            <textarea
-              className="mr-reject-textarea"
-              placeholder="Enter reason for rejection..."
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              rows={4}
-            />
-            <div className="mr-modal-btns">
-              <button className="mr-modal-btn mr-modal-btn--emb" onClick={handleRejectConfirm}>
-                Confirm Reject
-              </button>
-              <button className="mr-modal-cancel" onClick={() => setRejectModal(false)}>Cancel</button>
-            </div>
+            {!rejectConfirming ? (
+              <>
+                <h3>Reason for Rejection</h3>
+                <p>Please provide a reason why this report is being rejected.</p>
+                <textarea
+                  className="mr-reject-textarea"
+                  placeholder="Enter reason for rejection..."
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  rows={4}
+                />
+                <div className="mr-modal-btns">
+                  <button className="mr-modal-btn mr-modal-btn--emb" onClick={handleRejectReasonNext}>
+                    Next
+                  </button>
+                  <button className="mr-modal-cancel" onClick={handleRejectCancel}>Cancel</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3>Confirm Rejection</h3>
+                <p>
+                  Reject report <strong>#{selectedReport?.reportId || selectedReport?.id?.slice(0, 6).toUpperCase()}</strong> with this reason?
+                </p>
+                <p className="mr-modal-suggestion">{rejectReason}</p>
+                <div className="mr-modal-btns">
+                  <button className="mr-modal-btn mr-modal-btn--emb" onClick={handleRejectConfirm}>
+                    ✔ Confirm Reject
+                  </button>
+                </div>
+                <button className="mr-modal-cancel" onClick={() => setRejectConfirming(false)}>← Back</button>
+              </>
+            )}
           </div>
         </div>
       )}

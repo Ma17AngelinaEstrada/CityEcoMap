@@ -100,46 +100,53 @@
   display: flex;
   gap: 1.5rem;
   align-items: flex-start;
+  max-width: 100%;
+  min-width: 0;
 }
 
+/* Table card: this is the box that should scroll horizontally.
+   min-width: 0 lets a flex child shrink below its content size so the
+   overflow-x rule below actually gets a chance to kick in instead of
+   the card (and the whole page) stretching to fit the table. */
 .mr-table-card {
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
   background: #fff;
   border-radius: 10px;
-  overflow: hidden;
   border: 1px solid #e0ddd5;
-  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mr-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-family: sans-serif;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
 }
 
 .mr-table thead tr { border-bottom: 2px solid #eee; }
 
 .mr-table th {
   text-align: left;
-  padding: 0.9rem 1rem;
+  padding: 0.7rem 0.6rem;
   font-weight: 700;
   color: #333;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .mr-table td {
-  padding: 0.8rem 1rem;
+  padding: 0.65rem 0.6rem;
   color: #444;
   border-bottom: 1px solid #f0ede5;
-}
-
-.mr-table th,
-.mr-table td {
-  white-space: nowrap;
-}
-
-.mr-table-card {
-  overflow-x: auto;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  vertical-align: top;
 }
 
 .mr-table tbody tr:last-child td { border-bottom: none; }
@@ -157,6 +164,7 @@
   color: #999;
   padding: 2rem;
   font-family: sans-serif;
+  white-space: normal;
 }
 
 .mr-view-btn {
@@ -192,10 +200,26 @@
 .mr-detail {
   width: 320px;
   min-width: 320px;
+  flex-shrink: 0;
   background: #fff;
   border-radius: 10px;
   border: 1px solid #e0ddd5;
   overflow: hidden;
+}
+
+/* Detail modal — centered popup version, used inside .mr-modal-overlay */
+.mr-detail--modal {
+  width: 100%;
+  max-width: 520px;
+  min-width: 0;
+  flex-shrink: initial;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.mr-detail--modal .mr-detail-body {
+  max-height: calc(85vh - 60px);
 }
 
 .mr-detail-header {
@@ -268,6 +292,12 @@
   border-radius: 8px;
   object-fit: cover;
   max-height: 180px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.mr-photo:hover {
+  opacity: 0.85;
 }
 
 .mr-status-actions {
@@ -343,6 +373,15 @@
   font-family: sans-serif;
 }
 
+.mr-modal-suggestion {
+  background: #f2f8f2;
+  border: 1px solid #d7e8d7;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.82rem !important;
+  color: #1a4a1a !important;
+}
+
 .mr-modal-btns {
   display: flex;
   gap: 10px;
@@ -361,6 +400,12 @@
 
 .mr-modal-btn--emb { background: #1a4a1a; color: #fff; }
 .mr-modal-btn--lgu { background: #2d6a2d; color: #fff; }
+
+.mr-modal-btn--suggested {
+  outline: 3px solid #2e7d32;
+  outline-offset: 2px;
+  font-weight: 700;
+}
 
 .mr-modal-cancel {
   background: none;
@@ -387,19 +432,6 @@
 .mr-reject-textarea:focus {
   border-color: #1a4a1a;
   box-shadow: 0 0 0 3px rgba(26,74,26,0.1);
-}
-
-.mr-photo {
-  width: 100%;
-  border-radius: 8px;
-  object-fit: cover;
-  max-height: 180px;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.mr-photo:hover {
-  opacity: 0.85;
 }
 
 .mr-photo-hint {
@@ -521,4 +553,61 @@
 @keyframes mr-toast-in {
   from { transform: translateY(-10px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+.mr-daterange-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.mr-subcat-select {
+  max-width: 200px;
+}
+
+.mr-filters-tail {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.mr-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.mr-filter-group select,
+.mr-filter-group input {
+  padding: 6px 8px;
+  font-size: 0.78rem;
+}
+
+.mr-search {
+  padding: 6px 8px;
+  font-size: 0.78rem;
+  width: 130px;
+}
+
+.mr-subcat-select {
+  max-width: 140px;
+}
+
+.mr-clear-btn {
+  padding: 6px 10px;
+  font-size: 0.76rem;
+}
+
+.mr-filters-tail {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.mr-daterange-group {
+  display: flex;
+  gap: 0.6rem;
 }

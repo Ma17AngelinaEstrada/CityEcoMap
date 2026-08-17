@@ -36,6 +36,7 @@ function MapView() {
   const [pendingFlyTo, setPendingFlyTo] = useState(flyToCoords || null);
   const [heading, setHeading] = useState(0);
   const [panelExpanded, setPanelExpanded] = useState(true);
+  const [activeReportsTab, setActiveReportsTab] = useState('recent'); // 'mine' | 'recent'
   const [myReportIds, setMyReportIds] = useState([]);
   const { isLoaded } = useGoogleMapsLoaded();
   const [showTour, setShowTour] = useState(routerLocation.state?.showTour || false);
@@ -439,8 +440,24 @@ function MapView() {
 
         <div className="reports-panel-content">
           {myReports.length > 0 && (
+            <div className="report-tabs">
+              <button
+                className={`report-tab ${activeReportsTab === 'mine' ? 'report-tab--active' : ''}`}
+                onClick={() => setActiveReportsTab('mine')}
+              >
+                My Reports
+              </button>
+              <button
+                className={`report-tab ${activeReportsTab === 'recent' ? 'report-tab--active' : ''}`}
+                onClick={() => setActiveReportsTab('recent')}
+              >
+                Recent Reports
+              </button>
+            </div>
+          )}
+
+          {(activeReportsTab === 'mine' && myReports.length > 0) && (
             <div className="report-section">
-              <h3 className="report-section-title">My Reports</h3>
               <div className="report-cards-scroll">
                 {myReports.map((r) => (
                   <div 
@@ -468,37 +485,39 @@ function MapView() {
             </div>
           )}
 
-          <div className="report-section">
-            <h3 className="report-section-title">Recent Reports</h3>
-            <div className="report-cards-scroll">
-              {recentReports.length === 0 ? (
-                <p className="report-empty">No reports yet.</p>
-              ) : (
-                recentReports.map((r) => (
-                  <div 
-                  key={r.id} 
-                  className="report-mini-card" 
-                  style={{ borderLeftColor: statusColors[r.status] || '#e53935' }}
-                  onClick={() => handleReportCardClick(r)}>
-                    <span
-                      className="report-mini-status"
-                      style={{ background: statusColors[r.status] || '#e53935' }}
-                    >
-                      {r.status || 'Pending'}
-                    </span>
-                    <p className="report-mini-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</p>
-                    <p className="report-mini-category">{r.category}{r.subCategory ? ` — ${r.subCategory}` : ''}</p>
-                    <p className="report-mini-date">{formatDate(r.createdAt)}</p>
-                    {r.description && (
-                      <p className="report-mini-desc">
-                        {r.description.length > 60 ? r.description.slice(0, 60) + '...' : r.description}
-                      </p>
-                    )}
-                  </div>
-                ))
-              )}
+          {(activeReportsTab === 'recent' || myReports.length === 0) && (
+            <div className="report-section">
+              {myReports.length === 0 && <h3 className="report-section-title">Recent Reports</h3>}
+              <div className="report-cards-scroll">
+                {recentReports.length === 0 ? (
+                  <p className="report-empty">No reports yet.</p>
+                ) : (
+                  recentReports.map((r) => (
+                    <div 
+                    key={r.id} 
+                    className="report-mini-card" 
+                    style={{ borderLeftColor: statusColors[r.status] || '#e53935' }}
+                    onClick={() => handleReportCardClick(r)}>
+                      <span
+                        className="report-mini-status"
+                        style={{ background: statusColors[r.status] || '#e53935' }}
+                      >
+                        {r.status || 'Pending'}
+                      </span>
+                      <p className="report-mini-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</p>
+                      <p className="report-mini-category">{r.category}{r.subCategory ? ` — ${r.subCategory}` : ''}</p>
+                      <p className="report-mini-date">{formatDate(r.createdAt)}</p>
+                      {r.description && (
+                        <p className="report-mini-desc">
+                          {r.description.length > 60 ? r.description.slice(0, 60) + '...' : r.description}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

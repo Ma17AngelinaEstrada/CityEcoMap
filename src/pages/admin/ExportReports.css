@@ -117,33 +117,38 @@
 .er-table-card {
   background: #fff;
   border-radius: 10px;
-  overflow: hidden;
   border: 1px solid #e0ddd5;
-  overflow-x: auto;
+  overflow-x: hidden;
+  overflow-y: hidden;
 }
 
 .er-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-family: sans-serif;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .er-table thead tr { border-bottom: 2px solid #eee; }
 
 .er-table th {
   text-align: left;
-  padding: 0.9rem 1.1rem;
+  padding: 0.7rem 0.7rem;
   font-weight: 700;
   color: #333;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .er-table td {
-  padding: 0.8rem 1.1rem;
+  padding: 0.65rem 0.7rem;
   color: #444;
   border-bottom: 1px solid #f0ede5;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  vertical-align: top;
 }
 
 .er-table tbody tr:last-child td { border-bottom: none; }
@@ -207,3 +212,53 @@
 .er-badge--ongoing   { background: #f9a825; color: #fff; }
 .er-badge--resolved  { background: #2e7d32; color: #fff; }
 .er-badge--rejected  { background: #757575; color: #fff; }
+
+.er-daterange-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.er-subcat-select {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.er-filters-tail {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.er-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.er-filter-group select,
+.er-filter-group input {
+  padding: 6px 8px;
+  font-size: 0.78rem;
+}
+
+.er-subcat-select {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.er-clear-btn {
+  padding: 6px 10px;
+  font-size: 0.76rem;
+}
+
+.er-daterange-group {
+  display: flex;
+  gap: 0.6rem;
+}

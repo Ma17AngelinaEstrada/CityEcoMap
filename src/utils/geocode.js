@@ -31,19 +31,31 @@ export const reverseGeocode = async (lat, lng) => {
 
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`,
       { headers: { 'Accept-Language': 'en' } }
     );
     const data = await res.json();
     const addr = data.address;
 
     const parts = [
-      addr.road || addr.pedestrian || addr.footway,
-      addr.suburb || addr.village || addr.neighbourhood,
-      addr.city || addr.town || addr.municipality,
+      addr.road || addr.pedestrian || addr.footway || addr.residential,
+      addr.suburb || addr.village || addr.neighbourhood || addr.quarter || addr.hamlet,
+      addr.city_district || addr.city || addr.town || addr.municipality,
     ].filter(Boolean);
 
-    const result = parts.length > 0 ? parts.join(', ') : data.display_name?.split(',').slice(0, 3).join(',').trim();
+    // Remove duplicate consecutive parts (e.g. suburb same as city)
+    const uniqueParts = parts.filter((part, i) => part !== parts[i - 1]);
+
+    let result;
+    if (uniqueParts.length >= 2) {
+      result = uniqueParts.join(', ');
+    } else if (data.display_name) {
+      // Fallback: use the first 3 meaningful segments of Nominatim's full display name
+      result = data.display_name.split(',').slice(0, 3).map(s => s.trim()).join(', ');
+    } else {
+      result = uniqueParts.join(', ') || 'Location unavailable';
+    }
+
     cache[key] = result;
     saveCache(cache);
     return result;
