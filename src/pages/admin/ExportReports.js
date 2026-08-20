@@ -152,6 +152,7 @@ export default function ExportReports() {
       r.email || 'Not provided',
       r.category || '—',
       r.subCategory === "Other" ? (r.subCategoryOther || "Other") : (r.subCategory || '—'),
+      r.areaType || '—',
       formatDate(r.createdAt),
       r.description || '—',
       [r.locationDescription, r.addressInput || (r.location ? (addresses[r.id] || `${r.location.lat.toFixed(4)}° N, ${r.location.lng.toFixed(4)}° E`) : null)]
@@ -162,66 +163,165 @@ export default function ExportReports() {
     ]);
 
   const headers = [
-    "Report ID", "Submitted By", "Email", "Category", "Sub-Category",
+    "Report ID", "Submitted By", "Email", "Category", "Sub-Category", "Type of Area",
     "Date Submitted", "Description", "Location", "Assigned To", "Status"
   ];
 
   const logExport = async (format) => {
-  try {
-    await addDoc(collection(db, "exportedReports"), {
-      adminEmail: auth.currentUser?.email || "unknown",
-      format,
-      filters: {
-        status: filterStatus,
-        category: filterCategory,
-        assignedTo: filterAssigned,
-        dateFrom: dateFrom || null,
-        dateTo: dateTo || null,
-      },
-      reportCount: filtered.length,
-      exportedAt: serverTimestamp(),
-    });
-    fetchExportHistory();
-  } catch (err) {
-    console.error("Failed to log export:", err);
-  }
-};
+    try {
+      await addDoc(collection(db, "exportedReports"), {
+        adminEmail: auth.currentUser?.email || "unknown",
+        format,
+        filters: {
+          status: filterStatus,
+          category: filterCategory,
+          assignedTo: filterAssigned,
+          dateFrom: dateFrom || null,
+          dateTo: dateTo || null,
+        },
+        reportCount: filtered.length,
+        exportedAt: serverTimestamp(),
+      });
+      fetchExportHistory();
+    } catch (err) {
+      console.error("Failed to log export:", err);
+    }
+  };
+
+  const logExportSingle = async (reportId) => {
+    try {
+      await addDoc(collection(db, "exportedReports"), {
+        adminEmail: auth.currentUser?.email || "unknown",
+        format: `PDF (Single — #${reportId})`,
+        filters: null,
+        reportCount: 1,
+        exportedAt: serverTimestamp(),
+      });
+      fetchExportHistory();
+    } catch (err) {
+      console.error("Failed to log export:", err);
+    }
+  };
 
   const handleExportPDF = () => {
-  const docPdf = new jsPDF({ orientation: "landscape" });
-  docPdf.setFontSize(14);
-  docPdf.text("CityEcoMap — Report Summary", 14, 15);
-  docPdf.setFontSize(9);
-  docPdf.text(
-    `Environmental Management Bureau, Lucena City | Generated: ${new Date().toLocaleString("en-PH")}`,
-    14, 21
-  );
+    const docPdf = new jsPDF({ orientation: "landscape" });
+    docPdf.setFontSize(14);
+    docPdf.text("CityEcoMap — Report Summary", 14, 15);
+    docPdf.setFontSize(9);
+    docPdf.text(
+      `Lucena City Environmental Reporting System | Generated: ${new Date().toLocaleString("en-PH")}`,
+      14, 21
+    );
 
-  autoTable(docPdf, {
-    startY: 27,
-    head: [headers],
-    body: buildRows(),
-    styles: { fontSize: 7, cellPadding: 2 },
-    headStyles: { fillColor: [26, 74, 26], textColor: 255 },
-    columnStyles: { 6: { cellWidth: 40 }, 7: { cellWidth: 45 } },
-  });
+    autoTable(docPdf, {
+      startY: 27,
+      head: [headers],
+      body: buildRows(),
+      styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fillColor: [26, 74, 26], textColor: 255 },
+      columnStyles: { 6: { cellWidth: 40 }, 7: { cellWidth: 45 } },
+    });
 
-  docPdf.save(`CityEcoMap_Reports_${new Date().toISOString().slice(0, 10)}.pdf`);
-  logExport("PDF");
-};
+    docPdf.save(`CityEcoMap_Reports_${new Date().toISOString().slice(0, 10)}.pdf`);
+    logExport("PDF");
+  };
 
   const handleExportExcel = () => {
-  const wsData = [headers, ...buildRows()];
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws["!cols"] = [
-    { wch: 12 }, { wch: 16 }, { wch: 22 }, { wch: 14 }, { wch: 18 },
-    { wch: 20 }, { wch: 35 }, { wch: 30 }, { wch: 10 }, { wch: 12 },
-  ];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Reports");
-  XLSX.writeFile(wb, `CityEcoMap_Reports_${new Date().toISOString().slice(0, 10)}.xlsx`);
-  logExport("Excel");
-};
+    const rows = buildRows();
+    const wsData = [headers, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Auto-size each column based on its longest cell content (capped so
+    // no single column takes over the whole sheet)
+    const MIN_WIDTH = 10;
+    const MAX_WIDTH = 45;
+    ws["!cols"] = headers.map((header, colIndex) => {
+      let maxLen = String(header).length;
+      rows.forEach((row) => {
+        const cell = row[colIndex];
+        if (cell != null) {
+          const len = String(cell).length;
+          if (len > maxLen) maxLen = len;
+        }
+      });
+      return { wch: Math.min(Math.max(maxLen + 2, MIN_WIDTH), MAX_WIDTH) };
+    });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reports");
+    XLSX.writeFile(wb, `CityEcoMap_Reports_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    logExport("Excel");
+  };
+
+  const handleGenerateSingleReport = (r) => {
+    const docPdf = new jsPDF({ orientation: "portrait" });
+
+    docPdf.setFontSize(14);
+    docPdf.text("CityEcoMap — Incident Report", 14, 18);
+    docPdf.setFontSize(9);
+    docPdf.text(
+      `Lucena City Environmental Reporting System | Generated: ${new Date().toLocaleString("en-PH")}`,
+      14, 24
+    );
+    docPdf.setLineWidth(0.3);
+    docPdf.line(14, 28, 196, 28);
+
+    let y = 38;
+    const addRow = (label, value) => {
+      docPdf.setFontSize(9);
+      docPdf.setTextColor(120);
+      docPdf.text(label.toUpperCase(), 14, y);
+      docPdf.setFontSize(11);
+      docPdf.setTextColor(30);
+      const lines = docPdf.splitTextToSize(value || "—", 170);
+      docPdf.text(lines, 14, y + 6);
+      y += 6 + lines.length * 6 + 4;
+    };
+
+    addRow("Report ID", `#${r.reportId || r.id.slice(0, 6).toUpperCase()}`);
+    addRow("Date Submitted", formatDate(r.createdAt));
+    addRow("Submitted By", r.fullName || "—");
+    addRow("Email", r.email || "Not provided");
+    addRow("Category", r.category || "—");
+    addRow(
+      "Sub-Category",
+      r.subCategory === "Other" ? (r.subCategoryOther || "Other") : (r.subCategory || "—")
+    );
+    addRow("Type of Area", r.areaType || "Not specified");
+    addRow(
+      "Location",
+      [r.locationDescription, r.addressInput].filter(Boolean).join(" — ") || "—"
+    );
+    if (r.location?.lat && r.location?.lng) {
+      addRow("Coordinates", `Lat: ${r.location.lat.toFixed(5)}, Long: ${r.location.lng.toFixed(5)}`);
+    }
+    addRow("Description", r.description || "—");
+    addRow("Status", r.status || "Pending");
+    addRow("Assigned To", r.assignedTo || "—");
+    if (r.status === "Rejected" && r.rejectionReason) {
+      addRow("Rejection Reason", r.rejectionReason);
+    }
+
+      if (r.photo) {
+        if (y > 220) {
+          docPdf.addPage();
+          y = 20;
+        }
+        docPdf.setFontSize(9);
+        docPdf.setTextColor(120);
+        docPdf.text("PHOTO DOCUMENTATION", 14, y);
+        y += 6;
+        try {
+          docPdf.addImage(r.photo, "JPEG", 14, y, 80, 60);
+          y += 66;
+        } catch (err) {
+          console.error("Failed to embed photo:", err);
+        }
+      }
+
+      docPdf.save(`CityEcoMap_${r.reportId || r.id.slice(0, 6).toUpperCase()}.pdf`);
+      logExportSingle(r.reportId || r.id.slice(0, 6).toUpperCase());
+    };
 
   const applyQuickRange = (value) => {
     setQuickRange(value);
@@ -468,14 +568,15 @@ export default function ExportReports() {
             <colgroup>
               <col style={{ width: "7%" }} />
               <col style={{ width: "9%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "6%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "7%" }} />
               <col style={{ width: "8%" }} />
               <col style={{ width: "8%" }} />
               <col style={{ width: "14%" }} />
-              <col style={{ width: "20%" }} />
+              <col style={{ width: "18%" }} />
               <col style={{ width: "6%" }} />
               <col style={{ width: "8%" }} />
+              <col style={{ width: "9%" }} />
             </colgroup>
             <thead>
               <tr>
@@ -483,29 +584,33 @@ export default function ExportReports() {
                 <th>Submitted By</th>
                 <th>Email</th>
                 <th>Category</th>
-                <th>Sub-Category</th>
+                <th>Type of Area</th>
                 <th>Date Submitted</th>
                 <th>Description</th>
                 <th>Location</th>
                 <th>Assigned To</th>
                 <th>Status</th>
+                <th>Report</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan="10" className="er-empty">No reports match the selected filters.</td></tr>
+                <tr><td colSpan="11" className="er-empty">No reports match the selected filters.</td></tr>
                 ) : (
                   filtered.map((r) => (
                     <tr key={r.id}>
                       <td>#{r.reportId || r.id.slice(0, 6).toUpperCase()}</td>
                       <td>{r.fullName || "—"}</td>
                       <td>{r.email || "—"}</td>
-                      <td>{r.category}</td>
                       <td>
-                        {r.subCategory === "Other"
-                          ? (r.subCategoryOther || "Other")
-                          : (r.subCategory || "—")}
+                        <div>{r.category}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#888', fontStyle: 'italic' }}>
+                          {r.subCategory === "Other"
+                            ? (r.subCategoryOther || "Other")
+                            : (r.subCategory || "—")}
+                        </div>
                       </td>
+                      <td>{r.areaType || "—"}</td>
                       <td>{formatDate(r.createdAt)}</td>
                       <td>{r.description || "—"}</td>
                       <td>
@@ -521,6 +626,14 @@ export default function ExportReports() {
                       </td>
                       <td>{r.assignedTo || "—"}</td>
                       <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
+                      <td>
+                        <button
+                          className="er-generate-btn"
+                          onClick={() => handleGenerateSingleReport(r)}
+                        >
+                          📄 Generate
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}

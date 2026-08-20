@@ -589,12 +589,12 @@ export default function AdminDashboard() {
                 <col style={{ width: "8%" }} />
                 <col style={{ width: "10%" }} />
                 <col style={{ width: "10%" }} />
-                <col style={{ width: "8%" }} />
                 <col style={{ width: "10%" }} />
                 <col style={{ width: "9%" }} />
                 <col style={{ width: "15%" }} />
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "8%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "9%" }} />
                 <col style={{ width: "9%" }} />
               </colgroup>
               <thead>
@@ -603,7 +603,7 @@ export default function AdminDashboard() {
                   <th>Submitted By</th>
                   <th>Email</th>
                   <th>Category</th>
-                  <th>Sub-Category</th>
+                  <th>Type of Area</th>
                   <th>Date Submitted</th>
                   <th>Description</th>
                   <th>Location</th>
@@ -620,12 +620,15 @@ export default function AdminDashboard() {
                       <td>#{r.reportId || r.id.slice(0, 6).toUpperCase()}</td>
                       <td>{r.fullName || "—"}</td>
                       <td>{r.email || "—"}</td>
-                      <td>{r.category}</td>
                       <td>
-                        {r.subCategory === "Other"
-                          ? (r.subCategoryOther || "Other")
-                          : (r.subCategory || "—")}
+                        <div>{r.category}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#888', fontStyle: 'italic' }}>
+                          {r.subCategory === "Other"
+                            ? (r.subCategoryOther || "Other")
+                            : (r.subCategory || "—")}
+                        </div>
                       </td>
+                      <td>{r.areaType || "—"}</td>
                       <td>{formatDate(r.createdAt)}</td>
                       <td>{r.description || "—"}</td>
                       <td>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Autocomplete } from '@react-google-maps/api';
-import { GOOGLE_MAPS_LIBRARIES } from '../../utils/googleMapsLibraries';
 import logo from '../../logowhite2.png';
 import './SubmitReport.css';
 import '../../styles/CitizenHeader.css';
@@ -23,6 +22,20 @@ const SUB_CATEGORIES = {
   ],
 };
 
+const AREA_TYPES = [
+  'Road',
+  'Sidewalk',
+  'Canal',
+  'Esteros (Waterway)',
+  'Vacant Lot',
+  'Residential Area',
+  'Establishment/Commercial Area',
+  'Bridge',
+  'Coastal Area',
+  'Park',
+  'Other',
+];
+
 function SubmitReport() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,6 +45,8 @@ function SubmitReport() {
   const [selectedCategory, setSelectedCategory] = useState(previousForm?.selectedCategory || '');
   const [subCategory, setSubCategory] = useState(previousForm?.subCategory || '');
   const [otherSubCategory, setOtherSubCategory] = useState(previousForm?.otherSubCategory || '');
+  const [areaType, setAreaType] = useState(previousForm?.areaType || '');
+  const [otherAreaType, setOtherAreaType] = useState(previousForm?.otherAreaType || '');
   const [description, setDescription] = useState(previousForm?.description || '');
   const [email, setEmail] = useState(previousForm?.email || '');
   const [photo, setPhoto] = useState(previousForm?.photo || null);
@@ -144,7 +159,15 @@ function SubmitReport() {
       return;
     }
     if (subCategory === 'Other' && !otherSubCategory.trim()) {
-      alert('Please specify the issue type.');
+  alert('Please specify the issue type.');
+  return;
+    }
+    if (!areaType) {
+      alert('Please select the type of area.');
+      return;
+    }
+    if (areaType === 'Other' && !otherAreaType.trim()) {
+      alert('Please specify the type of area.');
       return;
     }
     if (!photo) {
@@ -173,6 +196,7 @@ function SubmitReport() {
           fullName,
           selectedCategory,
           subCategory: subCategory === 'Other' ? otherSubCategory : subCategory,
+          areaType: areaType === 'Other' ? otherAreaType : areaType,
           description,
           email,
           photo,
@@ -263,10 +287,38 @@ function SubmitReport() {
                   style={{ marginTop: '8px' }}
                 />
               )}
-            </>
-          )}
+              </>
+              )}
 
-          <div className="section-label">ADD PHOTO</div>
+              {selectedCategory && (
+                <>
+                  <div className="section-label">TYPE OF AREA <span className="required">(Required)</span></div>
+                  <p className="notify-note">This helps the team prepare the right equipment before heading to the site.</p>
+                  <select
+                    className="email-input"
+                    value={areaType}
+                    onChange={(e) => setAreaType(e.target.value)}
+                  >
+                    <option value="">Select the type of area...</option>
+                    {AREA_TYPES.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                  {areaType === 'Other' && (
+                    <input
+                      type="text"
+                      className="email-input"
+                      placeholder="Please specify the type of area"
+                      value={otherAreaType}
+                      onChange={(e) => setOtherAreaType(e.target.value)}
+                      maxLength={100}
+                      style={{ marginTop: '8px' }}
+                    />
+                  )}
+                </>
+              )}
+
+              <div className="section-label">ADD PHOTO</div>
           <div className="photo-options">
             <label className="photo-option-btn" htmlFor="photo-camera">
               <CameraIcon /> Take a Photo

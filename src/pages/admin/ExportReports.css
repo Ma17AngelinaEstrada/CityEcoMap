@@ -262,3 +262,19 @@
   display: flex;
   gap: 0.6rem;
 }
+
+.er-generate-btn {
+  background: #1a4a1a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-family: sans-serif;
+  white-space: nowrap;
+}
+
+.er-generate-btn:hover {
+  background: #2d6a2d;
+}

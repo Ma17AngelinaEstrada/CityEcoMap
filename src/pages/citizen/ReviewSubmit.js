@@ -47,6 +47,7 @@ function ReviewSubmit() {
         fullName: form?.fullName || null,
         category: form?.selectedCategory,
         subCategory: form?.subCategory || null,
+        areaType: form?.areaType || null,
         description: form?.description,
         email: form?.email || null,
         location: form?.location || null,
@@ -139,6 +140,14 @@ function ReviewSubmit() {
                 <span className="summary-label">Report Type</span>
                 <span className="summary-value">{form?.selectedCategory || 'Not selected'}</span>
                 <span className="summary-desc">{form?.subCategory || ''}</span>
+              </div>
+            </div>
+            <hr />
+            <div className="summary-row">
+              <div className="summary-icon"><PinIcon /></div>
+              <div className="summary-info">
+                <span className="summary-label">Type of Area</span>
+                <span className="summary-value">{form?.areaType || 'Not specified'}</span>
               </div>
             </div>
             <hr />
