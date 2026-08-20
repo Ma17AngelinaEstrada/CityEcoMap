@@ -13,7 +13,12 @@ function SplashScreen() {
 
   return (
     <div className="splash-container">
-      <div className="splash-hero">
+      <div
+        className="splash-hero"
+        style={{
+          backgroundImage: `url(${process.env.PUBLIC_URL}/splash-bg1.jpeg)`,
+        }}
+      >
         <img src={logo} alt="CityEcoMap Logo" className="splash-logo" />
       </div>
 

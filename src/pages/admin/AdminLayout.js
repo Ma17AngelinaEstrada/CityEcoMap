@@ -148,7 +148,7 @@ export default function AdminLayout({ children }) {
     <div className="al2-wrapper">
       {/* Top navbar */}
       <header className="al2-topbar">
-        <img src="/logogreen2.png" alt="CityEcoMap" className="al2-logo" />
+        <img src="/logowhite2.png" alt="CityEcoMap" className="al2-logo" />
 
         <div className="al2-notif-wrapper">
           <button className="al2-notif-btn" onClick={(e) => { e.stopPropagation(); setShowNotifs(!showNotifs); }}>
@@ -199,7 +199,12 @@ export default function AdminLayout({ children }) {
 
       <div className="al2-body">
         {/* Sidebar */}
-        <aside className={`al2-sidebar ${collapsed ? "al2-sidebar--collapsed" : ""}`}>
+        <aside
+          className={`al2-sidebar ${collapsed ? "al2-sidebar--collapsed" : ""}`}
+          style={{
+            backgroundImage: `linear-gradient(rgba(26,74,26,0.9), rgba(26,74,26,0.9)), url(${process.env.PUBLIC_URL}/sidebar-bg.jpg)`,
+          }}
+        >
           <div className="al2-sidebar-toolbar">
             <button
               className="al2-collapse-btn"

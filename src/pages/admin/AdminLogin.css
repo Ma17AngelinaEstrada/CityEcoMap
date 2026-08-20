@@ -10,6 +10,9 @@
 .al-left {
   width: 50%;
   background-color: #1a4a1a;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -44,7 +47,7 @@
 /* Right panel */
 .al-right {
   width: 50%;
-  background-color: #fafafa;
+  background-color: #f3ede3;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -76,7 +79,7 @@
   font-size: 0.85rem;
   font-style: normal;
   font-weight: 500;
-  color: #888;
+  color: #7d7a63;
   margin-bottom: 2rem;
   text-align: center;
 }
@@ -101,7 +104,7 @@
 .al-field label {
   display: block;
   font-size: 0.8rem;
-  color: #666;
+  color: #6b6552;
   margin-bottom: 6px;
   font-weight: 500;
 }
@@ -109,7 +112,7 @@
 .al-field input {
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid #ddd;
+  border: 1px solid #d9cfb8;
   border-radius: 8px;
   font-size: 0.95rem;
   background: #fff;
@@ -151,7 +154,7 @@
 .al-footer {
   font-size: 0.75rem;
   font-style: normal;
-  color: #999;
+  color: #8c8368;
   text-align: center;
   margin-top: 2.5rem;
 }
