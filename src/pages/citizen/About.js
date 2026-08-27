@@ -15,11 +15,13 @@ function About() {
         <div className="header-logo">
           <img src={logo} alt="CityEcoMap" className="logo-img" />
         </div>
-        <nav className="header-nav">
-          <a href="/map" className="nav-link">Home</a>
-          <a href="/track-report" className="nav-link">Track Report</a>
-          <a href="/about" className="nav-link active">About</a>
-        </nav>
+        <div className="header-right">
+          <nav className="header-nav">
+            <a href="/map" className="nav-link">Home</a>
+            <a href="/track-report" className="nav-link">Track Report</a>
+            <a href="/about" className="nav-link active">About</a>
+          </nav>
+        </div>
       </div>
 
       {/* Hero */}
@@ -43,7 +45,7 @@ function About() {
         <div className="divider" />
 
         {/* How it works */}
-        <div className="about-section">
+        <div className="about-section" id="about-how-it-works">
           <div className="section-icon"><GearIcon /></div>
           <div className="section-content">
             <h3>How It Works</h3>

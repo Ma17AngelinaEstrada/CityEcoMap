@@ -6,6 +6,7 @@ import { auth, db } from "../../firebase/firebase";
 import AdminLayout from "./AdminLayout";
 import "./ManageReports.css";
 import { reverseGeocode, isCached } from '../../utils/geocode';
+import { useAdminTour } from "../../context/AdminTourContext";
 
 const sendEmailNotification = async (to, subject, body) => {
   if (!to) return;
@@ -26,6 +27,63 @@ const getSuggestedAssignee = (subCategory) => {
   if (subCategory === RIVER_SUBCATEGORY) return "EMB";
   return "LGU";
 };
+
+const SAMPLE_REPORT = {
+  id: 'SAMPLE_REPORT',
+  reportId: 'WI99999',
+  fullName: 'Juan Dela Cruz',
+  email: 'juan.delacruz@example.com',
+  category: 'Waste Issue',
+  subCategory: 'Illegal Dumping',
+  areaType: 'Vacant Lot',
+  createdAt: { toDate: () => new Date() },
+  description: 'Sample report for preview — pile of garbage dumped near the vacant lot.',
+  locationDescription: 'Beside the basketball court',
+  addressInput: 'Brgy. 5, Lucena City',
+  location: null,
+  assignedTo: null,
+  status: 'Pending',
+  rejectionReason: null,
+  photo: null,
+};
+
+const SAMPLE_HISTORY = [
+  {
+    id: 'sample-history-1',
+    status: 'Pending',
+    adminEmail: 'system',
+    timestamp: { toDate: () => new Date() },
+    notes: null,
+  },
+];
+
+const MANAGE_REPORTS_TOUR_STEPS = [
+  {
+    selector: '.mr-filters',
+    title: 'Filter Reports',
+    description: 'Narrow down the report list by status, category, sub-category, assigned office, date range, or a keyword/Report ID search.',
+  },
+  {
+    selector: '.mr-table-card',
+    title: 'Reports Table',
+    description: 'All matching reports appear here. Click any row to open its full details.',
+  },
+  {
+    selector: '.mr-detail--modal',
+    title: 'Report Details',
+    description: 'This is a sample preview of what you\u2019ll see when you click a report — full details, photo, and current status.',
+  },
+  {
+    selector: '.mr-status-actions',
+    title: 'Take Action',
+    description: 'Depending on the report\u2019s status, you can Approve, Reject, mark it Ongoing, or mark it Resolved here.',
+  },
+  {
+    selector: '.mr-history-section',
+    title: 'Status History',
+    description: 'Every status change is logged here, along with who made the change and when.',
+  },
+];
 
 export default function ManageReports() {
   const navigate = useNavigate();
@@ -48,14 +106,34 @@ export default function ManageReports() {
   const [addresses, setAddresses] = useState({});
   const [statusHistory, setStatusHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [adminNameMap, setAdminNameMap] = useState({});
   const [toast, setToast] = useState(null);
   const isFirstLoad = useRef(true);
   const prevIdsRef = useRef(new Set());
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [filterSubCategory, setFilterSubCategory] = useState("All");
+    const [filterSubCategory, setFilterSubCategory] = useState("All");
   const [quickRange, setQuickRange] = useState("custom");
   const [specificMonth, setSpecificMonth] = useState("");
+    const { registerTour, showTour, currentStepIndex } = useAdminTour();
+
+  // Register this page's tour steps with the shared AdminLayout tour system
+  useEffect(() => {
+    registerTour(MANAGE_REPORTS_TOUR_STEPS, 'cityecomap_admin_tour_seen_reports');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const SAMPLE_MODAL_STEP_INDEX = 2;
+
+  useEffect(() => {
+    if (showTour && currentStepIndex >= SAMPLE_MODAL_STEP_INDEX) {
+      setSelectedReport(SAMPLE_REPORT);
+      setStatusHistory(SAMPLE_HISTORY);
+    } else if (selectedReport?.id === 'SAMPLE_REPORT') {
+      setSelectedReport(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTour, currentStepIndex]);
 
   const WASTE_SUBCATEGORIES = ["Illegal Dumping", "Uncollected Garbage", "Waste Affecting Rivers, Waterways, and Natural Water Bodies", "Other"];
   const DRAINAGE_SUBCATEGORIES = ["Blocked Drainage", "Damaged Drainage", "Flooding", "Other"];
@@ -211,6 +289,25 @@ export default function ManageReports() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reports]);
 
+  useEffect(() => {
+    const fetchAdmins = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "admins"));
+        const map = {};
+        snapshot.docs.forEach((d) => {
+          const data = d.data();
+          if (data.email) {
+            map[data.email] = data.name || data.username || data.email;
+          }
+        });
+        setAdminNameMap(map);
+      } catch (err) {
+        console.error("Error fetching admins for name lookup:", err);
+      }
+    };
+    fetchAdmins();
+  }, []);
+
   const updateStatus = async (reportId, newStatus, extraFields = {}) => {
       setUpdatingId(reportId);
       try {
@@ -244,7 +341,6 @@ export default function ManageReports() {
       }
     };
 
-  // Approve → open assign office modal
   const handleApprove = () => {
     setPendingOffice(null);
     setAssignModal(true);
@@ -360,6 +456,9 @@ const handleSetResolved = async () => {
   };
 
   useEffect(() => {
+    if (selectedReport?.id === 'SAMPLE_REPORT') {
+      return; // sample history is already set directly — don't overwrite with a real fetch
+    }
     if (selectedReport?.id) {
       fetchStatusHistory(selectedReport.id);
     } else {
@@ -418,17 +517,17 @@ const handleSetResolved = async () => {
     });
   };
 
-  // Which action buttons to show based on current status
-  const renderActions = () => {
+    const renderActions = () => {
     const s = selectedReport?.status;
     const busy = updatingId === selectedReport?.id;
+    const isSample = selectedReport?.id === 'SAMPLE_REPORT';
 
     if (s === "Pending") return (
       <div className="mr-status-btns">
-        <button className="mr-action-btn mr-action-btn--approve" onClick={handleApprove} disabled={busy}>
+        <button className="mr-action-btn mr-action-btn--approve" onClick={handleApprove} disabled={busy || isSample}>
           ✔ Approve
         </button>
-        <button className="mr-action-btn mr-action-btn--reject" onClick={handleRejectClick} disabled={busy}>
+        <button className="mr-action-btn mr-action-btn--reject" onClick={handleRejectClick} disabled={busy || isSample}>
           ✕ Reject
         </button>
       </div>
@@ -436,7 +535,7 @@ const handleSetResolved = async () => {
 
     if (s === "Approved") return (
       <div className="mr-status-btns">
-        <button className="mr-action-btn mr-action-btn--ongoing" onClick={handleSetOngoing} disabled={busy}>
+        <button className="mr-action-btn mr-action-btn--ongoing" onClick={handleSetOngoing} disabled={busy || isSample}>
           ▶ Mark as Ongoing
         </button>
       </div>
@@ -444,7 +543,7 @@ const handleSetResolved = async () => {
 
     if (s === "Ongoing" || s === "In Progress") return (
       <div className="mr-status-btns">
-        <button className="mr-action-btn mr-action-btn--resolved" onClick={handleSetResolved} disabled={busy}>
+        <button className="mr-action-btn mr-action-btn--resolved" onClick={handleSetResolved} disabled={busy || isSample}>
           ✔ Mark as Resolved
         </button>
       </div>
@@ -610,11 +709,10 @@ const handleSetResolved = async () => {
                 <col style={{ width: "10%" }} />
                 <col style={{ width: "7%" }} />
                 <col style={{ width: "9%" }} />
-                <col style={{ width: "17%" }} />
-                <col style={{ width: "16%" }} />
+                <col style={{ width: "19%" }} />
+                <col style={{ width: "20%" }} />
                 <col style={{ width: "7%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "7%" }} />
+                <col style={{ width: "8%" }} />
               </colgroup>
               <thead>
                 <tr>
@@ -628,12 +726,11 @@ const handleSetResolved = async () => {
                   <th>Location</th>
                   <th>Assigned To</th>
                   <th>Status</th>
-                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan="11" className="mr-empty">No reports found.</td></tr>
+                  <tr><td colSpan="10" className="mr-empty">No reports found.</td></tr>
                 ) : (
                   filtered.map((r) => (
                     <tr
@@ -668,14 +765,6 @@ const handleSetResolved = async () => {
                       </td>
                       <td>{r.assignedTo || "—"}</td>
                       <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
-                      <td>
-                        <button
-                          className="mr-view-btn"
-                          onClick={(e) => { e.stopPropagation(); setSelectedReport(r); }}
-                        >
-                          View
-                        </button>
-                      </td>
                     </tr>
                   ))
                 )}
@@ -788,7 +877,9 @@ const handleSetResolved = async () => {
                     {statusHistory.map((h) => (
                       <div key={h.id} className="mr-history-item">
                         <span className={getStatusClass(h.status)}>{h.status}</span>
-                        <span className="mr-history-admin">{h.adminEmail}</span>
+                        <span className="mr-history-admin">
+                          <span className="mr-history-admin-label">Updated by:</span> {adminNameMap[h.adminEmail] || h.adminEmail}
+                        </span>
                         <span className="mr-history-date">{formatDate(h.timestamp)}</span>
                         {h.notes && <p className="mr-history-notes">{h.notes}</p>}
                       </div>

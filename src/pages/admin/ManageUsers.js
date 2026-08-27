@@ -6,6 +6,7 @@ import { collection, getDocs, doc, setDoc, updateDoc, serverTimestamp } from "fi
 import { auth, db } from "../../firebase/firebase";
 import AdminLayout from "./AdminLayout";
 import "./ManageUsers.css";
+import { useAdminTour } from "../../context/AdminTourContext";
 
 // Secondary Firebase app to create users without signing out current admin
 const secondaryApp = initializeApp({
@@ -19,6 +20,37 @@ const secondaryApp = initializeApp({
 
 const secondaryAuth = getAuth(secondaryApp);
 
+const MASTER_TOUR_STEPS = [
+  {
+    selector: '.mu-table-card',
+    title: 'Admin Accounts',
+    description: 'View all admin accounts, their role (Master or Regular Admin), and their status.',
+  },
+  {
+    selector: '.mu-create-btn',
+    title: 'Add a New Admin',
+    description: 'Click here to create a new admin account with a name, email, password, and role.',
+  },
+  {
+    selector: '.mu-modal',
+    title: 'Admin Account Form',
+    description: 'This is a sample preview of the form used to create or edit an admin account.',
+  },
+  {
+    selector: '.mu-actions',
+    title: 'Edit or Deactivate',
+    description: 'Use these buttons to edit an admin\u2019s name/role, or deactivate their account. You cannot deactivate your own account.',
+  },
+];
+
+const REGULAR_TOUR_STEPS = [
+  {
+    selector: '.mu-table-card',
+    title: 'Admin Accounts',
+    description: 'View all admin accounts, their role, and their status. Only Master Admins can create, edit, or deactivate accounts.',
+  },
+];
+
 export default function ManageUsers() {
   const navigate = useNavigate();
   const [currentAdmin, setCurrentAdmin] = useState(null);
@@ -29,6 +61,36 @@ export default function ManageUsers() {
   const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "Regular Admin" });
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const { registerTour, showTour, currentStepIndex } = useAdminTour();
+  const isMasterAdmin = currentAdmin?.role === "Master Admin";
+
+  // isMasterAdmin is resolved asynchronously via fetchAdmins() — re-register
+  // whenever it changes, so the tour matches what the current admin can see
+  useEffect(() => {
+    if (currentAdmin === null) return; // not resolved yet
+    registerTour(
+      isMasterAdmin ? MASTER_TOUR_STEPS : REGULAR_TOUR_STEPS,
+      'cityecomap_admin_tour_seen_users'
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentAdmin, isMasterAdmin]);
+
+  // Step index (within MASTER_TOUR_STEPS) where the sample create/edit form
+  // should be shown — only relevant for Master Admins
+  const SAMPLE_MODAL_STEP_INDEX = 2;
+
+  useEffect(() => {
+    if (!isMasterAdmin) return;
+    if (showTour && currentStepIndex === SAMPLE_MODAL_STEP_INDEX) {
+      setEditingAdmin(null);
+      setFormData({ name: "Juan Dela Cruz", email: "juan.delacruz@example.com", password: "", role: "Regular Admin" });
+      setFormError("");
+      setShowModal(true);
+    } else if (showModal) {
+      setShowModal(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTour, currentStepIndex, isMasterAdmin]);
 
   useEffect(() => {
       const unsub = onAuthStateChanged(auth, async (user) => {
@@ -58,8 +120,6 @@ export default function ManageUsers() {
         setLoading(false);
       }
     };
-
-  const isMasterAdmin = currentAdmin?.role === "Master Admin";
 
   const openCreateModal = () => {
     setEditingAdmin(null);

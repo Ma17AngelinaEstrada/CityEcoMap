@@ -6,6 +6,7 @@ import './SubmitReport.css';
 import '../../styles/CitizenHeader.css';
 import { TrashIcon, WaveIcon, CheckIcon, CameraIcon, ImageIcon, XIcon, PinIcon, ArrowLeftIcon } from '../../components/Icons';
 import { useGoogleMapsLoaded } from '../../context/GoogleMapsLoaderContext';
+import OnboardingTour from '../../components/OnboardingTour';
 
 const SUB_CATEGORIES = {
   'Waste Issue': [
@@ -36,6 +37,54 @@ const AREA_TYPES = [
   'Other',
 ];
 
+const TOUR_STEPS = [
+  {
+    selector: '#field-name',
+    title: 'Your Name',
+    description: 'Enter your name here. This is required and will be shown as the submitter of the report.',
+  },
+  {
+    selector: '.category-section',
+    title: 'Choose a Category',
+    description: 'Select whether this is a Waste Issue or a Drainage Issue.',
+  },
+  {
+    selector: '#field-specific-issue',
+    title: 'Specific Issue',
+    description: 'Pick the specific type of issue, like Illegal Dumping or Blocked Drainage. This section appears once you choose a category above.',
+  },
+  {
+    selector: '#field-area-type',
+    title: 'Type of Area',
+    description: 'Tell us what kind of area this is (road, sidewalk, vacant lot, etc.) so the team can prepare the right equipment.',
+  },
+  {
+    selector: '.photo-options',
+    title: 'Add a Photo',
+    description: 'Take a photo or upload one from your gallery. A photo is required.',
+  },
+  {
+    selector: '#field-email',
+    title: 'Get Notified (Optional)',
+    description: 'Enter your email to get status updates directly, or leave it blank and track your report using your Report ID instead.',
+  },
+  {
+    selector: '#field-address',
+    title: 'Address',
+    description: 'Start typing an address and select it from the suggestions, or use your current location.',
+  },
+  {
+    selector: '#field-exact-spot',
+    title: 'Exact Spot',
+    description: 'If the address covers a large area, describe exactly where the issue is \u2014 e.g. "Beside the basketball court."',
+  },
+  {
+    selector: '.submit-btn',
+    title: 'Review & Submit',
+    description: 'Once everything is filled out, tap here to review your report before sending it.',
+  },
+];
+
 function SubmitReport() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,6 +104,7 @@ function SubmitReport() {
   const [addressInput, setAddressInput] = useState(previousForm?.addressInput || '');
   const [locationDescription, setLocationDescription] = useState(previousForm?.locationDescription || '');
   const [autocompleteInstance, setAutocompleteInstance] = useState(null);
+  const [showTour, setShowTour] = useState(false);
 
   const { isLoaded } = useGoogleMapsLoaded();
 
@@ -66,6 +116,15 @@ function SubmitReport() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory]);
+
+    // Auto-select a sample category when the tour opens, so Specific Issue
+    // and Type of Area fields render for the walkthrough
+    useEffect(() => {
+      if (showTour && !selectedCategory) {
+        setSelectedCategory('Waste Issue');
+      }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showTour]);
 
   // Block browser back button if there's progress
   useEffect(() => {
@@ -223,7 +282,10 @@ function SubmitReport() {
       <div className="citizen-header report-header">
         <button className="header-back-btn" onClick={handleLeave}><ArrowLeftIcon /></button>
         <img src={logo} alt="CityEcoMap" className="logo-img" />
-        <button className="header-close-btn" onClick={handleLeave}><XIcon /></button>
+        <div className="header-actions">
+          <button className="header-help-btn" onClick={() => setShowTour(true)} title="Show guide">?</button>
+          <button className="header-close-btn" onClick={handleLeave}><XIcon /></button>
+        </div>
       </div>
 
       <div className="report-body">
@@ -234,6 +296,7 @@ function SubmitReport() {
 
           <div className="section-label">YOUR NAME <span className="required">(Required)</span></div>
           <input
+            id="field-name"
             type="text"
             className="email-input"
             placeholder="Juan Dela Cruz"
@@ -267,6 +330,7 @@ function SubmitReport() {
             <>
               <div className="section-label">SPECIFIC ISSUE <span className="required">(Required)</span></div>
               <select
+                id="field-specific-issue"
                 className="email-input"
                 value={subCategory}
                 onChange={(e) => setSubCategory(e.target.value)}
@@ -295,6 +359,7 @@ function SubmitReport() {
                   <div className="section-label">TYPE OF AREA <span className="required">(Required)</span></div>
                   <p className="notify-note">This helps the team prepare the right equipment before heading to the site.</p>
                   <select
+                    id="field-area-type"
                     className="email-input"
                     value={areaType}
                     onChange={(e) => setAreaType(e.target.value)}
@@ -369,6 +434,7 @@ function SubmitReport() {
           <div className="section-label">GET NOTIFIED <span className="optional">(Optional)</span></div>
           <p className="notify-note">Enter your email address to receive updates about your report status. (Leave blank if you prefer to track using your Report ID)</p>
           <input
+            id="field-email"
             type="email"
             className="email-input"
             placeholder="your@email.com"
@@ -381,6 +447,7 @@ function SubmitReport() {
           {isLoaded ? (
             <Autocomplete onLoad={onAutocompleteLoad} onPlaceChanged={onPlaceChanged}>
               <input
+                id="field-address"
                 type="text"
                 className="email-input"
                 placeholder="e.g. Quezon Avenue, Ibabang Dupay, Lucena City"
@@ -402,6 +469,7 @@ function SubmitReport() {
             If the address above is a large area (e.g. a subdivision or campus), tell us exactly where — e.g. "Beside the basketball court" or "Near Gate 2."
           </p>
           <input
+            id="field-exact-spot"
             type="text"
             className="email-input"
             placeholder="e.g. Near the public market, Brgy. 5"
@@ -416,6 +484,13 @@ function SubmitReport() {
 
         </div>
       </div>
+      {showTour && (
+        <OnboardingTour
+          steps={TOUR_STEPS}
+          onFinish={() => setShowTour(false)}
+          storageKey="cityecomap_tour_seen_submit"
+        />
+      )}
     </div>
   );
 }

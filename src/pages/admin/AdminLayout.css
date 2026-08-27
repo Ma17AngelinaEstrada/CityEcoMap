@@ -30,7 +30,7 @@
 }
 
 .al2-logo {
-  height: 28px;
+  height: 35px;
   width: auto;
   object-fit: contain;
 }
@@ -66,26 +66,30 @@
 
 .al2-collapse-btn {
   position: absolute;
-  top: 12px;
-  right: -12px;
-  width: 24px;
-  height: 24px;
+  top: 18px;
+  right: -13px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: #ffffff;
-  color: #1a6b3c;
-  border: 1px solid #ddd;
-  font-size: 0.85rem;
-  font-weight: 700;
+  color: #1a4a1a;
+  border: 2px solid #f3ede3;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  transition: transform 0.15s;
+}
+
+.al2-collapse-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 .al2-collapse-btn:hover {
-  background: #f5f5f5;
+  transform: scale(1.08);
 }
 
 /* Profile */
@@ -239,38 +243,43 @@
   color: #ffb3a7;
 }
 
-/* Sidebar toolbar / collapse button */
-.al2-sidebar-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  padding: 10px 12px 0;
+
+.al2-sidebar-outer {
+  position: relative;
+  flex-shrink: 0;
 }
 
-.al2-sidebar--collapsed .al2-sidebar-toolbar {
-  justify-content: center;
-  padding: 10px 0 0;
+.al2-sidebar-outer {
+  position: relative;
+  flex-shrink: 0;
 }
 
 .al2-collapse-btn {
-  width: 30px;
-  height: 30px;
+  position: absolute;
+  top: 18px;
+  right: -13px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.12);
-  color: #ffffff;
-  border: 1px solid rgba(255,255,255,0.3);
-  font-size: 1rem;
-  font-weight: 700;
+  background: #ffffff;
+  color: #1a4a1a;
+  border: 2px solid #f3ede3;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  transition: background 0.15s, transform 0.15s;
+  z-index: 50;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  transition: transform 0.15s;
+}
+
+.al2-collapse-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 .al2-collapse-btn:hover {
-  background: rgba(255,255,255,0.22);
-  transform: scale(1.06);
+  transform: scale(1.08);
 }
 
 /* Main content area */
@@ -305,8 +314,8 @@
 }
 
 .al2-notif-btn svg {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
 }
 
 .al2-notif-count {
@@ -409,4 +418,54 @@
 
 .al2-notif-viewall:hover {
   background: #e8f5ee;
+}
+
+.al2-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.al2-help-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 6px;
+  opacity: 0.9;
+  transition: opacity 0.15s;
+}
+
+.al2-help-btn:hover {
+  opacity: 1;
+}
+
+.al2-help-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.al2-help-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  opacity: 0.9;
+  transition: opacity 0.15s;
+  width: 20px;
+  height: 20px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.al2-help-btn:hover {
+  opacity: 1;
 }

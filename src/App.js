@@ -13,6 +13,7 @@ import ManageReports from './pages/admin/ManageReports';
 import ExportReports from './pages/admin/ExportReports';
 import ManageUsers from './pages/admin/ManageUsers';
 import { GoogleMapsProvider } from './context/GoogleMapsLoaderContext';
+import { AdminTourProvider } from './context/AdminTourContext'
 
 function App() {
   return (
@@ -29,10 +30,10 @@ function App() {
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/reports" element={<ManageReports />} />
-          <Route path="/admin/export" element={<ExportReports />} />
-          <Route path="/admin/users" element={<ManageUsers />} />
+          <Route path="/admin/dashboard" element={<AdminTourProvider><AdminDashboard /></AdminTourProvider>} />
+          <Route path="/admin/reports" element={<AdminTourProvider><ManageReports /></AdminTourProvider>} />
+          <Route path="/admin/export" element={<AdminTourProvider><ExportReports /></AdminTourProvider>} />
+          <Route path="/admin/users" element={<AdminTourProvider><ManageUsers /></AdminTourProvider>} />
           
         </Routes>
       </Router>

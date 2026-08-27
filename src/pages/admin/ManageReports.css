@@ -167,19 +167,6 @@
   white-space: normal;
 }
 
-.mr-view-btn {
-  background: #1a4a1a;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 5px 14px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  font-family: sans-serif;
-}
-
-.mr-view-btn:hover { background: #2d6a2d; }
-
 /* Badges */
 .mr-badge {
   display: inline-block;
@@ -505,6 +492,14 @@
 .mr-history-admin {
   color: #555;
   font-weight: 600;
+}
+
+.mr-history-admin-label {
+  color: #999;
+  font-weight: 400;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .mr-history-date {

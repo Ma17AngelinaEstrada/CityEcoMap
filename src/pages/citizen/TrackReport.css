@@ -425,3 +425,31 @@
     font-size: 14px !important;
   }
 }
+
+.sample-preview-btn {
+  margin-top: 16px;
+  background: none;
+  border: 1px solid #1a6b3c;
+  color: #1a6b3c;
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sample-preview-btn:hover {
+  background: #f0f7f2;
+}
+
+.sample-preview-label {
+  text-align: center;
+  font-size: 13px;
+  color: #888;
+  font-style: italic;
+  margin-bottom: 8px;
+}
+
+.sample-preview-wrapper {
+  margin-top: 20px;
+}

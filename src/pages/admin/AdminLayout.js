@@ -5,6 +5,8 @@ import { collection, getDocs, query, where, onSnapshot, orderBy } from "firebase
 import { auth, db } from "../../firebase/firebase";
 import "./AdminLayout.css";
 import { BellIcon } from "../../components/Icons";
+import { useAdminTour } from "../../context/AdminTourContext";
+import OnboardingTour from "../../components/OnboardingTour";
 
 export default function AdminLayout({ children }) {
   const navigate = useNavigate();
@@ -16,6 +18,7 @@ export default function AdminLayout({ children }) {
   });
   const [pendingReports, setPendingReports] = useState([]);
   const [showNotifs, setShowNotifs] = useState(false);
+  const { tourSteps, tourKey, showTour, setShowTour, setCurrentStepIndex } = useAdminTour();
 
   useEffect(() => {
     let unsubSnapshot = () => {};
@@ -150,114 +153,137 @@ export default function AdminLayout({ children }) {
       <header className="al2-topbar">
         <img src="/logowhite2.png" alt="CityEcoMap" className="al2-logo" />
 
-        <div className="al2-notif-wrapper">
-          <button className="al2-notif-btn" onClick={(e) => { e.stopPropagation(); setShowNotifs(!showNotifs); }}>
-            <BellIcon />
-            {pendingReports.length > 0 && (
-              <span className="al2-notif-count">{pendingReports.length}</span>
-            )}
-          </button>
-
-          {showNotifs && (
-            <div className="al2-notif-dropdown">
-              <div className="al2-notif-header">New Reports</div>
-              {pendingReports.length === 0 ? (
-                <p className="al2-notif-empty">No new reports.</p>
-              ) : (
-                <>
-                  {pendingReports.slice(0, 10).map((r) => (
-                    <button
-                      key={r.id}
-                      className="al2-notif-item"
-                      onClick={() => {
-                        setShowNotifs(false);
-                        navigate(`/admin/reports?report=${r.id}`);
-                      }}
-                    >
-                      <span className="al2-notif-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</span>
-                      <span className="al2-notif-desc">{r.category}</span>
-                      <span className="al2-notif-time">{formatNotifDate(r.createdAt)}</span>
-                    </button>
-                  ))}
-                  {pendingReports.length > 10 && (
-                    <button
-                      className="al2-notif-viewall"
-                      onClick={() => {
-                        setShowNotifs(false);
-                        navigate("/admin/reports?status=Pending");
-                      }}
-                    >
-                      View all {pendingReports.length} pending reports →
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
+        <div className="al2-topbar-right">
+          {tourSteps.length > 0 && (
+            <button
+              className="al2-help-btn"
+              onClick={() => setShowTour(true)}
+              title="Show guide for this page"
+            >
+              ?
+            </button>
           )}
+
+          <div className="al2-notif-wrapper">
+            <button className="al2-notif-btn" onClick={(e) => { e.stopPropagation(); setShowNotifs(!showNotifs); }}>
+              <BellIcon />
+              {pendingReports.length > 0 && (
+                <span className="al2-notif-count">{pendingReports.length}</span>
+              )}
+            </button>
+
+            {showNotifs && (
+              <div className="al2-notif-dropdown">
+                <div className="al2-notif-header">New Reports</div>
+                {pendingReports.length === 0 ? (
+                  <p className="al2-notif-empty">No new reports.</p>
+                ) : (
+                  <>
+                    {pendingReports.slice(0, 10).map((r) => (
+                      <button
+                        key={r.id}
+                        className="al2-notif-item"
+                        onClick={() => {
+                          setShowNotifs(false);
+                          navigate(`/admin/reports?report=${r.id}`);
+                        }}
+                      >
+                        <span className="al2-notif-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</span>
+                        <span className="al2-notif-desc">{r.category}</span>
+                        <span className="al2-notif-time">{formatNotifDate(r.createdAt)}</span>
+                      </button>
+                    ))}
+                    {pendingReports.length > 10 && (
+                      <button
+                        className="al2-notif-viewall"
+                        onClick={() => {
+                          setShowNotifs(false);
+                          navigate("/admin/reports?status=Pending");
+                        }}
+                      >
+                        View all {pendingReports.length} pending reports →
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
       <div className="al2-body">
         {/* Sidebar */}
-        <aside
-          className={`al2-sidebar ${collapsed ? "al2-sidebar--collapsed" : ""}`}
-          style={{
-            backgroundImage: `linear-gradient(rgba(26,74,26,0.9), rgba(26,74,26,0.9)), url(${process.env.PUBLIC_URL}/sidebar-bg.jpg)`,
-          }}
-        >
-          <div className="al2-sidebar-toolbar">
-            <button
-              className="al2-collapse-btn"
-              onClick={() => {
-                const next = !collapsed;
-                setCollapsed(next);
-                localStorage.setItem("al2-sidebar-collapsed", next);
-              }}
-              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {collapsed ? "»" : "«"}
-            </button>
-          </div>
-
-          {currentAdmin && (
-            <div className="al2-profile">
-              <div className="al2-avatar">{getInitials(currentAdmin.name)}</div>
-              {!collapsed && (
-                <div className="al2-profile-info">
-                  <span className="al2-profile-name">{currentAdmin.name}</span>
-                  <span className="al2-profile-role">{currentAdmin.role}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          <nav className="al2-nav">
-            {visibleNavItems.map((item) => (
-              <button
-                key={item.path}
-                className={`al2-nav-item ${location.pathname === item.path ? "al2-nav-item--active" : ""}`}
-                onClick={() => navigate(item.path)}
-                title={collapsed ? item.label : undefined}
-              >
-                <span className="al2-nav-icon">{item.icon}</span>
-                {!collapsed && <span>{item.label}</span>}
-                {item.path === "/admin/reports" && pendingReports.length > 0 && (
-                  <span className="al2-nav-badge">{pendingReports.length}</span>
+        <div className={`al2-sidebar-outer ${collapsed ? "al2-sidebar-outer--collapsed" : ""}`}>
+          <aside
+            className={`al2-sidebar ${collapsed ? "al2-sidebar--collapsed" : ""}`}
+            style={{
+              backgroundImage: `linear-gradient(rgba(26,74,26,0.9), rgba(26,74,26,0.9)), url(${process.env.PUBLIC_URL}/sidebar-bg.jpg)`,
+            }}
+          >
+            {currentAdmin && (
+              <div className="al2-profile">
+                <div className="al2-avatar">{getInitials(currentAdmin.name)}</div>
+                {!collapsed && (
+                  <div className="al2-profile-info">
+                    <span className="al2-profile-name">{currentAdmin.name}</span>
+                    <span className="al2-profile-role">{currentAdmin.role}</span>
+                  </div>
                 )}
-              </button>
-            ))}
-          </nav>
-          <button className="al2-logout" onClick={handleLogout} title={collapsed ? "Logout" : undefined}>
-            <span className="al2-nav-icon">{icons.logout}</span>
-            {!collapsed && <span>Logout</span>}
+              </div>
+            )}
+
+            <nav className="al2-nav">
+              {visibleNavItems.map((item) => (
+                <button
+                  key={item.path}
+                  className={`al2-nav-item ${location.pathname === item.path ? "al2-nav-item--active" : ""}`}
+                  onClick={() => navigate(item.path)}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <span className="al2-nav-icon">{item.icon}</span>
+                  {!collapsed && <span>{item.label}</span>}
+                  {item.path === "/admin/reports" && pendingReports.length > 0 && (
+                    <span className="al2-nav-badge">{pendingReports.length}</span>
+                  )}
+                </button>
+              ))}
+            </nav>
+            <button className="al2-logout" onClick={handleLogout} title={collapsed ? "Logout" : undefined}>
+              <span className="al2-nav-icon">{icons.logout}</span>
+              {!collapsed && <span>Logout</span>}
+            </button>
+          </aside>
+
+          <button
+            className="al2-collapse-btn"
+            onClick={() => {
+              const next = !collapsed;
+              setCollapsed(next);
+              localStorage.setItem("al2-sidebar-collapsed", next);
+            }}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              {collapsed ? <path d="M9 6l6 6-6 6" /> : <path d="M15 6l-6 6 6 6" />}
+            </svg>
           </button>
-        </aside>
+        </div>
 
         {/* Page content */}
         <main className="al2-main">
           {children}
         </main>
       </div>
+
+      {showTour && tourSteps.length > 0 && (
+        <OnboardingTour
+          steps={tourSteps}
+          onFinish={() => { setShowTour(false); setCurrentStepIndex(0); }}
+          storageKey={tourKey}
+          onStepChange={setCurrentStepIndex}
+        />
+      )}
     </div>
   );
 }

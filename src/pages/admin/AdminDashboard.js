@@ -12,6 +12,7 @@ import { GoogleMap, MarkerF, InfoWindowF } from '@react-google-maps/api';
 import { reverseGeocode, isCached } from '../../utils/geocode';
 import { SearchIcon, CalendarIcon, PinIcon, BuildingIcon } from '../../components/Icons';
 import { useGoogleMapsLoaded } from "../../context/GoogleMapsLoaderContext";
+import { useAdminTour } from "../../context/AdminTourContext";
 
 const statusColors = {
   'Pending':  '#e53935',
@@ -24,18 +25,61 @@ const statusColors = {
 const LUCENA_CENTER = { lat: 13.9394, lng: 121.6169 };
 const adminMapContainerStyle = { width: '100%', height: '100%' };
 
+const DASHBOARD_TOUR_STEPS = [
+  {
+    selector: '.al2-notif-wrapper',
+    title: 'New Report Alerts',
+    description: 'This bell shows new reports as soon as they come in. Click it to see which ones are waiting for your review.',
+  },
+  {
+    selector: '.ad-stats',
+    title: 'Report Statistics at a Glance',
+    description: 'These cards show the total number of reports and how many are Pending, Approved, Ongoing, Resolved, or Rejected.',
+  },
+  {
+    selector: '.ad-overview-left',
+    title: 'Report Trends',
+    description: 'View report volume over time. Switch between By Category, By Sub-Category, or By Status using the dropdowns, and adjust the time range.',
+  },
+  {
+    selector: '.ad-overview-right',
+    title: 'Top Subcategories',
+    description: 'See which specific issue types (like Illegal Dumping or Blocked Drainage) are reported the most.',
+  },
+  {
+    selector: '.ad-map-card',
+    title: 'Report Map',
+    description: 'View all reports on the map. Use the search bar, filters, or fullscreen button to explore. Click a marker or a report in the sidebar to see details.',
+  },
+  {
+    selector: '.ad-table-card',
+    title: 'Recent Reports',
+    description: 'A quick look at the latest submitted reports. Click "View all" to go to the full Manage & Resolve Reports page.',
+  },
+];
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [addresses, setAddresses] = useState({});
   const [mapSearchQuery, setMapSearchQuery] = useState('');
+  const [mapFilterStatus, setMapFilterStatus] = useState('All');
+  const [mapFilterCategory, setMapFilterCategory] = useState('All');
   const [activeInfoWindow, setActiveInfoWindow] = useState(null);
   const adminMapRef = useRef(null);
   const [chartView, setChartView] = useState("category"); // "category" | "subcategory"
   const [chartParentCategory, setChartParentCategory] = useState("Waste Issue");
   const [chartTimeRange, setChartTimeRange] = useState("year"); // "year" | "quarter" | "last3" | "last1"
   const { isLoaded } = useGoogleMapsLoaded();
+  const [mapTimeRange, setMapTimeRange] = useState("all"); // "all" | "year" | "quarter" | "last3" | "last1"
+  const { registerTour } = useAdminTour();
+
+  // Register this page's tour steps with the shared AdminLayout tour system
+  useEffect(() => {
+    registerTour(DASHBOARD_TOUR_STEPS, 'cityecomap_admin_tour_seen_dashboard');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -81,6 +125,8 @@ export default function AdminDashboard() {
   }, [reports]);
 
   const total = reports.length;
+  const totalWaste = reports.filter((r) => r.category === "Waste Issue").length;
+  const totalDrainage = reports.filter((r) => r.category === "Drainage Issue").length;
   const pending = reports.filter((r) => r.status === "Pending").length;
   const approved = reports.filter((r) => r.status === "Approved").length;
   const ongoing = reports.filter((r) => r.status === "Ongoing" || r.status === "In Progress").length;
@@ -91,10 +137,11 @@ export default function AdminDashboard() {
   const currentYear = new Date().getFullYear();
 
   const RANGE_LABELS = {
-    year: `This Year (${currentYear})`,
+    month: `This Month (${monthNames[new Date().getMonth()]})`,
     quarter: "This Quarter",
     last3: "Last 3 Months",
     last1: "Last 4 Weeks",
+    year: `This Year (${currentYear})`,
   };
 
   const getTimeBuckets = (range) => {
@@ -106,6 +153,23 @@ export default function AdminDashboard() {
         start: new Date(currentYear, m, 1),
         end: new Date(currentYear, m + 1, 1),
       }));
+    }
+
+    if (range === "month") {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const buckets = [];
+      let wStart = new Date(monthStart);
+      let weekNum = 1;
+      while (wStart < monthEnd) {
+        const wEnd = new Date(wStart);
+        wEnd.setDate(wStart.getDate() + 7);
+        const clampedEnd = wEnd > monthEnd ? monthEnd : wEnd;
+        buckets.push({ label: `Wk ${weekNum}`, start: new Date(wStart), end: clampedEnd });
+        wStart = clampedEnd;
+        weekNum++;
+      }
+      return buckets;
     }
 
     if (range === "quarter") {
@@ -153,6 +217,16 @@ export default function AdminDashboard() {
     return Boolean(date) && rangeStart && rangeEnd && date >= rangeStart && date < rangeEnd;
   };
 
+  const mapTimeBuckets = mapTimeRange === "all" ? null : getTimeBuckets(mapTimeRange);
+  const mapRangeStart = mapTimeBuckets?.[0]?.start;
+  const mapRangeEnd = mapTimeBuckets?.[mapTimeBuckets.length - 1]?.end;
+
+  const inMapTimeRange = (r) => {
+    if (mapTimeRange === "all") return true;
+    const date = r.createdAt?.toDate?.();
+    return Boolean(date) && mapRangeStart && mapRangeEnd && date >= mapRangeStart && date < mapRangeEnd;
+  };
+
   const chartData = timeBuckets.map(({ label, start, end }) => {
     const waste = reports.filter((r) => {
       const date = r.createdAt?.toDate?.();
@@ -189,19 +263,46 @@ export default function AdminDashboard() {
     return row;
   });
 
+  const STATUS_LIST = ["Pending", "Approved", "Ongoing", "Resolved", "Rejected"];
+
+  const matchesStatus = (r, status) =>
+    status === "Ongoing" ? (r.status === "Ongoing" || r.status === "In Progress") : r.status === status;
+
+  const statusByCategoryChartData = ["Waste Issue", "Drainage Issue"].map((cat) => {
+    const row = { category: cat === "Waste Issue" ? "Waste Issues" : "Drainage Issues" };
+    STATUS_LIST.forEach((status) => {
+      row[status] = reports.filter((r) => inSelectedRange(r) && r.category === cat && matchesStatus(r, status)).length;
+    });
+    return row;
+  });
+
   const SUBCATEGORY_SHORT_LABELS = {
     "Waste Affecting Rivers, Waterways, and Natural Water Bodies": "Rivers/Waterways",
   };
 
   const shortenLabel = (label) => SUBCATEGORY_SHORT_LABELS[label] || label;
 
-  const subCategoryColors = ["#1a4a1a", "#2e7d32", "#7eb87e", "#a5d6a7"];
-  const categoryColors = ["#1a4a1a", "#7eb87e"];
+  const categoryColors = {
+    "Waste Issue": "#2e7d32",
+    "Drainage Issue": "#1565c0",
+  };
+
+  const subCategoryColorSets = {
+    "Waste Issue": ["#2e7d32", "#66a06a", "#a5d6a7", "#8d8f6b"],
+    "Drainage Issue": ["#1565c0", "#5e92d9", "#b3cde8", "#8a97a8"],
+  };
+
+  const subCategoryColors = subCategoryColorSets[chartParentCategory];
 
   const pieData = chartView === "category"
     ? ["Waste Issue", "Drainage Issue"].map((cat) => ({
         name: cat,
         value: reports.filter((r) => inSelectedRange(r) && r.category === cat).length,
+      }))
+    : chartView === "status"
+    ? STATUS_LIST.map((status) => ({
+        name: status,
+        value: reports.filter((r) => inSelectedRange(r) && matchesStatus(r, status)).length,
       }))
     : activeSubCategories.map((sub) => ({
         name: shortenLabel(sub),
@@ -211,12 +312,50 @@ export default function AdminDashboard() {
         }).length,
       }));
 
-  const pieColors = chartView === "category" ? categoryColors : subCategoryColors;
+  const pieColors = chartView === "category"
+    ? ["Waste Issue", "Drainage Issue"].map((c) => categoryColors[c])
+    : chartView === "status"
+    ? STATUS_LIST.map((s) => statusColors[s])
+    : subCategoryColors;
   const pieTotal = pieData.reduce((sum, d) => sum + d.value, 0);
+
+  const subcategoryCategoryMap = {};
+  WASTE_SUBCATEGORIES.forEach((s) => { if (s !== "Other") subcategoryCategoryMap[s] = "Waste Issue"; });
+  DRAINAGE_SUBCATEGORIES.forEach((s) => { if (s !== "Other") subcategoryCategoryMap[s] = "Drainage Issue"; });
+
+  const topSubcategoryData = Object.entries(subcategoryCategoryMap)
+    .map(([name, cat]) => ({
+      name: shortenLabel(name),
+      count: reports.filter((r) => inSelectedRange(r) && r.category === cat && r.subCategory === name).length,
+      category: cat,
+    }))
+    .concat([
+      {
+        name: "Other (Waste)",
+        count: reports.filter((r) => inSelectedRange(r) && r.category === "Waste Issue" && isOtherSubCategory(r.subCategory)).length,
+        category: "Waste Issue",
+      },
+      {
+        name: "Other (Drainage)",
+        count: reports.filter((r) => inSelectedRange(r) && r.category === "Drainage Issue" && isOtherSubCategory(r.subCategory)).length,
+        category: "Drainage Issue",
+      },
+    ])
+    .filter((d) => d.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+  const subcategoryBarColor = (category) => categoryColors[category] || "#aaaaaa";
 
   const recent = [...reports]
     .sort((a, b) => (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0))
     .slice(0, 7);
+
+  const mapMarkers = reports.filter((r) => {
+    const hasLocation = r.location?.lat && r.location?.lng;
+    const matchStatus = mapFilterStatus === 'All' || r.status === mapFilterStatus;
+    const matchCategory = mapFilterCategory === 'All' || r.category === mapFilterCategory;
+    return hasLocation && matchStatus && matchCategory && inMapTimeRange(r);
+  });
 
   const getStatusClass = (status) => {
     if (status === "Pending") return "ad-badge ad-badge--pending";
@@ -292,6 +431,13 @@ export default function AdminDashboard() {
     }
   };
 
+  const panToReport = (report) => {
+    if (!report.location?.lat || !report.location?.lng) return;
+    adminMapRef.current?.panTo({ lat: report.location.lat, lng: report.location.lng });
+    adminMapRef.current?.setZoom(17);
+    setTimeout(() => setActiveInfoWindow(report.id), 500);
+  };
+
   return (
     <AdminLayout>
       {loading ? (
@@ -303,163 +449,41 @@ export default function AdminDashboard() {
             <div className="ad-stat-card ad-stat-card--total">
               <span className="ad-stat-label">Total Reports</span>
               <span className="ad-stat-number">{total}</span>
+              <span className="ad-stat-desc">
+                All reports submitted to date<br />
+                Waste: {totalWaste} · Drainage: {totalDrainage}
+              </span>
             </div>
             <div className="ad-stat-card ad-stat-card--pending">
               <span className="ad-stat-label">Pending</span>
               <span className="ad-stat-number">{pending}</span>
+              <span className="ad-stat-desc">Awaiting admin review</span>
             </div>
             <div className="ad-stat-card ad-stat-card--approved">
               <span className="ad-stat-label">Approved</span>
               <span className="ad-stat-number">{approved}</span>
+              <span className="ad-stat-desc">Reviewed and assigned</span>
             </div>
             <div className="ad-stat-card ad-stat-card--ongoing">
               <span className="ad-stat-label">Ongoing</span>
               <span className="ad-stat-number">{ongoing}</span>
+              <span className="ad-stat-desc">Cleanup in progress</span>
             </div>
             <div className="ad-stat-card ad-stat-card--resolved">
               <span className="ad-stat-label">Resolved</span>
               <span className="ad-stat-number">{resolved}</span>
+              <span className="ad-stat-desc">Issue successfully resolved</span>
             </div>
             <div className="ad-stat-card ad-stat-card--rejected">
               <span className="ad-stat-label">Rejected</span>
               <span className="ad-stat-number">{rejected}</span>
+              <span className="ad-stat-desc">Not approved for action</span>
             </div>
           </div>
 
-          {/* Map + chart row — now first */}
-          <div className="ad-bottom">
-            <div className="ad-map-card">
-              <div className="ad-map-header">
-                <h3 className="ad-map-title">Report Map</h3>
-                <button
-                  className="ad-map-fullscreen-btn"
-                  onClick={() => {
-                    const el = document.getElementById('admin-map-wrapper');
-                    if (!document.fullscreenElement) {
-                      el.requestFullscreen();
-                    } else {
-                      document.exitFullscreen();
-                    }
-                  }}
-                >
-                  ⛶ Fullscreen
-                </button>
-              </div>
-              <div className="ad-map-wrapper" id="admin-map-wrapper">
-                <div className="ad-map-search">
-                  <span className="ad-map-search-icon"><SearchIcon /></span>
-                  <input
-                    type="text"
-                    className="ad-map-search-input"
-                    placeholder="Search Report ID or location..."
-                    value={mapSearchQuery}
-                    onChange={(e) => setMapSearchQuery(e.target.value)}
-                    onKeyDown={handleMapSearch}
-                  />
-                </div>
-                {isLoaded && (
-                  <GoogleMap
-                    mapContainerStyle={adminMapContainerStyle}
-                    center={LUCENA_CENTER}
-                    zoom={14}
-                    onLoad={onAdminMapLoad}
-                    onClick={() => setActiveInfoWindow(null)}
-                    options={{
-                      zoomControl: false,
-                      panControl: false,
-                      cameraControl: false,
-                      streetViewControl: false,
-                      mapTypeControl: false,
-                      fullscreenControl: false,
-                      rotateControl: false,
-                      keyboardShortcuts: false,
-                      gestureHandling: 'greedy',
-                    }}
-                  >
-                    {reports
-                      .filter((r) => r.location?.lat && r.location?.lng)
-                      .map((report) => (
-                        <MarkerF
-                          key={report.id}
-                          position={{ lat: report.location.lat, lng: report.location.lng }}
-                          icon={getMarkerIcon(statusColors[report.status] || '#e53935')}
-                          onClick={() => setActiveInfoWindow(report.id)}
-                        >
-                          {activeInfoWindow === report.id && (
-                            <InfoWindowF onCloseClick={() => setActiveInfoWindow(null)}>
-                              <div className="admin-info-popup" style={{ fontFamily: 'sans-serif', minWidth: '160px', maxWidth: '200px' }}>
-                                <p style={{ fontWeight: 700, color: '#1a4a1a', marginBottom: 4 }}>
-                                  #{report.reportId || report.id.slice(0, 6).toUpperCase()}
-                                </p>
-                                <p style={{ fontSize: '0.78rem', color: '#666', marginBottom: 2 }}>
-                                  {report.fullName || "—"}
-                                </p>
-                                {report.email && (
-                                  <p style={{ fontSize: '0.75rem', color: '#888', marginBottom: 4 }}>
-                                    {report.email}
-                                  </p>
-                                )}
-                                <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: 2 }}>
-                                  {report.category}
-                                </p>
-                                <p style={{ fontSize: '0.78rem', color: '#777', marginBottom: 4 }}>
-                                  {report.subCategory === "Other"
-                                    ? (report.subCategoryOther || "Other")
-                                    : (report.subCategory || "—")}
-                                </p>
-                                <p style={{ fontSize: '0.78rem', color: '#888', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                                  <CalendarIcon /> {formatDate(report.createdAt)}
-                                </p>
-                                <span style={{
-                                  display: 'inline-block',
-                                  padding: '3px 10px',
-                                  borderRadius: 20,
-                                  fontSize: '0.75rem',
-                                  fontWeight: 600,
-                                  color: 'white',
-                                  background: statusColors[report.status] || '#e53935',
-                                  marginBottom: 4,
-                                }}>
-                                  {report.status || 'Pending'}
-                                </span>
-                                {report.description && (
-                                  <p style={{ fontSize: '0.78rem', color: '#555', marginTop: 4, borderTop: '1px solid #eee', paddingTop: 4 }}>
-                                    {report.description}
-                                  </p>
-                                )}
-                                {(report.locationDescription || report.addressInput || addresses[report.id]) && (
-                                  <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                                    <PinIcon /> {report.locationDescription || report.addressInput || addresses[report.id]}
-                                  </p>
-                                )}
-                                {report.assignedTo && (
-                                  <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
-                                    <BuildingIcon /> {report.assignedTo}
-                                  </p>
-                                )}
-                                {report.photo && (
-                                  <img src={report.photo} alt="Report" style={{ width: '100%', borderRadius: 6, marginTop: 6 }} />
-                                )}
-                              </div>
-                            </InfoWindowF>
-                          )}
-                        </MarkerF>
-                      ))}
-                  </GoogleMap>
-                )}
-
-                <div className="ad-map-legend">
-                  {Object.entries(statusColors).map(([status, color]) => (
-                    <div key={status} className="ad-legend-item">
-                      <span className="ad-legend-dot" style={{ background: color }}></span>
-                      <span className="ad-legend-label">{status}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="ad-chart-card">
+          {/* Report Statistics + Top Subcategories row */}
+          <div className="ad-overview-row">
+            <div className="ad-overview-left">
               <div className="ad-chart-header">
                 <h3 className="ad-chart-title">Report Statistics — {RANGE_LABELS[chartTimeRange]}</h3>
                 <div className="ad-chart-filters">
@@ -470,6 +494,7 @@ export default function AdminDashboard() {
                       value={chartTimeRange}
                       onChange={(e) => setChartTimeRange(e.target.value)}
                     >
+                      <option value="month">This Month</option>
                       <option value="last1">Last 4 Weeks</option>
                       <option value="last3">Last 3 Months</option>
                       <option value="quarter">This Quarter</option>
@@ -485,6 +510,7 @@ export default function AdminDashboard() {
                     >
                       <option value="category">By Category</option>
                       <option value="subcategory">By Sub-Category</option>
+                      <option value="status">By Status</option>
                     </select>
                   </div>
                   {chartView === "subcategory" && (
@@ -511,24 +537,52 @@ export default function AdminDashboard() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                        <Tooltip />
-                        <Legend
-                          iconSize={9}
-                          wrapperStyle={{ fontSize: 10.5 }}
-                          formatter={(value) => shortenLabel(value)}
+                        <Tooltip
+                          formatter={(value, name) => [value, shortenLabel(name)]}
+                          contentStyle={{ maxWidth: 200, fontSize: '0.78rem' }}
                         />
-                        <Bar dataKey="Waste Issues" fill="#1a4a1a" radius={[3,3,0,0]} />
-                        <Bar dataKey="Drainage Issues" fill="#7eb87e" radius={[3,3,0,0]} />
+                        <Legend iconSize={9} wrapperStyle={{ fontSize: 10.5 }} formatter={(value) => shortenLabel(value)} />
+                        <Bar dataKey="Waste Issues" fill={categoryColors["Waste Issue"]} radius={[0, 0, 0, 0]} stackId="a" />
+                        <Bar dataKey="Drainage Issues" fill={categoryColors["Drainage Issue"]} radius={[3, 3, 0, 0]} stackId="a" />
                       </BarChart>
-                    ) : (
+                    ) : chartView === "subcategory" ? (
                       <BarChart data={subCategoryChartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                        <Tooltip />
+                        <Tooltip
+                          formatter={(value, name) => [value, shortenLabel(name)]}
+                          contentStyle={{ maxWidth: 200, fontSize: '0.78rem' }}
+                        />
                         <Legend iconSize={9} wrapperStyle={{ fontSize: 10.5 }} />
                         {activeSubCategories.map((sub, i) => (
-                          <Bar key={sub} dataKey={sub} fill={subCategoryColors[i % subCategoryColors.length]} radius={[3,3,0,0]} />
+                          <Bar
+                            key={sub}
+                            dataKey={sub}
+                            fill={subCategoryColors[i % subCategoryColors.length]}
+                            radius={i === activeSubCategories.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+                            stackId="b"
+                          />
+                        ))}
+                      </BarChart>
+                    ) : (
+                      <BarChart data={statusByCategoryChartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="category" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                        <Tooltip
+                          formatter={(value, name) => [value, shortenLabel(name)]}
+                          contentStyle={{ maxWidth: 200, fontSize: '0.78rem' }}
+                        />
+                        <Legend iconSize={9} wrapperStyle={{ fontSize: 10.5 }} />
+                        {STATUS_LIST.map((status, i) => (
+                          <Bar
+                            key={status}
+                            dataKey={status}
+                            fill={statusColors[status]}
+                            radius={i === STATUS_LIST.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+                            stackId="c"
+                          />
                         ))}
                       </BarChart>
                     )}
@@ -554,7 +608,10 @@ export default function AdminDashboard() {
                               <Cell key={entry.name} fill={pieColors[i % pieColors.length]} />
                             ))}
                           </Pie>
-                          <Tooltip />
+                          <Tooltip
+                            formatter={(value, name) => [value, shortenLabel(name)]}
+                            contentStyle={{ maxWidth: 200, fontSize: '0.78rem' }}
+                          />
                         </PieChart>
                       </ResponsiveContainer>
                       <div className="ad-donut-legend">
@@ -567,6 +624,273 @@ export default function AdminDashboard() {
                         ))}
                       </div>
                     </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="ad-overview-right">
+              <h3 className="ad-status-title">Top Subcategories — {RANGE_LABELS[chartTimeRange]}</h3>
+              {topSubcategoryData.length === 0 ? (
+                <p className="ad-donut-empty">No reports in this range yet.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={Math.max(160, topSubcategoryData.length * 34)}>
+                  <BarChart
+                    data={topSubcategoryData}
+                    layout="vertical"
+                    margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={130} />
+                    <Tooltip
+                      formatter={(value, name) => [value, shortenLabel(name)]}
+                      contentStyle={{ maxWidth: 200, fontSize: '0.78rem' }}
+                    />
+                    <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={18}>
+                      {topSubcategoryData.map((entry) => (
+                        <Cell key={entry.name} fill={subcategoryBarColor(entry.category)} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+
+          {/* Map + chart row — now first */}
+          <div className="ad-bottom">
+            <div className="ad-map-card">
+              <div className="ad-map-header">
+                <h3 className="ad-map-title">Report Map</h3>
+                <button
+                  className="ad-map-fullscreen-btn"
+                  onClick={() => {
+                    const el = document.getElementById('admin-map-wrapper');
+                    if (!document.fullscreenElement) {
+                      el.requestFullscreen();
+                    } else {
+                      document.exitFullscreen();
+                    }
+                  }}
+                >
+                  ⛶ Fullscreen
+                </button>
+              </div>
+              <div className="ad-map-content" id="admin-map-wrapper">
+                <div className="ad-map-wrapper">
+                  <div className="ad-map-search">
+                    <span className="ad-map-search-icon"><SearchIcon /></span>
+                    <input
+                      type="text"
+                      className="ad-map-search-input"
+                      placeholder="Search Report ID or location..."
+                      value={mapSearchQuery}
+                      onChange={(e) => setMapSearchQuery(e.target.value)}
+                      onKeyDown={handleMapSearch}
+                    />
+                  </div>
+
+                  <div className="ad-map-filters">
+                    <select
+                      className="ad-map-filter-select"
+                      value={mapFilterStatus}
+                      onChange={(e) => setMapFilterStatus(e.target.value)}
+                    >
+                      <option value="All">All Status</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Approved">Approved</option>
+                      <option value="Ongoing">Ongoing</option>
+                      <option value="Resolved">Resolved</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                    <select
+                      className="ad-map-filter-select"
+                      value={mapFilterCategory}
+                      onChange={(e) => setMapFilterCategory(e.target.value)}
+                    >
+                      <option value="All">All Categories</option>
+                      <option value="Waste Issue">Waste Issue</option>
+                      <option value="Drainage Issue">Drainage Issue</option>
+                    </select>
+                    <select
+                      className="ad-map-filter-select"
+                      value={mapTimeRange}
+                      onChange={(e) => setMapTimeRange(e.target.value)}
+                    >
+                      <option value="all">All Time</option>
+                      <option value="month">This Month</option>
+                      <option value="last1">Last 4 Weeks</option>
+                      <option value="last3">Last 3 Months</option>
+                      <option value="quarter">This Quarter</option>
+                      <option value="year">This Year</option>
+                    </select>
+                  </div>
+                  {isLoaded && (
+                    <GoogleMap
+                      mapContainerStyle={adminMapContainerStyle}
+                      center={LUCENA_CENTER}
+                      zoom={14}
+                      onLoad={onAdminMapLoad}
+                      onClick={() => setActiveInfoWindow(null)}
+                      options={{
+                        zoomControl: false,
+                        panControl: false,
+                        cameraControl: false,
+                        streetViewControl: false,
+                        mapTypeControl: false,
+                        fullscreenControl: false,
+                        rotateControl: false,
+                        keyboardShortcuts: false,
+                        gestureHandling: 'greedy',
+                      }}
+                    >
+                      {mapMarkers.map((report) => (
+                          <MarkerF
+                            key={report.id}
+                            position={{ lat: report.location.lat, lng: report.location.lng }}
+                            icon={getMarkerIcon(statusColors[report.status] || '#e53935')}
+                            onClick={() => setActiveInfoWindow(report.id)}
+                          >
+                            {activeInfoWindow === report.id && (
+                              <InfoWindowF
+                                position={{ lat: report.location.lat, lng: report.location.lng }}
+                                onCloseClick={() => setActiveInfoWindow(null)}
+                              >
+                                <div className="admin-info-popup" style={{ fontFamily: 'sans-serif', minWidth: '160px', maxWidth: '200px' }}>
+                                  <p style={{ fontWeight: 700, color: '#1a4a1a', marginBottom: 4 }}>
+                                    #{report.reportId || report.id.slice(0, 6).toUpperCase()}
+                                  </p>
+                                  <p style={{ fontSize: '0.78rem', color: '#666', marginBottom: 2 }}>
+                                    {report.fullName || "—"}
+                                  </p>
+                                  {report.email && (
+                                    <p style={{ fontSize: '0.75rem', color: '#888', marginBottom: 4 }}>
+                                      {report.email}
+                                    </p>
+                                  )}
+                                  <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: 2 }}>
+                                    {report.category}
+                                  </p>
+                                  <p style={{ fontSize: '0.78rem', color: '#777', marginBottom: 4 }}>
+                                    {report.subCategory === "Other"
+                                      ? (report.subCategoryOther || "Other")
+                                      : (report.subCategory || "—")}
+                                  </p>
+                                  <p style={{ fontSize: '0.78rem', color: '#888', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <CalendarIcon /> {formatDate(report.createdAt)}
+                                  </p>
+                                  <span style={{
+                                    display: 'inline-block',
+                                    padding: '3px 10px',
+                                    borderRadius: 20,
+                                    fontSize: '0.75rem',
+                                    fontWeight: 600,
+                                    color: 'white',
+                                    background: statusColors[report.status] || '#e53935',
+                                    marginBottom: 4,
+                                  }}>
+                                    {report.status || 'Pending'}
+                                  </span>
+                                  {report.description && (
+                                    <p style={{ fontSize: '0.78rem', color: '#555', marginTop: 4, borderTop: '1px solid #eee', paddingTop: 4 }}>
+                                      {report.description}
+                                    </p>
+                                  )}
+                                  {(report.locationDescription || report.addressInput || addresses[report.id]) && (
+                                    <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                      <PinIcon /> {report.locationDescription || report.addressInput || addresses[report.id]}
+                                    </p>
+                                  )}
+                                  {report.assignedTo && (
+                                    <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                      <BuildingIcon /> {report.assignedTo}
+                                    </p>
+                                  )}
+                                  {report.photo && (
+                                    <img src={report.photo} alt="Report" style={{ width: '100%', borderRadius: 6, marginTop: 6 }} />
+                                  )}
+                                  <button
+                                    onClick={() => navigate(`/admin/reports?report=${report.id}`)}
+                                    style={{
+                                      display: 'block',
+                                      width: '100%',
+                                      marginTop: 8,
+                                      padding: '6px 10px',
+                                      background: '#1a4a1a',
+                                      color: '#fff',
+                                      border: 'none',
+                                      borderRadius: 6,
+                                      fontSize: '0.78rem',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                      fontFamily: 'sans-serif',
+                                    }}
+                                  >
+                                    Manage This Report →
+                                  </button>
+                                </div>
+                              </InfoWindowF>
+                            )}
+                          </MarkerF>
+                        ))}
+                    </GoogleMap>
+                  )}
+
+                  <div className="ad-map-legend">
+                    {Object.entries(statusColors).map(([status, color]) => (
+                      <div key={status} className="ad-legend-item">
+                        <span className="ad-legend-dot" style={{ background: color }}></span>
+                        <span className="ad-legend-label">{status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="ad-map-sidebar">
+                  <div className="ad-sidebar-header">
+                    Reports ({mapMarkers.length})
+                  </div>
+                  {mapMarkers.length === 0 ? (
+                    <p className="ad-sidebar-empty">No reports match the current filters.</p>
+                  ) : (
+                    [...mapMarkers]
+                      .sort((a, b) => (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0))
+                      .map((report) => (
+                        <div
+                          key={report.id}
+                          className={`ad-sidebar-item ${activeInfoWindow === report.id ? 'ad-sidebar-item--active' : ''}`}
+                          onClick={() => panToReport(report)}
+                        >
+                          <div className="ad-sidebar-item-top">
+                            <span className="ad-sidebar-item-id">
+                              #{report.reportId || report.id.slice(0, 6).toUpperCase()}
+                            </span>
+                            <span className={getStatusClass(report.status)}>
+                              {report.status || "Pending"}
+                            </span>
+                          </div>
+                          <div className="ad-sidebar-item-cat">
+                            {report.category}
+                            {report.subCategory && (
+                              <span className="ad-sidebar-item-sub">
+                                {" · "}
+                                {report.subCategory === "Other" ? (report.subCategoryOther || "Other") : report.subCategory}
+                              </span>
+                            )}
+                          </div>
+                          <div className="ad-sidebar-item-date">{formatDate(report.createdAt)}</div>
+                            <button
+                              className="ad-sidebar-manage-btn"
+                              onClick={(e) => {
+                                e.stopPropagation(); // para hindi din ma-trigger ang panToReport
+                                navigate(`/admin/reports?report=${report.id}`);
+                              }}
+                            >
+                              Manage →
+                            </button>
+                        </div>
+                      ))
                   )}
                 </div>
               </div>

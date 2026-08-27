@@ -278,3 +278,14 @@
 .er-generate-btn:hover {
   background: #2d6a2d;
 }
+
+.er-chart-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #444;
+  font-family: sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+}
