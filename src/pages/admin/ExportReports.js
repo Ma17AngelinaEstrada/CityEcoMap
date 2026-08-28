@@ -101,6 +101,14 @@ export default function ExportReports() {
 
   const isOtherSubCategory = (subCategory) => !KNOWN_SUBCATEGORIES.has(subCategory);
 
+  const AREA_TYPE_OPTIONS = [
+    'Road', 'Sidewalk', 'Canal', 'Esteros (Waterway)', 'Vacant Lot',
+    'Residential Area', 'Establishment/Commercial Area', 'Bridge',
+    'Coastal Area', 'Park',
+  ];
+  const KNOWN_AREA_TYPES = new Set(AREA_TYPE_OPTIONS);
+  const isOtherAreaType = (areaType) => Boolean(areaType) && !KNOWN_AREA_TYPES.has(areaType);
+
   const STATUS_LIST = ["Pending", "Approved", "Ongoing", "Resolved", "Rejected"];
   const statusColors = {
     Pending: '#e53935',
@@ -533,81 +541,237 @@ export default function ExportReports() {
 
   const handleGenerateSingleReport = (r) => {
     const docPdf = new jsPDF({ orientation: "portrait" });
+    const marginX = 14;
+    const pageWidth = 210;
+    const contentWidth = pageWidth - marginX * 2;
+    let y = 15;
 
-    docPdf.setFontSize(14);
-    docPdf.text("CityEcoMap — Incident Report", 14, 18);
+    // ---- Header ----
+    docPdf.setFillColor(26, 74, 26);
+    docPdf.rect(0, 0, pageWidth, 24, 'F');
+    docPdf.setTextColor(255, 255, 255);
+    docPdf.setFontSize(15);
+    docPdf.setFont(undefined, 'bold');
+    docPdf.text("CITYECOMAP", marginX, 12);
     docPdf.setFontSize(9);
-    docPdf.text(
-      `Lucena City Environmental Reporting System | Generated: ${new Date().toLocaleString("en-PH")}`,
-      14, 24
-    );
-    docPdf.setLineWidth(0.3);
-    docPdf.line(14, 28, 196, 28);
+    docPdf.setFont(undefined, 'normal');
+    docPdf.text("Incident Report — Lucena City Environmental Reporting System", marginX, 18);
+    docPdf.setFontSize(7.5);
+    docPdf.text(`Generated: ${new Date().toLocaleString("en-PH")}`, pageWidth - marginX, 18, { align: 'right' });
 
-    let y = 38;
-    const addRow = (label, value) => {
-      docPdf.setFontSize(9);
-      docPdf.setTextColor(120);
-      docPdf.text(label.toUpperCase(), 14, y);
-      docPdf.setFontSize(11);
-      docPdf.setTextColor(30);
-      const lines = docPdf.splitTextToSize(value || "—", 170);
-      docPdf.text(lines, 14, y + 6);
-      y += 6 + lines.length * 6 + 4;
-    };
+    y = 30;
 
-    addRow("Report ID", `#${r.reportId || r.id.slice(0, 6).toUpperCase()}`);
-    addRow("Date Submitted", formatDate(r.createdAt));
-    addRow("Submitted By", r.fullName || "—");
-    addRow("Email", r.email || "Not provided");
-    addRow("Category", r.category || "—");
-    addRow(
-      "Sub-Category",
-      r.subCategory === "Other" ? (r.subCategoryOther || "Other") : (r.subCategory || "—")
-    );
-    addRow("Type of Area", r.areaType || "Not specified");
-    addRow(
-      "Location",
-      [r.locationDescription, r.addressInput].filter(Boolean).join(" — ") || "—"
-    );
-    if (r.location?.lat && r.location?.lng) {
-      addRow("Coordinates", `Lat: ${r.location.lat.toFixed(5)}, Long: ${r.location.lng.toFixed(5)}`);
-    }
-    addRow("Description", r.description || "—");
-    addRow("Status", r.status || "Pending");
-    addRow("Assigned To", r.assignedTo || "—");
-    if (r.status === "Rejected" && r.rejectionReason) {
-      addRow("Rejection Reason", r.rejectionReason);
-    }
-
-      if (r.photo) {
-        if (y > 180) {
-          docPdf.addPage();
-          y = 20;
-        }
-        docPdf.setFontSize(9);
-        docPdf.setTextColor(120);
-        docPdf.text("PHOTO DOCUMENTATION", 14, y);
-        y += 6;
-        try {
-          const props = docPdf.getImageProperties(r.photo);
-          const maxWidth = 160;
-          const maxHeight = 100;
-          let imgW = props.width;
-          let imgH = props.height;
-          const scale = Math.min(maxWidth / imgW, maxHeight / imgH);
-          imgW = imgW * scale;
-          imgH = imgH * scale;
-          docPdf.addImage(r.photo, "JPEG", 14, y, imgW, imgH);
-          y += imgH + 6;
-        } catch (err) {
-          console.error("Failed to embed photo:", err);
-        }
+    const checkPageBreak = (neededHeight) => {
+      if (y + neededHeight > 280) {
+        docPdf.addPage();
+        y = 18;
       }
-
-      docPdf.save(`CityEcoMap_${r.reportId || r.id.slice(0, 6).toUpperCase()}.pdf`);
-      logExportSingle(r.reportId || r.id.slice(0, 6).toUpperCase());
     };
+
+    const sectionHeader = (title) => {
+      checkPageBreak(10);
+      docPdf.setFillColor(232, 245, 232);
+      docPdf.rect(marginX, y, contentWidth, 7, 'F');
+      docPdf.setDrawColor(210);
+      docPdf.rect(marginX, y, contentWidth, 7);
+      docPdf.setFontSize(9);
+      docPdf.setFont(undefined, 'bold');
+      docPdf.setTextColor(26, 74, 26);
+      docPdf.text(title.toUpperCase(), marginX + 3, y + 4.8);
+      docPdf.setFont(undefined, 'normal');
+      y += 7;
+    };
+
+    const fieldRow = (pairs) => {
+      checkPageBreak(14);
+      const colWidth = contentWidth / pairs.length;
+      const rowStartY = y;
+      let maxLines = 1;
+      pairs.forEach(([label, value], i) => {
+        docPdf.setFontSize(7.5);
+        docPdf.setTextColor(120);
+        docPdf.text(label.toUpperCase(), marginX + i * colWidth + 2, rowStartY + 4);
+        docPdf.setFontSize(10);
+        docPdf.setTextColor(30);
+        const lines = docPdf.splitTextToSize(value || "—", colWidth - 4);
+        docPdf.text(lines, marginX + i * colWidth + 2, rowStartY + 9);
+        maxLines = Math.max(maxLines, lines.length);
+      });
+      const rowHeight = 9 + maxLines * 4.5 + 2;
+      docPdf.setDrawColor(230);
+      docPdf.rect(marginX, rowStartY, contentWidth, rowHeight);
+      if (pairs.length > 1) {
+        docPdf.line(marginX + colWidth, rowStartY, marginX + colWidth, rowStartY + rowHeight);
+      }
+      y = rowStartY + rowHeight;
+    };
+
+    // ---- Report Information ----
+    sectionHeader("Report Information");
+    fieldRow([
+      ["Report ID", `#${r.reportId || r.id.slice(0, 6).toUpperCase()}`],
+      ["Date Submitted", formatDate(r.createdAt)],
+    ]);
+    fieldRow([
+      ["Category", r.category || "—"],
+      ["Sub-Category", r.subCategory === "Other" ? (r.subCategoryOther || "Other") : (r.subCategory || "—")],
+    ]);
+    fieldRow([
+      ["Submitted By", r.fullName || "—"],
+      ["Email", r.email || "Not provided"],
+    ]);
+
+    y += 4;
+
+    // ---- Location ----
+    sectionHeader("Location");
+    fieldRow([["Address", r.addressInput || "—"]]);
+    fieldRow([["Exact Spot", r.locationDescription || "Not provided by citizen"]]);
+    if (r.location?.lat && r.location?.lng) {
+      fieldRow([
+        ["Latitude", r.location.lat.toFixed(5)],
+        ["Longitude", r.location.lng.toFixed(5)],
+      ]);
+    }
+
+    y += 4;
+
+    // ---- Type of Area ----
+    sectionHeader("Type of Area");
+    checkPageBreak(35);
+    const checkboxColWidth = contentWidth / 2;
+    const checkboxRowHeight = 6.5;
+    const gridStartY = y + 3;
+    AREA_TYPE_OPTIONS.forEach((type, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const bx = marginX + col * checkboxColWidth + 2;
+      const by = gridStartY + row * checkboxRowHeight;
+      docPdf.setDrawColor(120);
+      docPdf.rect(bx, by, 3.5, 3.5);
+      if (r.areaType === type) {
+        docPdf.setFontSize(8);
+        docPdf.setTextColor(26, 74, 26);
+        docPdf.setFont(undefined, 'bold');
+        docPdf.text("X", bx + 0.6, by + 2.9);
+        docPdf.setFont(undefined, 'normal');
+      }
+      docPdf.setFontSize(9);
+      docPdf.setTextColor(50);
+      docPdf.text(type, bx + 5.5, by + 2.9);
+    });
+    const otherRowY = gridStartY + Math.ceil(AREA_TYPE_OPTIONS.length / 2) * checkboxRowHeight;
+    docPdf.setDrawColor(120);
+    docPdf.rect(marginX + 2, otherRowY, 3.5, 3.5);
+    const otherChecked = isOtherAreaType(r.areaType);
+    if (otherChecked) {
+      docPdf.setFontSize(8);
+      docPdf.setTextColor(26, 74, 26);
+      docPdf.setFont(undefined, 'bold');
+      docPdf.text("X", marginX + 2.6, otherRowY + 2.9);
+      docPdf.setFont(undefined, 'normal');
+    }
+    docPdf.setFontSize(9);
+    docPdf.setTextColor(50);
+    docPdf.text(otherChecked ? `Other: ${r.areaType}` : "Other", marginX + 7.5, otherRowY + 2.9);
+    if (!r.areaType) {
+      docPdf.setFontSize(8);
+      docPdf.setTextColor(150);
+      docPdf.setFont(undefined, 'italic');
+      docPdf.text("Not specified for this report.", marginX + 2, otherRowY + 9);
+      docPdf.setFont(undefined, 'normal');
+    }
+    y = otherRowY + (r.areaType ? 6 : 12);
+    y += 2;
+
+    // ---- Status ----
+    sectionHeader("Status");
+    checkPageBreak(16);
+    const sectionTop = y;
+    const statusY = sectionTop + 3;
+    const statusColorMap = {
+      Pending: [229, 57, 53], Approved: [21, 101, 192], Ongoing: [249, 168, 37],
+      Resolved: [46, 125, 50], Rejected: [117, 117, 117],
+    };
+    const [sr, sg, sb] = statusColorMap[r.status] || [117, 117, 117];
+    docPdf.setFillColor(sr, sg, sb);
+    docPdf.roundedRect(marginX + 2, statusY, 32, 7, 3, 3, 'F');
+    docPdf.setFontSize(9);
+    docPdf.setTextColor(255, 255, 255);
+    docPdf.setFont(undefined, 'bold');
+    docPdf.text(r.status || "Pending", marginX + 18, statusY + 4.7, { align: 'center' });
+    docPdf.setFont(undefined, 'normal');
+    docPdf.setFontSize(8.5);
+    docPdf.setTextColor(80);
+    docPdf.text(`Assigned To: ${r.assignedTo || "—"}`, marginX + 40, statusY + 4.7);
+    y = statusY + 10;
+    if (r.status === "Rejected" && r.rejectionReason) {
+      const lines = docPdf.splitTextToSize(`Rejection Reason: ${r.rejectionReason}`, contentWidth - 4);
+      docPdf.setFontSize(9);
+      docPdf.setTextColor(183, 28, 28);
+      docPdf.setFont(undefined, 'italic');
+      docPdf.text(lines, marginX + 2, y + 2);
+      docPdf.setFont(undefined, 'normal');
+      y += lines.length * 4.5 + 4;
+    }
+    docPdf.setDrawColor(230);
+    docPdf.rect(marginX, sectionTop, contentWidth, y - sectionTop);
+    y += 4;
+
+    // ---- Description ----
+    sectionHeader("Description");
+    checkPageBreak(20);
+    const descLines = docPdf.splitTextToSize(r.description || "—", contentWidth - 4);
+    docPdf.setFontSize(10);
+    docPdf.setTextColor(40);
+    docPdf.text(descLines, marginX + 2, y + 5);
+    const descBoxHeight = descLines.length * 5 + 6;
+    docPdf.setDrawColor(230);
+    docPdf.rect(marginX, y, contentWidth, descBoxHeight);
+    y += descBoxHeight + 4;
+
+    // ---- Photo Documentation ----
+    if (r.photo) {
+      checkPageBreak(90);
+      sectionHeader("Photo Documentation");
+      try {
+        const props = docPdf.getImageProperties(r.photo);
+        const maxWidth = contentWidth - 4;
+        const maxHeight = 100;
+        const scale = Math.min(maxWidth / props.width, maxHeight / props.height);
+        const imgW = props.width * scale;
+        const imgH = props.height * scale;
+        const imgX = marginX + (contentWidth - imgW) / 2;
+        docPdf.addImage(r.photo, "JPEG", imgX, y + 3, imgW, imgH);
+        y += imgH + 6;
+        docPdf.setFontSize(8);
+        docPdf.setTextColor(110);
+        docPdf.setFont(undefined, 'italic');
+        const caption = `Figure 1. Photo of the reported issue${r.locationDescription ? ` at ${r.locationDescription}` : ""}.`;
+        const capLines = docPdf.splitTextToSize(caption, contentWidth - 4);
+        docPdf.text(capLines, marginX + 2, y);
+        docPdf.setFont(undefined, 'normal');
+        y += capLines.length * 4 + 4;
+      } catch (err) {
+        console.error("Failed to embed photo:", err);
+      }
+    }
+
+    // ---- Footer on every page ----
+    const pageCount = docPdf.internal.getNumberOfPages();
+    for (let p = 1; p <= pageCount; p++) {
+      docPdf.setPage(p);
+      docPdf.setDrawColor(220);
+      docPdf.line(marginX, 288, pageWidth - marginX, 288);
+      docPdf.setFontSize(7.5);
+      docPdf.setTextColor(140);
+      docPdf.text("Generated via CityEcoMap", marginX, 292);
+      docPdf.text(`Page ${p} of ${pageCount}`, pageWidth - marginX, 292, { align: 'right' });
+    }
+
+    docPdf.save(`CityEcoMap_${r.reportId || r.id.slice(0, 6).toUpperCase()}.pdf`);
+    logExportSingle(r.reportId || r.id.slice(0, 6).toUpperCase());
+  };
 
     const toLocalISODate = (date) =>
       `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;

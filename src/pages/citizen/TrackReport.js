@@ -98,11 +98,11 @@ function TrackReport() {
 };
 
   const getStatusColor = (status) => {
-    if (status === 'Pending') return '#f0a500';
-    if (status === 'Approved') return '#3498db';
-    if (status === 'Ongoing') return '#1a6b3c';
-    if (status === 'Resolved') return '#2ecc71';
-    if (status === 'Rejected') return '#e74c3c';
+    if (status === 'Pending') return '#e53935';
+    if (status === 'Approved') return '#1565c0';
+    if (status === 'Ongoing') return '#f9a825';
+    if (status === 'Resolved') return '#2e7d32';
+    if (status === 'Rejected') return '#757575';
     return '#888';
   };
 

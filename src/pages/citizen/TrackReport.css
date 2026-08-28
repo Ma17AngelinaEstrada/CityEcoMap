@@ -214,7 +214,7 @@
 }
 
 .timeline-dot.rejected {
-  background: #e74c3c;
+  background: #e53935;
 }
 .status-timeline--rejected {
   justify-content: center;

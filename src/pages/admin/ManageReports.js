@@ -357,6 +357,7 @@ export default function ManageReports() {
      <p>Your report <strong>#${selectedReport.reportId}</strong> has been reviewed and approved.</p>
      <p>It has been assigned to <strong>${office}</strong> for action.</p>
      <p>Thank you for helping keep Lucena City clean!</p>
+     <p>You can also check your report's progress anytime using your Report ID <strong>#${selectedReport.reportId}</strong> on our Track Report page.</p>
      <br/>
      <p>— CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>`
   );
@@ -395,6 +396,7 @@ const handleRejectConfirm = async () => {
      <p>Your report <strong>#${selectedReport.reportId}</strong> has been reviewed but could not be approved.</p>
      <p><strong>Reason:</strong> ${rejectReason}</p>
      <p>If you believe this is an error, please submit a new report with clearer details.</p>
+     <p>You can also check your report's status anytime using your Report ID <strong>#${selectedReport.reportId}</strong> on our Track Report page.</p>
      <br/>
      <p>— CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>`
   );
@@ -419,6 +421,7 @@ const handleSetOngoing = async () => {
     `<p>Dear Citizen,</p>
      <p>Good news! Cleanup is now in progress for your report <strong>#${selectedReport.reportId}</strong>.</p>
      <p>Our team is actively working on resolving the issue. Thank you for your patience.</p>
+     <p>You can also check your report's progress anytime using your Report ID <strong>#${selectedReport.reportId}</strong> on our Track Report page.</p>
      <br/>
      <p>— CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>`
   );
@@ -432,6 +435,7 @@ const handleSetResolved = async () => {
     `<p>Dear Citizen,</p>
      <p>Your report <strong>#${selectedReport.reportId}</strong> has been successfully resolved.</p>
      <p>Thank you for helping us build a cleaner, greener Lucena City!</p>
+     <p>You can view the full details of your resolved report anytime using your Report ID <strong>#${selectedReport.reportId}</strong> on our Track Report page.</p>
      <br/>
      <p>— CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>`
   );
@@ -712,7 +716,7 @@ const handleSetResolved = async () => {
                 <col style={{ width: "19%" }} />
                 <col style={{ width: "20%" }} />
                 <col style={{ width: "7%" }} />
-                <col style={{ width: "8%" }} />
+                <col style={{ width: "9%" }} />
               </colgroup>
               <thead>
                 <tr>
