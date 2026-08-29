@@ -17,22 +17,25 @@
 .splash-hero {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 24px 60px;
+  gap: 12px;
+  padding: 32px 24px 20px;
   min-height: 200px;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background: linear-gradient(180deg, #eef7ee 0%, #ffffff 100%);
 }
 
 .splash-logo {
-  height: 70px;
+  height: 44px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.24));
-  padding: 10px 5px;
-  border-radius: 16px;
-  backdrop-filter: blur(2px);
+}
+
+.splash-illustration {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  object-fit: contain;
 }
 
 /* Bottom sheet */
@@ -149,8 +152,12 @@
     flex: 1;
     height: auto;
     max-height: none;
-    padding: 40px 24px 60px;
+    padding: 40px 40px 40px;
     min-height: 200px;
+  }
+
+  .splash-illustration {
+    max-width: 420px;
   }
 
   .splash-sheet {
@@ -174,8 +181,18 @@
 /* Safety net for short mobile screens */
 @media (max-height: 700px) {
   .splash-hero {
-    flex-basis: 16vh;
+    flex-basis: auto;
     min-height: 80px;
+    gap: 8px;
+    padding: 20px 20px 12px;
+  }
+
+  .splash-logo {
+    height: 32px;
+  }
+
+  .splash-illustration {
+    max-width: 220px;
   }
 
   .splash-title {

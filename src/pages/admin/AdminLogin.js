@@ -34,6 +34,13 @@ export default function AdminLogin() {
       {/* Left Panel */}
       <div className="al-left">
         <div className="al-left-content">
+          <div className="al-illustration-wrap">
+            <img
+              src="/admin-illustration.svg"
+              alt=""
+              className="al-illustration-img"
+            />
+          </div>
           <h1>CityEcoMap Administrative Access</h1>
           <p>
             Manage environmental reports and monitor city-wide drainage issues
@@ -46,7 +53,7 @@ export default function AdminLogin() {
       <div className="al-right">
         <div className="al-form-container">
           <div className="al-logo-row">
-            <img src="/logogreen2.png" alt="CityEcoMap logo" className="al-logo-img" />
+            <img src="/logowhite2.png" alt="CityEcoMap logo" className="al-logo-img" />
             
           </div>
           <p className="al-auth-note">Authorized Access Only</p>

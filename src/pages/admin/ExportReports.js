@@ -44,6 +44,22 @@ const EXPORT_REPORTS_TOUR_STEPS = [
   },
 ];
 
+const loadImageAsDataURL = (src) =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = reject;
+      img.src = src;
+    });
+
 export default function ExportReports() {
   const navigate = useNavigate();
   const [reports, setReports] = useState([]);
@@ -462,15 +478,33 @@ export default function ExportReports() {
 
   const handleExportPDF = async () => {
     const docPdf = new jsPDF({ orientation: "landscape" });
-    docPdf.setFontSize(14);
-    docPdf.text("CityEcoMap — Report Summary", 14, 15);
+    const pageWidth = 297;
+    const bannerHeight = 22;
+
+    docPdf.setFillColor(26, 74, 26);
+    docPdf.rect(0, 0, pageWidth, bannerHeight, 'F');
+
+    let textStartX = 14;
+    try {
+      const logoData = await loadImageAsDataURL('/logowhite2.png');
+      const logoProps = docPdf.getImageProperties(logoData);
+      const logoH = 12;
+      const logoW = (logoProps.width / logoProps.height) * logoH;
+      const logoY = (bannerHeight - logoH) / 2;
+      docPdf.addImage(logoData, 'PNG', 14, logoY, logoW, logoH);
+      textStartX = 14 + logoW + 6;
+    } catch (err) {
+      console.error("Failed to load logo:", err);
+    }
+
+    docPdf.setTextColor(255, 255, 255);
     docPdf.setFontSize(9);
     docPdf.text(
-      `Environmental Management Bureau, Lucena City | Generated: ${new Date().toLocaleString("en-PH")}`,
-      14, 21
+      `Report Summary — Environmental Management Bureau, Lucena City | Generated: ${new Date().toLocaleString("en-PH")}`,
+      textStartX, bannerHeight / 2 + 3
     );
 
-    let tableStartY = 27;
+    let tableStartY = 30;
 
     if (includeChart && chartRef.current) {
       try {
@@ -478,9 +512,9 @@ export default function ExportReports() {
         const imgData = canvas.toDataURL("image/png");
         const imgWidth = 260;
         const imgHeight = (canvas.height / canvas.width) * imgWidth;
-        docPdf.addImage(imgData, "PNG", 14, 26, imgWidth, imgHeight);
+        docPdf.addImage(imgData, "PNG", 14, 30, imgWidth, imgHeight);
 
-        const captionY = 26 + imgHeight + 6;
+        const captionY = 30 + imgHeight + 6;
         docPdf.setFontSize(8);
         docPdf.setTextColor(110);
         docPdf.text(
@@ -539,7 +573,7 @@ export default function ExportReports() {
     logExport("Excel");
   };
 
-  const handleGenerateSingleReport = (r) => {
+  const handleGenerateSingleReport = async (r) => {
     const docPdf = new jsPDF({ orientation: "portrait" });
     const marginX = 14;
     const pageWidth = 210;
@@ -547,17 +581,28 @@ export default function ExportReports() {
     let y = 15;
 
     // ---- Header ----
+    const bannerHeight = 24;
     docPdf.setFillColor(26, 74, 26);
-    docPdf.rect(0, 0, pageWidth, 24, 'F');
+    docPdf.rect(0, 0, pageWidth, bannerHeight, 'F');
     docPdf.setTextColor(255, 255, 255);
-    docPdf.setFontSize(15);
-    docPdf.setFont(undefined, 'bold');
-    docPdf.text("CITYECOMAP", marginX, 12);
+
+    let textStartX = marginX;
+    try {
+      const logoData = await loadImageAsDataURL('/logowhite2.png');
+      const logoProps = docPdf.getImageProperties(logoData);
+      const logoH = 10;
+      const logoW = (logoProps.width / logoProps.height) * logoH;
+      const logoY = (bannerHeight - logoH) / 2;
+      docPdf.addImage(logoData, 'PNG', marginX, logoY, logoW, logoH);
+      textStartX = marginX + logoW + 5;
+    } catch (err) {
+      console.error("Failed to load logo:", err);
+    }
+
     docPdf.setFontSize(9);
-    docPdf.setFont(undefined, 'normal');
-    docPdf.text("Incident Report — Lucena City Environmental Reporting System", marginX, 18);
+    docPdf.text("Incident Report — Environmental Management Bureau, Lucena City", textStartX, 13);
     docPdf.setFontSize(7.5);
-    docPdf.text(`Generated: ${new Date().toLocaleString("en-PH")}`, pageWidth - marginX, 18, { align: 'right' });
+    docPdf.text(`Generated: ${new Date().toLocaleString("en-PH")}`, textStartX, 19);
 
     y = 30;
 

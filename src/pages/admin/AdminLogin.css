@@ -9,7 +9,7 @@
 /* Left panel */
 .al-left {
   width: 50%;
-  background-color: #1a4a1a;
+  background-color: #f3ede3;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -26,7 +26,7 @@
 }
 
 .al-left-content h1 {
-  color: #ffffff;
+  color: #1a4a1a;
   font-size: 1.4rem;
   font-weight: 700;
   margin-bottom: 1.25rem;
@@ -36,7 +36,7 @@
 }
 
 .al-left-content p {
-  color: #b8d4b8;
+  color: #5a6b5a;
   font-size: 0.9rem;
   font-style: normal;
   line-height: 1.6;
@@ -44,10 +44,22 @@
   width: 100%;
 }
 
+.al-illustration-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.75rem;
+}
+
+.al-illustration-img {
+  width: 300px;
+  max-width: 100%;
+  height: auto;
+}
+
 /* Right panel */
 .al-right {
   width: 50%;
-  background-color: #f3ede3;
+  background-color: #1a4a1a;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -79,7 +91,7 @@
   font-size: 0.85rem;
   font-style: normal;
   font-weight: 500;
-  color: #7d7a63;
+  color: #b8d4b8;
   margin-bottom: 2rem;
   text-align: center;
 }
@@ -104,7 +116,7 @@
 .al-field label {
   display: block;
   font-size: 0.8rem;
-  color: #6b6552;
+  color: #cfe0cf;
   margin-bottom: 6px;
   font-weight: 500;
 }
@@ -112,10 +124,10 @@
 .al-field input {
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid #d9cfb8;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   font-size: 0.95rem;
-  background: #fff;
+  background: #eef2ea;
   color: #333;
   outline: none;
   font-family: inherit;
@@ -123,15 +135,15 @@
 }
 
 .al-field input:focus {
-  border-color: #2d6a2d;
-  box-shadow: 0 0 0 3px rgba(45, 106, 45, 0.1);
+  border-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15);
 }
 
 .al-btn {
   width: 100%;
   padding: 14px;
-  background: #1a4a1a;
-  color: #fff;
+  background: #dce8dc;
+  color: #1a4a1a;
   border: none;
   border-radius: 50px;
   font-size: 1rem;
@@ -139,11 +151,11 @@
   font-family: inherit;
   cursor: pointer;
   margin-top: 0.5rem;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
 .al-btn:hover:not(:disabled) {
-  background: #2d6a2d;
+  background: #c5d9c5;
 }
 
 .al-btn:disabled {
@@ -154,7 +166,7 @@
 .al-footer {
   font-size: 0.75rem;
   font-style: normal;
-  color: #8c8368;
+  color: #a3c4a3;
   text-align: center;
   margin-top: 2.5rem;
 }
@@ -164,4 +176,5 @@
   .al-wrapper { flex-direction: column; }
   .al-left { width: 100%; padding: 2rem; min-height: 200px; }
   .al-right { width: 100%; }
+  .al-illustration-img { width: 200px; }
 }

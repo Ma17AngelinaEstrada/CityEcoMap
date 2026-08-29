@@ -13,13 +13,13 @@ function SplashScreen() {
 
   return (
     <div className="splash-container">
-      <div
-        className="splash-hero"
-        style={{
-          backgroundImage: `url(${process.env.PUBLIC_URL}/splash-bg1.jpeg)`,
-        }}
-      >
+      <div className="splash-hero">
         <img src={logo} alt="CityEcoMap Logo" className="splash-logo" />
+        <img
+          src={`${process.env.PUBLIC_URL}/splash-illustration.svg`}
+          alt=""
+          className="splash-illustration"
+        />
       </div>
 
       <div className="splash-sheet">
