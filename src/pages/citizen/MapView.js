@@ -41,31 +41,36 @@ function MapView() {
   const { isLoaded } = useGoogleMapsLoaded();
   const [showTour, setShowTour] = useState(routerLocation.state?.showTour || false);
 
-  const TOUR_STEPS = [
+    const TOUR_STEPS = [
     {
       selector: '.floating-search',
       title: 'Search a Location',
       description: 'Type an address here to jump the map straight to that spot.',
+      static: true,
     },
     {
       selector: '.floating-filters',
       title: 'Filter Reports',
       description: 'Narrow down what you see on the map by category or status.',
+      static: true,
     },
     {
       selector: '.locate-btn',
       title: 'Find Your Location',
       description: 'Tap this to center the map on where you are right now.',
+      static: true,
     },
     {
       selector: '.map-legend',
       title: 'Map Legend',
       description: 'The blue arrow shows where you are. The colored dots show report statuses.',
+      static: true,
     },
     {
       selector: '.fab-btn',
       title: 'Submit a Report',
       description: 'Tap here anytime to report a waste or drainage issue in your area.',
+      static: true,
     },
     {
       selector: '.reports-panel-handle',

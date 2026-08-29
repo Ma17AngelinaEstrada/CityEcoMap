@@ -11,7 +11,7 @@ function OnboardingTour({ steps, onFinish, storageKey = 'cityecomap_tour_seen', 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIndex]);
 
-    useEffect(() => {
+      useEffect(() => {
     const step = steps[stepIndex];
     if (!step) return;
 
@@ -19,31 +19,61 @@ function OnboardingTour({ steps, onFinish, storageKey = 'cityecomap_tour_seen', 
     let cancelled = false;
     let resizeObserver;
     let settleTimeout;
+    let lastTop = null;
 
     const finalizeMeasurement = (el) => {
       if (cancelled) return;
       setTargetRect(el.getBoundingClientRect());
     };
 
+    // Resets the 300ms "settle" timer — called both when the element's
+    // size changes (ResizeObserver, e.g. async content loading) and when
+    // its position changes (watchPosition, e.g. mid-scroll). Only once
+    // NEITHER has changed for 300ms do we lock in the final rect.
+    const scheduleSettle = (el) => {
+      if (cancelled) return;
+      clearTimeout(settleTimeout);
+      settleTimeout = setTimeout(() => finalizeMeasurement(el), 300);
+    };
+
+    // Polls the element's position every frame during the scrollIntoView
+    // animation. ResizeObserver alone doesn't fire on pure scrolling (no
+    // size change), so without this, a smooth scroll that takes longer
+    // than 300ms (common on mobile, or for targets deep in a long form)
+    // gets measured mid-animation instead of at its final resting spot.
+    const watchPosition = (el) => {
+      const check = () => {
+        if (cancelled) return;
+        const rect = el.getBoundingClientRect();
+        if (lastTop === null || Math.abs(rect.top - lastTop) > 0.5) {
+          lastTop = rect.top;
+          scheduleSettle(el);
+        }
+        rafId = requestAnimationFrame(check);
+      };
+      rafId = requestAnimationFrame(check);
+    };
+
     const startObserving = (el) => {
+      // Steps flagged "static" target fixed/absolute-positioned overlays
+      // that never move on scroll (e.g. floating map controls). Skip the
+      // scroll animation and settle-wait entirely — there's nothing to
+      // wait for, and on heavy pages (Google Maps re-rendering) the
+      // per-frame position polling below can visibly lag the transition.
+      if (step.static) {
+        finalizeMeasurement(el);
+        return;
+      }
+
       const elHeight = el.getBoundingClientRect().height;
       const scrollBlock = elHeight > window.innerHeight * 0.9 ? 'start' : 'center';
       el.scrollIntoView({ behavior: 'smooth', block: scrollBlock });
 
-      // Wait until the element's size hasn't changed for 300ms before
-      // locking in its rect. ResizeObserver fires on every real size
-      // change (e.g. a table growing as async data arrives), so this
-      // correctly waits out both the scroll animation and any loading
-      // content, regardless of which sibling component triggers it.
-      const scheduleSettle = () => {
-        if (cancelled) return;
-        clearTimeout(settleTimeout);
-        settleTimeout = setTimeout(() => finalizeMeasurement(el), 300);
-      };
-
-      resizeObserver = new ResizeObserver(scheduleSettle);
+      resizeObserver = new ResizeObserver(() => scheduleSettle(el));
       resizeObserver.observe(el);
-      scheduleSettle(); // also settle if the element's size never changes at all
+
+      watchPosition(el);
+      scheduleSettle(el); // also settle if the element never moves or resizes at all
     };
 
     const waitForElement = (attemptsLeft) => {

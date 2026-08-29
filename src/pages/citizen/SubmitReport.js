@@ -58,10 +58,15 @@ const TOUR_STEPS = [
     title: 'Type of Area',
     description: 'Tell us what kind of area this is (road, sidewalk, vacant lot, etc.) so the team can prepare the right equipment.',
   },
-  {
+    {
     selector: '.photo-options',
     title: 'Add a Photo',
     description: 'Take a photo or upload one from your gallery. A photo is required.',
+  },
+  {
+    selector: '#field-description',
+    title: 'Describe the Issue',
+    description: 'Write a short description of what you\u2019re reporting — what you see, and any other helpful details.',
   },
   {
     selector: '#field-email',
@@ -422,6 +427,7 @@ function SubmitReport() {
 
           <div className="section-label">DESCRIPTION</div>
           <textarea
+            id="field-description"
             className="description-input"
             placeholder="Write a detailed description of the issue..."
             value={description}
