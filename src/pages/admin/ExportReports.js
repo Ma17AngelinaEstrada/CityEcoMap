@@ -117,14 +117,6 @@ export default function ExportReports() {
 
   const isOtherSubCategory = (subCategory) => !KNOWN_SUBCATEGORIES.has(subCategory);
 
-  const AREA_TYPE_OPTIONS = [
-    'Road', 'Sidewalk', 'Canal', 'Esteros (Waterway)', 'Vacant Lot',
-    'Residential Area', 'Establishment/Commercial Area', 'Bridge',
-    'Coastal Area', 'Park',
-  ];
-  const KNOWN_AREA_TYPES = new Set(AREA_TYPE_OPTIONS);
-  const isOtherAreaType = (areaType) => Boolean(areaType) && !KNOWN_AREA_TYPES.has(areaType);
-
   const STATUS_LIST = ["Pending", "Approved", "Ongoing", "Resolved", "Rejected"];
   const statusColors = {
     Pending: '#e53935',
@@ -418,21 +410,28 @@ export default function ExportReports() {
   })();
 
   const buildRows = () =>
-    filtered.map((r) => [
-      `#${r.reportId || r.id.slice(0, 6).toUpperCase()}`,
-      r.fullName || '—',
-      r.email || 'Not provided',
-      r.category || '—',
-      r.subCategory === "Other" ? (r.subCategoryOther || "Other") : (r.subCategory || '—'),
-      r.areaType || '—',
-      formatDate(r.createdAt),
-      r.description || '—',
-      [r.locationDescription, r.addressInput || (r.location ? (addresses[r.id] || `${r.location.lat.toFixed(4)}° N, ${r.location.lng.toFixed(4)}° E`) : null)]
-        .filter(Boolean)
-        .join(' — ') || '—',
-      r.assignedTo || '—',
-      r.status || 'Pending',
-    ]);
+    filtered.map((r) => {
+      const locationParts = [
+        r.locationDescription,
+        r.addressInput || (r.location ? addresses[r.id] : null),
+      ].filter(Boolean);
+      if (r.location?.lat && r.location?.lng) {
+        locationParts.push(`(${r.location.lat.toFixed(5)}, ${r.location.lng.toFixed(5)})`);
+      }
+      return [
+        `#${r.reportId || r.id.slice(0, 6).toUpperCase()}`,
+        r.fullName || '—',
+        r.email || 'Not provided',
+        r.category || '—',
+        r.subCategory === "Other" ? (r.subCategoryOther || "Other") : (r.subCategory || '—'),
+        r.areaType || '—',
+        formatDate(r.createdAt),
+        r.description || '—',
+        locationParts.join(' — ') || '—',
+        r.assignedTo || '—',
+        r.status || 'Pending',
+      ];
+    });
 
   const headers = [
     "Report ID", "Submitted By", "Email", "Category", "Sub-Category", "Type of Area",
@@ -581,7 +580,7 @@ export default function ExportReports() {
     let y = 15;
 
     // ---- Header ----
-    const bannerHeight = 24;
+    const bannerHeight = 20;
     docPdf.setFillColor(26, 74, 26);
     docPdf.rect(0, 0, pageWidth, bannerHeight, 'F');
     docPdf.setTextColor(255, 255, 255);
@@ -590,7 +589,7 @@ export default function ExportReports() {
     try {
       const logoData = await loadImageAsDataURL('/logowhite2.png');
       const logoProps = docPdf.getImageProperties(logoData);
-      const logoH = 10;
+      const logoH = 9;
       const logoW = (logoProps.width / logoProps.height) * logoH;
       const logoY = (bannerHeight - logoH) / 2;
       docPdf.addImage(logoData, 'PNG', marginX, logoY, logoW, logoH);
@@ -599,12 +598,12 @@ export default function ExportReports() {
       console.error("Failed to load logo:", err);
     }
 
-    docPdf.setFontSize(9);
-    docPdf.text("Incident Report — Environmental Management Bureau, Lucena City", textStartX, 13);
+    docPdf.setFontSize(9.5);
+    docPdf.text("Incident Report — Environmental Management Bureau, Lucena City", textStartX, 10.5);
     docPdf.setFontSize(7.5);
-    docPdf.text(`Generated: ${new Date().toLocaleString("en-PH")}`, textStartX, 19);
+    docPdf.text(`Generated: ${new Date().toLocaleString("en-PH")}`, textStartX, 15.5);
 
-    y = 30;
+    y = 26;
 
     const checkPageBreak = (neededHeight) => {
       if (y + neededHeight > 280) {
@@ -614,12 +613,12 @@ export default function ExportReports() {
     };
 
     const sectionHeader = (title) => {
-      checkPageBreak(10);
+      checkPageBreak(9);
       docPdf.setFillColor(232, 245, 232);
       docPdf.rect(marginX, y, contentWidth, 7, 'F');
       docPdf.setDrawColor(210);
       docPdf.rect(marginX, y, contentWidth, 7);
-      docPdf.setFontSize(9);
+      docPdf.setFontSize(8.5);
       docPdf.setFont(undefined, 'bold');
       docPdf.setTextColor(26, 74, 26);
       docPdf.text(title.toUpperCase(), marginX + 3, y + 4.8);
@@ -628,21 +627,21 @@ export default function ExportReports() {
     };
 
     const fieldRow = (pairs) => {
-      checkPageBreak(14);
+      checkPageBreak(13);
       const colWidth = contentWidth / pairs.length;
       const rowStartY = y;
       let maxLines = 1;
       pairs.forEach(([label, value], i) => {
         docPdf.setFontSize(7.5);
         docPdf.setTextColor(120);
-        docPdf.text(label.toUpperCase(), marginX + i * colWidth + 2, rowStartY + 4);
+        docPdf.text(label.toUpperCase(), marginX + i * colWidth + 2, rowStartY + 3.8);
         docPdf.setFontSize(10);
         docPdf.setTextColor(30);
         const lines = docPdf.splitTextToSize(value || "—", colWidth - 4);
-        docPdf.text(lines, marginX + i * colWidth + 2, rowStartY + 9);
+        docPdf.text(lines, marginX + i * colWidth + 2, rowStartY + 8.5);
         maxLines = Math.max(maxLines, lines.length);
       });
-      const rowHeight = 9 + maxLines * 4.5 + 2;
+      const rowHeight = 8 + maxLines * 4.3 + 1;
       docPdf.setDrawColor(230);
       docPdf.rect(marginX, rowStartY, contentWidth, rowHeight);
       if (pairs.length > 1) {
@@ -666,7 +665,7 @@ export default function ExportReports() {
       ["Email", r.email || "Not provided"],
     ]);
 
-    y += 4;
+    y += 2;
 
     // ---- Location ----
     sectionHeader("Location");
@@ -679,89 +678,59 @@ export default function ExportReports() {
       ]);
     }
 
-    y += 4;
-
-    // ---- Type of Area ----
-    sectionHeader("Type of Area");
-    checkPageBreak(35);
-    const checkboxColWidth = contentWidth / 2;
-    const checkboxRowHeight = 6.5;
-    const gridStartY = y + 3;
-    AREA_TYPE_OPTIONS.forEach((type, i) => {
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      const bx = marginX + col * checkboxColWidth + 2;
-      const by = gridStartY + row * checkboxRowHeight;
-      docPdf.setDrawColor(120);
-      docPdf.rect(bx, by, 3.5, 3.5);
-      if (r.areaType === type) {
-        docPdf.setFontSize(8);
-        docPdf.setTextColor(26, 74, 26);
-        docPdf.setFont(undefined, 'bold');
-        docPdf.text("X", bx + 0.6, by + 2.9);
-        docPdf.setFont(undefined, 'normal');
-      }
-      docPdf.setFontSize(9);
-      docPdf.setTextColor(50);
-      docPdf.text(type, bx + 5.5, by + 2.9);
-    });
-    const otherRowY = gridStartY + Math.ceil(AREA_TYPE_OPTIONS.length / 2) * checkboxRowHeight;
-    docPdf.setDrawColor(120);
-    docPdf.rect(marginX + 2, otherRowY, 3.5, 3.5);
-    const otherChecked = isOtherAreaType(r.areaType);
-    if (otherChecked) {
-      docPdf.setFontSize(8);
-      docPdf.setTextColor(26, 74, 26);
-      docPdf.setFont(undefined, 'bold');
-      docPdf.text("X", marginX + 2.6, otherRowY + 2.9);
-      docPdf.setFont(undefined, 'normal');
-    }
-    docPdf.setFontSize(9);
-    docPdf.setTextColor(50);
-    docPdf.text(otherChecked ? `Other: ${r.areaType}` : "Other", marginX + 7.5, otherRowY + 2.9);
-    if (!r.areaType) {
-      docPdf.setFontSize(8);
-      docPdf.setTextColor(150);
-      docPdf.setFont(undefined, 'italic');
-      docPdf.text("Not specified for this report.", marginX + 2, otherRowY + 9);
-      docPdf.setFont(undefined, 'normal');
-    }
-    y = otherRowY + (r.areaType ? 6 : 12);
     y += 2;
 
-    // ---- Status ----
-    sectionHeader("Status");
-    checkPageBreak(16);
-    const sectionTop = y;
-    const statusY = sectionTop + 3;
+    // ---- Type of Area & Status (side by side) ----
+    sectionHeader("Type of Area & Status");
+    checkPageBreak(20);
+    const halfWidth = contentWidth / 2;
+    const rowTop = y;
+
+    // Kaliwa: Type of Area (simpleng text field na lang, hindi na checkbox grid)
+    docPdf.setFontSize(7);
+    docPdf.setTextColor(120);
+    docPdf.text("TYPE OF AREA", marginX + 2, rowTop + 4);
+    docPdf.setFontSize(10);
+    docPdf.setTextColor(30);
+    docPdf.text(r.areaType || "Not specified", marginX + 2, rowTop + 9);
+
+    // Kanan: Status badge + Assigned To
     const statusColorMap = {
       Pending: [229, 57, 53], Approved: [21, 101, 192], Ongoing: [249, 168, 37],
       Resolved: [46, 125, 50], Rejected: [117, 117, 117],
     };
     const [sr, sg, sb] = statusColorMap[r.status] || [117, 117, 117];
+    docPdf.setFontSize(7);
+    docPdf.setTextColor(120);
+    docPdf.text("STATUS", marginX + halfWidth + 2, rowTop + 4);
     docPdf.setFillColor(sr, sg, sb);
-    docPdf.roundedRect(marginX + 2, statusY, 32, 7, 3, 3, 'F');
-    docPdf.setFontSize(9);
+    docPdf.roundedRect(marginX + halfWidth + 2, rowTop + 5.5, 28, 6, 3, 3, 'F');
+    docPdf.setFontSize(8);
     docPdf.setTextColor(255, 255, 255);
     docPdf.setFont(undefined, 'bold');
-    docPdf.text(r.status || "Pending", marginX + 18, statusY + 4.7, { align: 'center' });
+    docPdf.text(r.status || "Pending", marginX + halfWidth + 16, rowTop + 9.3, { align: 'center' });
     docPdf.setFont(undefined, 'normal');
-    docPdf.setFontSize(8.5);
+    docPdf.setFontSize(8);
     docPdf.setTextColor(80);
-    docPdf.text(`Assigned To: ${r.assignedTo || "—"}`, marginX + 40, statusY + 4.7);
-    y = statusY + 10;
+    docPdf.text(`Assigned: ${r.assignedTo || "—"}`, marginX + halfWidth + 34, rowTop + 9.3);
+
+    const rowHeight = 13;
+    docPdf.setDrawColor(230);
+    docPdf.rect(marginX, rowTop, contentWidth, rowHeight);
+    docPdf.line(marginX + halfWidth, rowTop, marginX + halfWidth, rowTop + rowHeight);
+    y = rowTop + rowHeight;
+
     if (r.status === "Rejected" && r.rejectionReason) {
+      checkPageBreak(10);
       const lines = docPdf.splitTextToSize(`Rejection Reason: ${r.rejectionReason}`, contentWidth - 4);
-      docPdf.setFontSize(9);
+      docPdf.setFontSize(8.5);
       docPdf.setTextColor(183, 28, 28);
       docPdf.setFont(undefined, 'italic');
-      docPdf.text(lines, marginX + 2, y + 2);
+      docPdf.text(lines, marginX + 2, y + 4);
       docPdf.setFont(undefined, 'normal');
-      y += lines.length * 4.5 + 4;
+      y += lines.length * 4 + 4;
     }
-    docPdf.setDrawColor(230);
-    docPdf.rect(marginX, sectionTop, contentWidth, y - sectionTop);
-    y += 4;
+    y += 2;
 
     // ---- Description ----
     sectionHeader("Description");
@@ -770,10 +739,10 @@ export default function ExportReports() {
     docPdf.setFontSize(10);
     docPdf.setTextColor(40);
     docPdf.text(descLines, marginX + 2, y + 5);
-    const descBoxHeight = descLines.length * 5 + 6;
+    const descBoxHeight = descLines.length * 5 + 5;
     docPdf.setDrawColor(230);
     docPdf.rect(marginX, y, contentWidth, descBoxHeight);
-    y += descBoxHeight + 4;
+    y += descBoxHeight + 1.5;
 
     // ---- Photo Documentation ----
     if (r.photo) {
@@ -782,7 +751,7 @@ export default function ExportReports() {
       try {
         const props = docPdf.getImageProperties(r.photo);
         const maxWidth = contentWidth - 4;
-        const maxHeight = 100;
+        const maxHeight = 78;
         const scale = Math.min(maxWidth / props.width, maxHeight / props.height);
         const imgW = props.width * scale;
         const imgH = props.height * scale;
