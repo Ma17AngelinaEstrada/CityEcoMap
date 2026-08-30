@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Autocomplete } from '@react-google-maps/api';
 import logo from '../../logowhite2.png';
 import './SubmitReport.css';
 import '../../styles/CitizenHeader.css';
 import { TrashIcon, WaveIcon, CheckIcon, CameraIcon, ImageIcon, XIcon, PinIcon, ArrowLeftIcon } from '../../components/Icons';
-import { useGoogleMapsLoaded } from '../../context/GoogleMapsLoaderContext';
 import OnboardingTour from '../../components/OnboardingTour';
 
 const SUB_CATEGORIES = {
@@ -108,10 +106,11 @@ function SubmitReport() {
   const [location2, setLocation2] = useState(previousForm?.location || null);
   const [addressInput, setAddressInput] = useState(previousForm?.addressInput || '');
   const [locationDescription, setLocationDescription] = useState(previousForm?.locationDescription || '');
-  const [autocompleteInstance, setAutocompleteInstance] = useState(null);
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchingAddress, setSearchingAddress] = useState(false);
+  const addressDebounceRef = useRef(null);
   const [showTour, setShowTour] = useState(false);
-
-  const { isLoaded } = useGoogleMapsLoaded();
 
   // Reset sub-category whenever the parent category changes
   useEffect(() => {
@@ -165,23 +164,38 @@ function SubmitReport() {
     return regex.test(email);
   };
 
-  const onAutocompleteLoad = (autocomplete) => {
-    autocomplete.setComponentRestrictions({ country: 'ph' });
-    setAutocompleteInstance(autocomplete);
-  };
-
-  const onPlaceChanged = () => {
-    if (!autocompleteInstance) return;
-    const place = autocompleteInstance.getPlace();
-    if (!place.geometry || !place.geometry.location) {
-      alert('Please select an address from the dropdown suggestions.');
+  const handleAddressChange = (value) => {
+    setAddressInput(value);
+    setLocation2(null); // hindi na valid ang dating napiling coords kapag nag-type ulit
+    if (addressDebounceRef.current) clearTimeout(addressDebounceRef.current);
+    if (!value.trim() || value.trim().length < 3) {
+      setAddressSuggestions([]);
+      setShowSuggestions(false);
       return;
     }
-    setLocation2({
-      lat: place.geometry.location.lat(),
-      lng: place.geometry.location.lng(),
-    });
-    setAddressInput(place.formatted_address || place.name);
+    addressDebounceRef.current = setTimeout(async () => {
+      setSearchingAddress(true);
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(value)}&format=json&limit=5&countrycodes=ph&addressdetails=1`,
+          { headers: { 'Accept-Language': 'en' } }
+        );
+        const data = await res.json();
+        setAddressSuggestions(data);
+        setShowSuggestions(true);
+      } catch (err) {
+        console.error('Address search failed:', err);
+      } finally {
+        setSearchingAddress(false);
+      }
+    }, 600);
+  };
+
+  const handleSelectSuggestion = (place) => {
+    setAddressInput(place.display_name);
+    setLocation2({ lat: parseFloat(place.lat), lng: parseFloat(place.lon) });
+    setAddressSuggestions([]);
+    setShowSuggestions(false);
   };
 
   const handleUseCurrentLocation = () => {
@@ -449,21 +463,30 @@ function SubmitReport() {
           />
 
           <div className="section-label">ADDRESS <span className="required">(Required)</span></div>
-          <p className="notify-note">Enter the address of the issue. Start typing and select from the suggestions.</p>
-          {isLoaded ? (
-            <Autocomplete onLoad={onAutocompleteLoad} onPlaceChanged={onPlaceChanged}>
-              <input
-                id="field-address"
-                type="text"
-                className="email-input"
-                placeholder="e.g. Quezon Avenue, Ibabang Dupay, Lucena City"
-                value={addressInput}
-                onChange={(e) => setAddressInput(e.target.value)}
-              />
-            </Autocomplete>
-          ) : (
-            <input type="text" className="email-input" placeholder="Loading address search..." disabled />
-          )}
+          <p className="notify-note">Enter the address of the issue. Start typing and pick a suggestion below, or use your current location.</p>
+          <div className="address-autocomplete-wrapper">
+            <input
+              id="field-address"
+              type="text"
+              className="email-input"
+              placeholder="e.g. Quezon Avenue, Ibabang Dupay, Lucena City"
+              value={addressInput}
+              onChange={(e) => handleAddressChange(e.target.value)}
+              onFocus={() => { if (addressSuggestions.length > 0) setShowSuggestions(true); }}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              autoComplete="off"
+            />
+            {searchingAddress && <div className="address-suggestions-status">Searching...</div>}
+            {showSuggestions && addressSuggestions.length > 0 && (
+              <ul className="address-suggestions-list">
+                {addressSuggestions.map((place) => (
+                  <li key={place.place_id} onMouseDown={() => handleSelectSuggestion(place)}>
+                    {place.display_name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <button type="button" className="use-location-btn" onClick={handleUseCurrentLocation}>
             <PinIcon /> Use my current location instead
           </button>
