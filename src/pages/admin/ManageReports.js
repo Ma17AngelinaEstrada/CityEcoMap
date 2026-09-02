@@ -11,7 +11,7 @@ import { useAdminTour } from "../../context/AdminTourContext";
 const sendEmailNotification = async (to, subject, body) => {
   if (!to) return;
   try {
-    await fetch('http://localhost:5000/send-email', {
+    await fetch('https://cityecomap-email.onrender.com/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ to, subject, body }),
