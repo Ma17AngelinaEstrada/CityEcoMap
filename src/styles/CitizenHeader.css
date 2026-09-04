@@ -35,10 +35,23 @@
 .citizen-header .header-logo {
   display: flex;
   align-items: center;
+  gap: 14px;
+}
+
+.citizen-header .logo-divider {
+  width: 1px;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.citizen-header .partner-logo-img {
+  height: 34px;
+  width: 34px;
+  object-fit: contain;
 }
 
 .citizen-header .logo-img {
-  height: 44px;
+  height: 34px;
   object-fit: contain;
 }
 
@@ -125,6 +138,21 @@
     display: none;
   }
   .citizen-header .logo-img {
-    height: 36px;
+    height: 26px;
   }
+  .citizen-header .partner-logo-img {
+    height: 26px;
+    width: 26px;
+  }
+}
+
+.citizen-header .header-logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto; /* para hindi kumuha ng buong available width */
+}
+
+.citizen-header.report-header .header-logo {
+  justify-self: center;
 }

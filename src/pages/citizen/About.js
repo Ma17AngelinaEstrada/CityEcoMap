@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../logowhite2.png';
+import embLogo from '../../emb-logo.png';
 import './About.css';
 import '../../styles/CitizenHeader.css';
 import { LeafIcon, GearIcon, FolderIcon, BankIcon, TrashIcon, WaveIcon, PinIcon, BellIcon, ClipboardIcon, CheckCircleIcon, HomeIcon, TrackIcon, AboutIcon } from '../../components/Icons';
@@ -13,7 +14,9 @@ function About() {
       {/* Header */}
       <div className="citizen-header">
         <div className="header-logo">
-          <img src={logo} alt="CityEcoMap" className="logo-img" />
+          <img src={logo} alt="CityEcoMap Logo" className="logo-img" />
+          <span className="logo-divider" />
+          <img src={embLogo} alt="EMB Logo" className="partner-logo-img" />
         </div>
         <div className="header-right">
           <nav className="header-nav">
@@ -107,7 +110,11 @@ function About() {
           <div className="section-icon"><BankIcon /></div>
           <div className="section-content">
             <h3>Who We Work With</h3>
-            <p>CityEcoMap is developed for the <strong>Environmental Management Bureau (EMB) of the DENR</strong>, the agency responsible for monitoring and responding to environmental concerns, in coordination with the <strong>Local Government of Lucena City</strong>, which oversees local drainage and waste management operations within the city.</p>
+            <p>CityEcoMap is developed for the <strong>Environmental Management Bureau (EMB) of the DENR</strong>, the agency responsible for monitoring and responding to environmental concerns, in coordination with the <strong>Local Government Unit of Lucena City</strong>, which oversees local drainage and waste management operations within the city.</p>
+            <div className="partner-showcase">
+              <img src={embLogo} alt="EMB Logo" className="partner-showcase-logo" />
+              <span className="partner-showcase-label">Environmental Management Bureau — Lucena City</span>
+            </div>
           </div>
         </div>
 

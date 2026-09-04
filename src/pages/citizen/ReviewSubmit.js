@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../logowhite2.png';
+import embLogo from '../../emb-logo.png';
 import './ReviewSubmit.css';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
@@ -107,10 +108,12 @@ function ReviewSubmit() {
   return (
     <div className="review-container">
       <div className="citizen-header review-header">
-        <button className="header-back-btn" onClick={() =>
-          navigate('/submit-report', { state: { previousForm: form } })
-        }><ArrowLeftIcon /></button>
-        <img src={logo} alt="CityEcoMap" className="logo-img" />
+        <button className="header-back-btn" onClick={() => navigate('/submit-report', { state: { previousForm: form } })}><ArrowLeftIcon /></button>
+        <div className="header-logo">
+          <img src={logo} alt="CityEcoMap" className="logo-img" />
+          <span className="logo-divider" />
+          <img src={embLogo} alt="EMB" className="partner-logo-img" />
+        </div>
         <button className="header-close-btn" onClick={() => {
           if (window.confirm('Are you sure you want to cancel? Your report will not be submitted.')) {
             navigate('/map', { replace: true });

@@ -350,3 +350,28 @@
     font-size: 14px !important;
   }
 }
+
+.partner-showcase {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+.partner-showcase-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.partner-showcase-label {
+  font-weight: 600;
+  color: #1a4a1a;
+  font-size: 0.95rem;
+}
+@media (max-width: 767px) {
+  .partner-showcase {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+}

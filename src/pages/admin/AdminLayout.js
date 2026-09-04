@@ -151,7 +151,11 @@ export default function AdminLayout({ children }) {
     <div className="al2-wrapper">
       {/* Top navbar */}
       <header className="al2-topbar">
-        <img src="/logowhite2.png" alt="CityEcoMap" className="al2-logo" />
+        <div className="al2-logo-group">
+          <img src="/logowhite2.png" alt="CityEcoMap" className="al2-logo" />
+          <span className="al2-logo-divider" />
+          <img src="/emb-logo.png" alt="EMB" className="al2-partner-logo" />
+        </div>
 
         <div className="al2-topbar-right">
           {tourSteps.length > 0 && (

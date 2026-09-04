@@ -30,9 +30,28 @@
 }
 
 .al2-logo {
-  height: 35px;
+  height: 28px;
   width: auto;
   object-fit: contain;
+}
+
+.al2-logo-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.al2-logo-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.al2-partner-logo {
+  height: 28px;
+  width: 28px;
+  object-fit: contain;
+  border-radius: 50%;
 }
 
 /* Body */

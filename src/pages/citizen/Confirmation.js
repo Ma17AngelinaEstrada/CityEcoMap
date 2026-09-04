@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logowhite from '../../logowhite2.png';
+import embLogo from '../../emb-logo.png';
 import './Confirmation.css';
 import { useLocation } from 'react-router-dom';
 import '../../styles/CitizenHeader.css';
@@ -57,7 +58,11 @@ function Confirmation() {
   return (
     <div className="confirm-container">
       <div className="citizen-header confirm-header">
-        <img src={logowhite} alt="CityEcoMap" className="logo-img" />
+        <div className="header-logo">
+          <img src={logowhite} alt="CityEcoMap" className="logo-img" />
+          <span className="logo-divider" />
+          <img src={embLogo} alt="EMB" className="partner-logo-img" />
+        </div>
       </div>
 
       <div className="confirm-body">

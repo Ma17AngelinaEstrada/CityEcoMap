@@ -478,7 +478,7 @@ export default function ExportReports() {
   const handleExportPDF = async () => {
     const docPdf = new jsPDF({ orientation: "landscape" });
     const pageWidth = 297;
-    const bannerHeight = 22;
+    const bannerHeight = 18;
 
     docPdf.setFillColor(26, 74, 26);
     docPdf.rect(0, 0, pageWidth, bannerHeight, 'F');
@@ -487,13 +487,25 @@ export default function ExportReports() {
     try {
       const logoData = await loadImageAsDataURL('/logowhite2.png');
       const logoProps = docPdf.getImageProperties(logoData);
-      const logoH = 12;
+      const logoH = 9;
       const logoW = (logoProps.width / logoProps.height) * logoH;
       const logoY = (bannerHeight - logoH) / 2;
       docPdf.addImage(logoData, 'PNG', 14, logoY, logoW, logoH);
       textStartX = 14 + logoW + 6;
     } catch (err) {
       console.error("Failed to load logo:", err);
+    }
+
+    try {
+      const embLogoData = await loadImageAsDataURL('/emb-logo.png');
+      const embLogoProps = docPdf.getImageProperties(embLogoData);
+      const embLogoH = 10;
+      const embLogoW = (embLogoProps.width / embLogoProps.height) * embLogoH;
+      const embLogoY = (bannerHeight - embLogoH) / 2;
+      docPdf.addImage(embLogoData, 'PNG', textStartX, embLogoY, embLogoW, embLogoH);
+      textStartX = textStartX + embLogoW + 6;
+    } catch (err) {
+      console.error("Failed to load EMB logo:", err);
     }
 
     docPdf.setTextColor(255, 255, 255);
@@ -580,7 +592,7 @@ export default function ExportReports() {
     let y = 15;
 
     // ---- Header ----
-    const bannerHeight = 20;
+    const bannerHeight = 18;
     docPdf.setFillColor(26, 74, 26);
     docPdf.rect(0, 0, pageWidth, bannerHeight, 'F');
     docPdf.setTextColor(255, 255, 255);
@@ -589,7 +601,7 @@ export default function ExportReports() {
     try {
       const logoData = await loadImageAsDataURL('/logowhite2.png');
       const logoProps = docPdf.getImageProperties(logoData);
-      const logoH = 9;
+      const logoH = 7;
       const logoW = (logoProps.width / logoProps.height) * logoH;
       const logoY = (bannerHeight - logoH) / 2;
       docPdf.addImage(logoData, 'PNG', marginX, logoY, logoW, logoH);
@@ -598,10 +610,22 @@ export default function ExportReports() {
       console.error("Failed to load logo:", err);
     }
 
+    try {
+      const embLogoData = await loadImageAsDataURL('/emb-logo.png');
+      const embLogoProps = docPdf.getImageProperties(embLogoData);
+      const embLogoH = 8;
+      const embLogoW = (embLogoProps.width / embLogoProps.height) * embLogoH;
+      const embLogoY = (bannerHeight - embLogoH) / 2;
+      docPdf.addImage(embLogoData, 'PNG', textStartX, embLogoY, embLogoW, embLogoH);
+      textStartX = textStartX + embLogoW + 5;
+    } catch (err) {
+      console.error("Failed to load EMB logo:", err);
+    }
+
     docPdf.setFontSize(9.5);
-    docPdf.text("Incident Report — Environmental Management Bureau, Lucena City", textStartX, 10.5);
+    docPdf.text("Incident Report — Environmental Management Bureau, Lucena City", textStartX, 9.5);
     docPdf.setFontSize(7.5);
-    docPdf.text(`Generated: ${new Date().toLocaleString("en-PH")}`, textStartX, 15.5);
+    docPdf.text(`Generated: ${new Date().toLocaleString("en-PH")}`, textStartX, 14);
 
     y = 26;
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../logowhite2.png';
+import embLogo from '../../emb-logo.png';
 import './SubmitReport.css';
 import '../../styles/CitizenHeader.css';
 import { TrashIcon, WaveIcon, CheckIcon, CameraIcon, ImageIcon, XIcon, PinIcon, ArrowLeftIcon } from '../../components/Icons';
@@ -300,7 +301,11 @@ function SubmitReport() {
     <div className="report-container">
       <div className="citizen-header report-header">
         <button className="header-back-btn" onClick={handleLeave}><ArrowLeftIcon /></button>
-        <img src={logo} alt="CityEcoMap" className="logo-img" />
+        <div className="header-logo">
+          <img src={logo} alt="CityEcoMap" className="logo-img" />
+          <span className="logo-divider" />
+          <img src={embLogo} alt="EMB" className="partner-logo-img" />
+        </div>
         <div className="header-actions">
           <button className="header-help-btn" onClick={() => setShowTour(true)} title="Show guide">?</button>
           <button className="header-close-btn" onClick={handleLeave}><XIcon /></button>

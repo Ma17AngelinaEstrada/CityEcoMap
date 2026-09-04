@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../logowhite2.png';
+import embLogo from '../../emb-logo.png';
 import './TrackReport.css';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
@@ -222,6 +223,8 @@ function TrackReport() {
       <div className="citizen-header">
         <div className="header-logo">
           <img src={logo} alt="CityEcoMap" className="logo-img" />
+          <span className="logo-divider" />
+          <img src={embLogo} alt="EMB" className="partner-logo-img" />
         </div>
         <div className="header-right">
           <nav className="header-nav">
