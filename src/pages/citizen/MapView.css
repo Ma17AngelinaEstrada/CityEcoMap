@@ -209,7 +209,7 @@
 @media (max-width: 767px) {
   .header-nav { display: none; }
   .map-header { padding: 10px 16px; }
-  .logo-img { height: 32px; }
+  .logo-img { height: 26px; }
 
   /* Move search bar to below header, not floating */
   .floating-search {
