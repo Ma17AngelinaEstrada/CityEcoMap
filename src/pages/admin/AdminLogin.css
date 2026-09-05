@@ -78,11 +78,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   margin-bottom: 0.75rem;
 }
 
+.al-logo-divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.al-partner-logo {
+  height: 40px;
+  width: 40px;
+  object-fit: contain;
+}
+
 .al-logo-img {
-  width: 220px;
+  width: 160px;
   height: auto;
   object-fit: contain;
 }
@@ -161,6 +174,42 @@
 .al-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.al-forgot-link {
+  background: none;
+  border: none;
+  color: #cfe0cf;
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 0.75rem;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.al-forgot-link:hover {
+  color: #ffffff;
+}
+
+.al-reset-instructions {
+  font-size: 0.82rem;
+  color: #cfe0cf;
+  text-align: center;
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+}
+
+.al-success {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #166534;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  padding: 10px 14px;
+  margin-bottom: 1rem;
+  width: 100%;
+  text-align: center;
 }
 
 .al-footer {

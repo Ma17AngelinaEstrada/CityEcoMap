@@ -89,6 +89,19 @@
   color: #7eb87e;
 }
 
+.splash-owner-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.splash-owner-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .splash-owner-names {
   font-size: 14px;
   color: #444;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../logogreen2.png';
+import embLogo from '../../emb-logo.png';
 import './SplashScreen.css';
 
 function SplashScreen() {
@@ -32,9 +33,12 @@ function SplashScreen() {
 
         <div className="splash-owner">
           <span className="splash-owner-label">DEVELOPED FOR</span>
-          <p className="splash-owner-names">
-            Environmental Management Bureau (EMB) &amp; the Local Government Unit of Lucena City
-          </p>
+          <div className="splash-owner-row">
+            <img src={embLogo} alt="EMB Logo" className="splash-owner-logo" />
+            <p className="splash-owner-names">
+              Environmental Management Bureau (EMB) &amp; the Local Government Unit of Lucena City
+            </p>
+          </div>
         </div>
 
         <div className="splash-notices">
