@@ -1126,26 +1126,27 @@ export default function ExportReports() {
           style={{
             background: "#fff",
             padding: "20px",
-            width: "1400px",
-            maxWidth: "100%",
+            width: "100%",
+            maxWidth: "1400px",
             marginBottom: "24px",
             borderRadius: "10px",
             border: "1px solid #e0ddd5",
             display: "flex",
+            flexWrap: "wrap",
             gap: "24px",
             alignItems: "flex-start",
           }}
         >
           {/* Kaliwang column: Report Statistics (bar + donut) — parehong laman ng
               "chartView" dropdown, kapareho ng Dashboard */}
-          <div style={{ flex: 1.4, minWidth: 0 }}>
+          <div className="er-chart-col-left" style={{ flex: 1.4, minWidth: 0 }}>
             <h4 style={{ fontSize: "0.9rem", fontWeight: 700, color: "#1a4a1a", fontFamily: "sans-serif", marginBottom: "4px" }}>
               Report Statistics
             </h4>
             <p style={{ fontSize: "0.75rem", color: "#888", fontFamily: "sans-serif", marginBottom: "12px" }}>
               {chartRangeLabel}
             </p>
-            <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
+            <div className="er-chart-inner-row" style={{ display: "flex", gap: "20px", alignItems: "center" }}>
               <div style={{ flex: 1.6, minWidth: 0 }}>
                 <ResponsiveContainer width="100%" height={260}>
                   {chartView === "category" ? (
@@ -1234,7 +1235,7 @@ export default function ExportReports() {
           {/* Kanang column: Top Subcategories ranking — laging pinagsama ang Waste +
               Drainage, batay sa lahat ng existing filters sa itaas (Status, Category,
               Time Range, atbp.); parehong border-left separator ng Dashboard columns */}
-          <div style={{ flex: 1, minWidth: 0, borderLeft: "1px solid #eee", paddingLeft: "24px" }}>
+          <div className="er-chart-col-right" style={{ flex: 1, minWidth: 0, borderLeft: "1px solid #eee", paddingLeft: "24px" }}>
             <h4 style={{ fontSize: "0.9rem", fontWeight: 700, color: "#1a4a1a", fontFamily: "sans-serif", marginBottom: "4px" }}>
               Top Subcategories
             </h4>
@@ -1269,83 +1270,119 @@ export default function ExportReports() {
       {loading ? (
         <p className="er-loading">Loading reports...</p>
       ) : (
-        <div className="er-table-card">
-          <table className="er-table">
-            <colgroup>
-              <col style={{ width: "7%" }} />
-              <col style={{ width: "9%" }} />
-              <col style={{ width: "9%" }} />
-              <col style={{ width: "7%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "18%" }} />
-              <col style={{ width: "6%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "9%" }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th>Report ID</th>
-                <th>Submitted By</th>
-                <th>Email</th>
-                <th>Category</th>
-                <th>Type of Area</th>
-                <th>Date Submitted</th>
-                <th>Description</th>
-                <th>Location</th>
-                <th>Assigned To</th>
-                <th>Status</th>
-                <th>Report</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan="11" className="er-empty">No reports match the selected filters.</td></tr>
-                ) : (
-                  filtered.map((r) => (
-                    <tr key={r.id}>
-                      <td>#{r.reportId || r.id.slice(0, 6).toUpperCase()}</td>
-                      <td>{r.fullName || "—"}</td>
-                      <td>{r.email || "—"}</td>
-                      <td>
-                        <div>{r.category}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#888', fontStyle: 'italic' }}>
-                          {r.subCategory === "Other"
-                            ? (r.subCategoryOther || "Other")
-                            : (r.subCategory || "—")}
-                        </div>
-                      </td>
-                      <td>{r.areaType || "—"}</td>
-                      <td>{formatDate(r.createdAt)}</td>
-                      <td>{r.description || "—"}</td>
-                      <td>
-                        {r.locationDescription && <div>{r.locationDescription}</div>}
-                        {r.addressInput ? (
-                          <div style={{ fontSize: '0.78rem', color: '#888' }}>{r.addressInput}</div>
-                        ) : r.location ? (
-                          <div style={{ fontSize: '0.78rem', color: '#888' }}>
-                            {addresses[r.id] || 'Resolving...'}
+        <>
+          <div className="er-table-card">
+            <table className="er-table">
+              <colgroup>
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "18%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "9%" }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Report ID</th>
+                  <th>Submitted By</th>
+                  <th>Email</th>
+                  <th>Category</th>
+                  <th>Type of Area</th>
+                  <th>Date Submitted</th>
+                  <th>Description</th>
+                  <th>Location</th>
+                  <th>Assigned To</th>
+                  <th>Status</th>
+                  <th>Report</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr><td colSpan="11" className="er-empty">No reports match the selected filters.</td></tr>
+                  ) : (
+                    filtered.map((r) => (
+                      <tr key={r.id}>
+                        <td>#{r.reportId || r.id.slice(0, 6).toUpperCase()}</td>
+                        <td>{r.fullName || "—"}</td>
+                        <td>{r.email || "—"}</td>
+                        <td>
+                          <div>{r.category}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#888', fontStyle: 'italic' }}>
+                            {r.subCategory === "Other"
+                              ? (r.subCategoryOther || "Other")
+                              : (r.subCategory || "—")}
                           </div>
-                        ) : null}
-                        {!r.locationDescription && !r.addressInput && !r.location && '—'}
-                      </td>
-                      <td>{r.assignedTo || "—"}</td>
-                      <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
-                      <td>
-                        <button
-                          className="er-generate-btn"
-                          onClick={() => handleGenerateSingleReport(r)}
-                        >
-                          📄 Generate
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-            </tbody>
-          </table>
+                        </td>
+                        <td>{r.areaType || "—"}</td>
+                        <td>{formatDate(r.createdAt)}</td>
+                        <td>{r.description || "—"}</td>
+                        <td>
+                          {r.locationDescription && <div>{r.locationDescription}</div>}
+                          {r.addressInput ? (
+                            <div style={{ fontSize: '0.78rem', color: '#888' }}>{r.addressInput}</div>
+                          ) : r.location ? (
+                            <div style={{ fontSize: '0.78rem', color: '#888' }}>
+                              {addresses[r.id] || 'Resolving...'}
+                            </div>
+                          ) : null}
+                          {!r.locationDescription && !r.addressInput && !r.location && '—'}
+                        </td>
+                        <td>{r.assignedTo || "—"}</td>
+                        <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
+                        <td>
+                          <button
+                            className="er-generate-btn"
+                            onClick={() => handleGenerateSingleReport(r)}
+                          >
+                            📄 Generate
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+              </tbody>
+            </table>
+          </div>
+         <div className="er-cards">
+          {filtered.length === 0 ? (
+            <p className="er-empty">No reports match the selected filters.</p>
+          ) : (
+            filtered.map((r) => (
+              <div key={r.id} className="er-card">
+                <div className="er-card-top">
+                  <span className="er-card-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</span>
+                  <span className={getStatusClass(r.status)}>{r.status || "Pending"}</span>
+                </div>
+                <div className="er-card-row"><strong>{r.fullName || "—"}</strong></div>
+                <div className="er-card-row er-card-sub">{r.email || "—"}</div>
+                <div className="er-card-row">
+                  {r.category}
+                  {r.subCategory && (
+                    <span className="er-card-sub"> — {r.subCategory === "Other" ? (r.subCategoryOther || "Other") : r.subCategory}</span>
+                  )}
+                </div>
+                <div className="er-card-row er-card-sub">{r.areaType || "—"} · {formatDate(r.createdAt)}</div>
+                {r.description && <div className="er-card-row er-card-desc">{r.description}</div>}
+                <div className="er-card-row er-card-sub">
+                  {r.locationDescription || r.addressInput || (r.location ? (addresses[r.id] || 'Resolving...') : '—')}
+                </div>
+                <div className="er-card-row er-card-sub">Assigned: {r.assignedTo || "—"}</div>
+                <button
+                  className="er-generate-btn er-card-generate-btn"
+                  onClick={() => handleGenerateSingleReport(r)}
+                >
+                  📄 Generate
+                </button>
+              </div>
+            ))
+          )}
         </div>
+      </>
       )}
     </AdminLayout>
   );

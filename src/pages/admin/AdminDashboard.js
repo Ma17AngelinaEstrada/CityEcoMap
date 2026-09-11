@@ -977,6 +977,32 @@ export default function AdminDashboard() {
                 )}
               </tbody>
             </table>
+
+            <div className="ad-cards">
+            {recent.length === 0 ? (
+              <p className="ad-empty">No reports yet.</p>
+            ) : (
+              recent.map((r) => (
+                <div key={r.id} className="ad-card">
+                  <div className="ad-card-top">
+                    <span className="ad-card-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</span>
+                    <span className={getStatusClass(r.status)}>{r.status || "Pending"}</span>
+                  </div>
+                  <div className="ad-card-row"><strong>{r.fullName || "—"}</strong></div>
+                  <div className="ad-card-row ad-card-sub">{r.email || "—"}</div>
+                  <div className="ad-card-row">
+                    {r.category}
+                    {r.subCategory && (
+                      <span className="ad-card-sub"> — {r.subCategory === "Other" ? (r.subCategoryOther || "Other") : r.subCategory}</span>
+                    )}
+                  </div>
+                  <div className="ad-card-row ad-card-sub">{r.areaType || "—"} · {formatDate(r.createdAt)}</div>
+                  {r.description && <div className="ad-card-row ad-card-desc">{r.description}</div>}
+                  <div className="ad-card-row ad-card-sub">Assigned: {r.assignedTo || "—"}</div>
+                </div>
+              ))
+            )}
+          </div>
           </div>
         </>
       )}

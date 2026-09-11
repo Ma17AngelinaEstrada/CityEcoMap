@@ -488,3 +488,74 @@
 .al2-help-btn:hover {
   opacity: 1;
 }
+
+.al2-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 6px;
+  margin-right: 10px;
+}
+.al2-hamburger svg { width: 22px; height: 22px; }
+
+.al2-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 150;
+}
+
+@media (max-width: 900px) {
+  .al2-hamburger { display: flex; }
+  .al2-collapse-btn { display: none; }
+
+  .al2-topbar {
+    z-index: 1060;
+  }
+
+  .al2-backdrop {
+    z-index: 1040;
+  }
+
+  .al2-sidebar-outer {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    bottom: 0;
+    z-index: 1050;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+  .al2-sidebar-outer--mobile-open {
+    transform: translateX(0);
+  }
+  .al2-sidebar,
+  .al2-sidebar--collapsed {
+    width: 78vw;
+    max-width: 260px;
+    min-width: 0;
+  }
+  .al2-main {
+    padding: 1rem;
+  }
+  .al2-logo-group { gap: 4px; }
+  .al2-partner-logo { height: 24px; width: 24px; }
+  .al2-logo { height: 24px; }
+
+  .al2-nav-item,
+  .al2-logout {
+    justify-content: flex-start !important;
+    text-align: left;
+  }
+
+  .al2-profile {
+    justify-content: flex-start !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .al2-topbar { padding: 0.5rem 0.75rem; }
+  .al2-notif-dropdown { width: 260px; right: -60px; }
+}

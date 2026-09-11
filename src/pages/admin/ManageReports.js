@@ -775,6 +775,40 @@ const handleSetResolved = async () => {
               </tbody>
             </table>
           </div>
+          
+              {/* Cards (mobile) */}
+              <div className="mr-cards">
+                {filtered.length === 0 ? (
+                  <p className="mr-empty">No reports found.</p>
+                ) : (
+                  filtered.map((r) => (
+                    <div
+                      key={r.id}
+                      className="mr-card"
+                      onClick={() => setSelectedReport(r)}
+                    >
+                      <div className="mr-card-top">
+                        <span className="mr-card-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</span>
+                        <span className={getStatusClass(r.status)}>{r.status || "Pending"}</span>
+                      </div>
+                      <div className="mr-card-row"><strong>{r.fullName || "—"}</strong></div>
+                      <div className="mr-card-row mr-card-sub">{r.email || "—"}</div>
+                      <div className="mr-card-row">
+                        {r.category}
+                        {r.subCategory && (
+                          <span className="mr-card-sub"> — {r.subCategory === "Other" ? (r.subCategoryOther || "Other") : r.subCategory}</span>
+                        )}
+                      </div>
+                      <div className="mr-card-row mr-card-sub">{r.areaType || "—"} · {formatDate(r.createdAt)}</div>
+                      {r.description && <div className="mr-card-row mr-card-desc">{r.description}</div>}
+                      <div className="mr-card-row mr-card-sub">
+                        {r.locationDescription || r.addressInput || (r.location ? (addresses[r.id] || 'Resolving...') : '—')}
+                      </div>
+                      <div className="mr-card-row mr-card-sub">Assigned: {r.assignedTo || "—"}</div>
+                    </div>
+                  ))
+                )}
+              </div>
         </div>
       )}
 

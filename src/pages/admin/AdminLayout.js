@@ -16,6 +16,7 @@ export default function AdminLayout({ children }) {
   const [collapsed, setCollapsed] = useState(() => {
     return localStorage.getItem("al2-sidebar-collapsed") === "true";
   });
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [pendingReports, setPendingReports] = useState([]);
   const [showNotifs, setShowNotifs] = useState(false);
   const { tourSteps, tourKey, showTour, setShowTour, setCurrentStepIndex } = useAdminTour();
@@ -151,6 +152,15 @@ export default function AdminLayout({ children }) {
     <div className="al2-wrapper">
       {/* Top navbar */}
       <header className="al2-topbar">
+        <button
+          className="al2-hamburger"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open menu"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M3 6h18M3 12h18M3 18h18" />
+          </svg>
+        </button>
         <div className="al2-logo-group">
           <img src="/logowhite2.png" alt="CityEcoMap" className="al2-logo" />
           <span className="al2-logo-divider" />
@@ -217,8 +227,11 @@ export default function AdminLayout({ children }) {
       </header>
 
       <div className="al2-body">
+        {mobileOpen && (
+          <div className="al2-backdrop" onClick={() => setMobileOpen(false)} />
+        )}
         {/* Sidebar */}
-        <div className={`al2-sidebar-outer ${collapsed ? "al2-sidebar-outer--collapsed" : ""}`}>
+        <div className={`al2-sidebar-outer ${collapsed ? "al2-sidebar-outer--collapsed" : ""} ${mobileOpen ? "al2-sidebar-outer--mobile-open" : ""}`}>
           <aside
             className={`al2-sidebar ${collapsed ? "al2-sidebar--collapsed" : ""}`}
             style={{
@@ -228,7 +241,7 @@ export default function AdminLayout({ children }) {
             {currentAdmin && (
               <div className="al2-profile">
                 <div className="al2-avatar">{getInitials(currentAdmin.name)}</div>
-                {!collapsed && (
+                {(!collapsed || mobileOpen) && (
                   <div className="al2-profile-info">
                     <span className="al2-profile-name">{currentAdmin.name}</span>
                     <span className="al2-profile-role">{currentAdmin.role}</span>
@@ -242,11 +255,11 @@ export default function AdminLayout({ children }) {
                 <button
                   key={item.path}
                   className={`al2-nav-item ${location.pathname === item.path ? "al2-nav-item--active" : ""}`}
-                  onClick={() => navigate(item.path)}
+                  onClick={() => { navigate(item.path); setMobileOpen(false); }}
                   title={collapsed ? item.label : undefined}
                 >
                   <span className="al2-nav-icon">{item.icon}</span>
-                  {!collapsed && <span>{item.label}</span>}
+                  {(!collapsed || mobileOpen) && <span>{item.label}</span>}
                   {item.path === "/admin/reports" && pendingReports.length > 0 && (
                     <span className="al2-nav-badge">{pendingReports.length}</span>
                   )}
@@ -255,7 +268,7 @@ export default function AdminLayout({ children }) {
             </nav>
             <button className="al2-logout" onClick={handleLogout} title={collapsed ? "Logout" : undefined}>
               <span className="al2-nav-icon">{icons.logout}</span>
-              {!collapsed && <span>Logout</span>}
+              {(!collapsed || mobileOpen) && <span>Logout</span>}
             </button>
           </aside>
 

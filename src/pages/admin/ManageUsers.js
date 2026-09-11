@@ -248,6 +248,7 @@ export default function ManageUsers() {
       {loading ? (
         <p className="mu-loading">Loading users...</p>
       ) : (
+        <>
         <div className="mu-table-card">
           <table className="mu-table">
             <thead>
@@ -301,6 +302,42 @@ export default function ManageUsers() {
             </tbody>
           </table>
         </div>
+
+        <div className="mu-cards">
+      {admins.length === 0 ? (
+        <p className="mu-empty">No admin accounts found.</p>
+      ) : (
+        admins.map((admin) => (
+          <div key={admin.id} className="mu-card">
+            <div className="mu-card-top">
+              <span className="mu-card-name">
+                {admin.name}
+                {admin.id === auth.currentUser?.uid && <span className="mu-you"> (you)</span>}
+              </span>
+              <span className={getRoleClass(admin.role)}>{admin.role}</span>
+            </div>
+            <div className="mu-card-row mu-card-sub">{admin.email}</div>
+            <div className="mu-card-row">
+              <span className={getStatusClass(admin.status)}>{admin.status}</span>
+            </div>
+            <div className="mu-card-row mu-card-sub">Created by: {admin.createdBy || "—"}</div>
+            {isMasterAdmin && (
+              <div className="mu-actions mu-card-actions">
+                <button className="mu-edit-btn" onClick={() => openEditModal(admin)}>Edit</button>
+                <button
+                  className={`mu-toggle-btn ${admin.status === "Active" ? "mu-toggle-btn--deactivate" : "mu-toggle-btn--activate"}`}
+                  onClick={() => handleToggleStatus(admin)}
+                  disabled={admin.id === auth.currentUser?.uid}
+                >
+                  {admin.status === "Active" ? "Deactivate" : "Activate"}
+                </button>
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  </>
       )}
 
       {/* Create/Edit Modal */}

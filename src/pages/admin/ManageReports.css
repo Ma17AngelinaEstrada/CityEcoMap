@@ -606,3 +606,89 @@
   display: flex;
   gap: 0.6rem;
 }
+
+@media (max-width: 900px) {
+  .mr-filters { gap: 0.5rem; }
+  .mr-search { width: 100%; }
+  .mr-table-card { overflow-x: auto; }
+  .mr-table { min-width: 900px; }
+  .mr-detail--modal { max-width: 92vw; }
+}
+
+/* Mobile filter grid */
+@media (max-width: 900px) {
+  .mr-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.6rem;
+    align-items: end;
+  }
+  .mr-filter-group { width: 100%; }
+  .mr-filter-group select,
+  .mr-filter-group input,
+  .mr-search {
+    width: 100%;
+  }
+  .mr-filters-tail { display: contents; }
+  .mr-daterange-group {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.6rem;
+  }
+  .mr-clear-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .mr-count {
+    grid-column: 1 / -1;
+    margin-left: 0;
+  }
+}
+
+/* Card list (mobile only) */
+.mr-cards { display: none; }
+
+.mr-card {
+  background: #fff;
+  border: 1px solid #e0ddd5;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.mr-card:active { background: #f5f3ec; }
+
+.mr-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.mr-card-id {
+  font-weight: 700;
+  color: #1a4a1a;
+  font-size: 0.88rem;
+}
+
+.mr-card-row {
+  font-size: 0.82rem;
+  color: #444;
+  margin-bottom: 3px;
+  line-height: 1.4;
+}
+
+.mr-card-sub {
+  color: #888;
+  font-size: 0.78rem;
+}
+
+.mr-card-desc {
+  color: #555;
+  font-style: italic;
+}
+
+@media (max-width: 900px) {
+  .mr-table-card { display: none; }
+  .mr-cards { display: flex; flex-direction: column; gap: 10px; }
+}
