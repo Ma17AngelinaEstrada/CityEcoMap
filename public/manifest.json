@@ -1,6 +1,7 @@
 {
   "short_name": "CityEcoMap",
   "name": "CityEcoMap - Environmental Reporting System",
+  "description": "A geo-tagged mobile and web monitoring and reporting system for environmental waste and drainage issues in Lucena City.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +21,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
+  "theme_color": "#1a6b3c",
   "background_color": "#ffffff"
 }
