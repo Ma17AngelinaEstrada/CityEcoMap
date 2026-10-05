@@ -557,5 +557,27 @@
 
 @media (max-width: 480px) {
   .al2-topbar { padding: 0.5rem 0.75rem; }
-  .al2-notif-dropdown { width: 260px; right: -60px; }
+  .al2-notif-dropdown { width: min(320px, calc(100vw - 24px)); right: 0; }
+}
+
+.al2-notif-tabs {
+  display: flex;
+  border-bottom: 1px solid #eee;
+}
+
+.al2-notif-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 10px 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #888;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.al2-notif-tab--active {
+  color: #1a4a1a;
+  border-bottom-color: #1a4a1a;
 }

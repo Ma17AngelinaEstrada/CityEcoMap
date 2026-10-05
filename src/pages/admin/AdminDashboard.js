@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, onSnapshot } from "firebase/firestore";
-import { db } from "../../firebase/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { collection, doc, getDoc, onSnapshot } from "firebase/firestore";
+import { auth, db } from "../../firebase/firebase";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
@@ -13,6 +14,7 @@ import { reverseGeocode, isCached } from '../../utils/geocode';
 import { SearchIcon, CalendarIcon, PinIcon, BuildingIcon } from '../../components/Icons';
 import { useGoogleMapsLoaded } from "../../context/GoogleMapsLoaderContext";
 import { useAdminTour } from "../../context/AdminTourContext";
+import { isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
 
 const statusColors = {
   'Pending':  '#e53935',
@@ -68,17 +70,35 @@ export default function AdminDashboard() {
   const [mapFilterCategory, setMapFilterCategory] = useState('All');
   const [activeInfoWindow, setActiveInfoWindow] = useState(null);
   const adminMapRef = useRef(null);
-  const [chartView, setChartView] = useState("category"); // "category" | "subcategory"
+  const [chartView, setChartView] = useState("category");
   const [chartParentCategory, setChartParentCategory] = useState("Waste Issue");
-  const [chartTimeRange, setChartTimeRange] = useState("year"); // "year" | "quarter" | "last3" | "last1"
+  const [chartTimeRange, setChartTimeRange] = useState("year");
   const { isLoaded } = useGoogleMapsLoaded();
-  const [mapTimeRange, setMapTimeRange] = useState("all"); // "all" | "year" | "quarter" | "last3" | "last1"
+  const [mapTimeRange, setMapTimeRange] = useState("all");
   const { registerTour } = useAdminTour();
+  const [currentOffice, setCurrentOffice] = useState(null);
+  const [isMaster, setIsMaster] = useState(false);
 
-  // Register this page's tour steps with the shared AdminLayout tour system
   useEffect(() => {
     registerTour(DASHBOARD_TOUR_STEPS, 'cityecomap_admin_tour_seen_dashboard');
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      try {
+        const snap = await getDoc(doc(db, "admins", user.uid));
+        if (snap.exists()) {
+          const role = snap.data().role;
+          setIsMaster(isMasterRole(role));
+          setCurrentOffice(officeForRole(role));
+        }
+      } catch (err) {
+        console.error("Error resolving admin role:", err);
+      }
+    });
+    return () => unsub();
   }, []);
 
   useEffect(() => {
@@ -100,10 +120,18 @@ export default function AdminDashboard() {
     return () => unsub();
   }, []);
 
+  const visibleReports = isMaster
+    ? reports
+    : reports.filter((r) =>
+        r.primaryOffice === currentOffice ||
+        (r.supportingOfficeIds || []).includes(currentOffice) ||
+        (r.jurisdictionCandidates || []).includes(currentOffice)
+      );
+
   useEffect(() => {
     const resolveAddresses = async () => {
       const newAddresses = {};
-      for (const r of reports) {
+      for (const r of visibleReports) {
         if (r.location?.lat && r.location?.lng) {
           const key = r.id;
           if (!addresses[key]) {
@@ -120,18 +148,18 @@ export default function AdminDashboard() {
         setAddresses((prev) => ({ ...prev, ...newAddresses }));
       }
     };
-    if (reports.length > 0) resolveAddresses();
+    if (visibleReports.length > 0) resolveAddresses();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reports]);
+  }, [reports, isMaster, currentOffice]);
 
-  const total = reports.length;
-  const totalWaste = reports.filter((r) => r.category === "Waste Issue").length;
-  const totalDrainage = reports.filter((r) => r.category === "Drainage Issue").length;
-  const pending = reports.filter((r) => r.status === "Pending").length;
-  const approved = reports.filter((r) => r.status === "Approved").length;
-  const ongoing = reports.filter((r) => r.status === "Ongoing" || r.status === "In Progress").length;
-  const resolved = reports.filter((r) => r.status === "Resolved").length;
-  const rejected = reports.filter((r) => r.status === "Rejected").length;
+  const total = visibleReports.length;
+  const totalWaste = visibleReports.filter((r) => r.category === "Waste Issue").length;
+  const totalDrainage = visibleReports.filter((r) => r.category === "Drainage Issue").length;
+  const pending = visibleReports.filter((r) => r.status === "Pending").length;
+  const approved = visibleReports.filter((r) => r.status === "Approved").length;
+  const ongoing = visibleReports.filter((r) => r.status === "Ongoing" || r.status === "In Progress").length;
+  const resolved = visibleReports.filter((r) => r.status === "Resolved").length;
+  const rejected = visibleReports.filter((r) => r.status === "Rejected").length;
 
   const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const currentYear = new Date().getFullYear();
@@ -195,7 +223,6 @@ export default function AdminDashboard() {
       });
     }
 
-    // last1: last 4 weeks, weekly buckets
     const rangeStart = new Date(now);
     rangeStart.setHours(0, 0, 0, 0);
     rangeStart.setDate(rangeStart.getDate() - 27);
@@ -228,11 +255,11 @@ export default function AdminDashboard() {
   };
 
   const chartData = timeBuckets.map(({ label, start, end }) => {
-    const waste = reports.filter((r) => {
+    const waste = visibleReports.filter((r) => {
       const date = r.createdAt?.toDate?.();
       return date && date >= start && date < end && r.category === "Waste Issue";
     }).length;
-    const drainage = reports.filter((r) => {
+    const drainage = visibleReports.filter((r) => {
       const date = r.createdAt?.toDate?.();
       return date && date >= start && date < end && r.category === "Drainage Issue";
     }).length;
@@ -240,7 +267,7 @@ export default function AdminDashboard() {
   });
 
   const WASTE_SUBCATEGORIES = ["Illegal Dumping", "Uncollected Garbage", "Waste Affecting Rivers, Waterways, and Natural Water Bodies", "Other"];
-  const DRAINAGE_SUBCATEGORIES = ["Blocked Drainage", "Damaged Drainage", "Flooding", "Other"];
+  const DRAINAGE_SUBCATEGORIES = ["Clogged Drainage", "Blocked Drainage", "Damaged Drainage", "Flooding", "Other"];
   const KNOWN_SUBCATEGORIES = new Set([
     ...WASTE_SUBCATEGORIES.filter((s) => s !== "Other"),
     ...DRAINAGE_SUBCATEGORIES.filter((s) => s !== "Other"),
@@ -253,7 +280,7 @@ export default function AdminDashboard() {
   const subCategoryChartData = timeBuckets.map(({ label, start, end }) => {
     const row = { month: label };
     activeSubCategories.forEach((sub) => {
-      row[sub] = reports.filter((r) => {
+      row[sub] = visibleReports.filter((r) => {
         const date = r.createdAt?.toDate?.();
         const inBucket = date && date >= start && date < end;
         if (!inBucket || r.category !== chartParentCategory) return false;
@@ -271,7 +298,7 @@ export default function AdminDashboard() {
   const statusByCategoryChartData = ["Waste Issue", "Drainage Issue"].map((cat) => {
     const row = { category: cat === "Waste Issue" ? "Waste Issues" : "Drainage Issues" };
     STATUS_LIST.forEach((status) => {
-      row[status] = reports.filter((r) => inSelectedRange(r) && r.category === cat && matchesStatus(r, status)).length;
+      row[status] = visibleReports.filter((r) => inSelectedRange(r) && r.category === cat && matchesStatus(r, status)).length;
     });
     return row;
   });
@@ -297,16 +324,16 @@ export default function AdminDashboard() {
   const pieData = chartView === "category"
     ? ["Waste Issue", "Drainage Issue"].map((cat) => ({
         name: cat,
-        value: reports.filter((r) => inSelectedRange(r) && r.category === cat).length,
+        value: visibleReports.filter((r) => inSelectedRange(r) && r.category === cat).length,
       }))
     : chartView === "status"
     ? STATUS_LIST.map((status) => ({
         name: status,
-        value: reports.filter((r) => inSelectedRange(r) && matchesStatus(r, status)).length,
+        value: visibleReports.filter((r) => inSelectedRange(r) && matchesStatus(r, status)).length,
       }))
     : activeSubCategories.map((sub) => ({
         name: shortenLabel(sub),
-        value: reports.filter((r) => {
+        value: visibleReports.filter((r) => {
           if (!inSelectedRange(r) || r.category !== chartParentCategory) return false;
           return sub === "Other" ? isOtherSubCategory(r.subCategory) : r.subCategory === sub;
         }).length,
@@ -326,18 +353,18 @@ export default function AdminDashboard() {
   const topSubcategoryData = Object.entries(subcategoryCategoryMap)
     .map(([name, cat]) => ({
       name: shortenLabel(name),
-      count: reports.filter((r) => inSelectedRange(r) && r.category === cat && r.subCategory === name).length,
+      count: visibleReports.filter((r) => inSelectedRange(r) && r.category === cat && r.subCategory === name).length,
       category: cat,
     }))
     .concat([
       {
         name: "Other (Waste)",
-        count: reports.filter((r) => inSelectedRange(r) && r.category === "Waste Issue" && isOtherSubCategory(r.subCategory)).length,
+        count: visibleReports.filter((r) => inSelectedRange(r) && r.category === "Waste Issue" && isOtherSubCategory(r.subCategory)).length,
         category: "Waste Issue",
       },
       {
         name: "Other (Drainage)",
-        count: reports.filter((r) => inSelectedRange(r) && r.category === "Drainage Issue" && isOtherSubCategory(r.subCategory)).length,
+        count: visibleReports.filter((r) => inSelectedRange(r) && r.category === "Drainage Issue" && isOtherSubCategory(r.subCategory)).length,
         category: "Drainage Issue",
       },
     ])
@@ -346,11 +373,11 @@ export default function AdminDashboard() {
 
   const subcategoryBarColor = (category) => categoryColors[category] || "#aaaaaa";
 
-  const recent = [...reports]
+  const recent = [...visibleReports]
     .sort((a, b) => (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0))
     .slice(0, 7);
 
-  const mapMarkers = reports.filter((r) => {
+  const mapMarkers = visibleReports.filter((r) => {
     const hasLocation = r.location?.lat && r.location?.lng;
     const matchStatus = mapFilterStatus === 'All' || r.status === mapFilterStatus;
     const matchCategory = mapFilterCategory === 'All' || r.category === mapFilterCategory;
@@ -400,7 +427,7 @@ export default function AdminDashboard() {
     if (!mapSearchQuery.trim()) return;
 
     const cleanQuery = mapSearchQuery.trim().replace('#', '').toUpperCase();
-    const matchedReport = reports.find(
+    const matchedReport = visibleReports.find(
       (r) => r.reportId?.toUpperCase() === cleanQuery
     );
 
@@ -444,7 +471,6 @@ export default function AdminDashboard() {
         <p className="ad-loading">Loading reports...</p>
       ) : (
         <>
-          {/* 6 Stat cards */}
           <div className="ad-stats">
             <div className="ad-stat-card ad-stat-card--total">
               <span className="ad-stat-label">Total Reports</span>
@@ -481,7 +507,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Report Statistics + Top Subcategories row */}
           <div className="ad-overview-row">
             <div className="ad-overview-left">
               <div className="ad-chart-header">
@@ -658,7 +683,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Map + chart row — now first */}
           <div className="ad-bottom">
             <div className="ad-map-card">
               <div className="ad-map-header">
@@ -802,13 +826,22 @@ export default function AdminDashboard() {
                                       <PinIcon /> {report.locationDescription || report.addressInput || addresses[report.id]}
                                     </p>
                                   )}
-                                  {report.assignedTo && (
+                                  {officeLabel(report) !== "—" && (
                                     <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
-                                      <BuildingIcon /> {report.assignedTo}
+                                      <BuildingIcon /> {officeLabel(report)}
                                     </p>
                                   )}
-                                  {report.photo && (
-                                    <img src={report.photo} alt="Report" style={{ width: '100%', borderRadius: 6, marginTop: 6 }} />
+                                  {(report.photos?.length ? report.photos : (report.photo ? [report.photo] : [])).length > 0 && (
+                                    <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                                      {(report.photos?.length ? report.photos : [report.photo]).map((src, i) => (
+                                        <img
+                                          key={i}
+                                          src={src}
+                                          alt={`Report ${i + 1}`}
+                                          style={{ width: '33%', borderRadius: 6, objectFit: 'cover', height: 50 }}
+                                        />
+                                      ))}
+                                    </div>
                                   )}
                                   <button
                                     onClick={() => navigate(`/admin/reports?report=${report.id}`)}
@@ -883,7 +916,7 @@ export default function AdminDashboard() {
                             <button
                               className="ad-sidebar-manage-btn"
                               onClick={(e) => {
-                                e.stopPropagation(); // para hindi din ma-trigger ang panToReport
+                                e.stopPropagation();
                                 navigate(`/admin/reports?report=${report.id}`);
                               }}
                             >
@@ -897,7 +930,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Recent reports table */}
           <div className="ad-table-card">
             <div className="ad-table-header">
               <h3 className="ad-table-title">Recent Reports</h3>
@@ -931,7 +963,7 @@ export default function AdminDashboard() {
                   <th>Date Submitted</th>
                   <th>Description</th>
                   <th>Location</th>
-                  <th>Assigned To</th>
+                  <th>Primary Office</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -966,7 +998,7 @@ export default function AdminDashboard() {
                         ) : null}
                         {!r.locationDescription && !r.addressInput && !r.location && '—'}
                       </td>
-                      <td>{r.assignedTo || "—"}</td>
+                      <td>{officeLabel(r)}</td>
                       <td>
                         <span className={getStatusClass(r.status)}>
                           {r.status || "Pending"}
@@ -998,7 +1030,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="ad-card-row ad-card-sub">{r.areaType || "—"} · {formatDate(r.createdAt)}</div>
                   {r.description && <div className="ad-card-row ad-card-desc">{r.description}</div>}
-                  <div className="ad-card-row ad-card-sub">Assigned: {r.assignedTo || "—"}</div>
+                  <div className="ad-card-row ad-card-sub">Office: {officeLabel(r)}</div>
                 </div>
               ))
             )}

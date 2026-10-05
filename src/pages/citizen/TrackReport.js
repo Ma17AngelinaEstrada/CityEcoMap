@@ -40,7 +40,7 @@ const SAMPLE_REPORT = {
   description: 'Uncollected garbage piling up near the corner store.',
   status: 'Ongoing',
   date: 'Aug 20, 2026',
-  assignedTo: 'LGU',
+  primaryOffice: 'CENRO',
   rejectionReason: null,
 };
 
@@ -85,8 +85,8 @@ function TrackReport() {
         description: data.description,
         status: data.status,
         date: data.createdAt?.toDate().toLocaleDateString() || 'N/A',
-        photo: data.photo,
-        assignedTo: data.assignedTo || null,
+        photos: data.photos?.length ? data.photos : (data.photo ? [data.photo] : []),
+        primaryOffice: data.primaryOffice || null,
         rejectionReason: data.rejectionReason || null,
       });
     } else {
@@ -155,12 +155,20 @@ function TrackReport() {
               </div>
             </div>
 
+            {data.photos?.length > 0 && (
+              <div className="track-photo-grid">
+                {data.photos.map((src, i) => (
+                  <img key={i} src={src} alt={`Report ${i + 1}`} className="track-photo" />
+                ))}
+              </div>
+            )}
+
       {data.status === 'Approved' || data.status === 'Ongoing' || data.status === 'Resolved' ? (
-        data.assignedTo && (
+        data.primaryOffice && (
           <div className="details-grid">
             <div className="detail-box full-width">
-              <span className="detail-label"><BuildingIcon /> Assigned To</span>
-              <span className="detail-value">{data.assignedTo}</span>
+              <span className="detail-label"><BuildingIcon /> Handling Office</span>
+              <span className="detail-value">{data.primaryOffice}</span>
             </div>
           </div>
         )

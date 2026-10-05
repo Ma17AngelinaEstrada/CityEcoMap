@@ -7,6 +7,7 @@ import { auth, db } from "../../firebase/firebase";
 import AdminLayout from "./AdminLayout";
 import "./ManageUsers.css";
 import { useAdminTour } from "../../context/AdminTourContext";
+import { OFFICE_ROLES } from "../../constants/offices";
 
 // Secondary Firebase app to create users without signing out current admin
 const secondaryApp = initializeApp({
@@ -58,7 +59,7 @@ export default function ManageUsers() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState(null);
-  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "Regular Admin" });
+  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "", isFocalPerson: false });
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { registerTour, showTour, currentStepIndex } = useAdminTour();
@@ -83,7 +84,7 @@ export default function ManageUsers() {
     if (!isMasterAdmin) return;
     if (showTour && currentStepIndex === SAMPLE_MODAL_STEP_INDEX) {
       setEditingAdmin(null);
-      setFormData({ name: "Juan Dela Cruz", email: "juan.delacruz@example.com", password: "", role: "Regular Admin" });
+      setFormData({ name: "Juan Dela Cruz", email: "juan.delacruz@example.com", password: "", role: "CENRO Admin", isFocalPerson: false });
       setFormError("");
       setShowModal(true);
     } else if (showModal) {
@@ -123,14 +124,14 @@ export default function ManageUsers() {
 
   const openCreateModal = () => {
     setEditingAdmin(null);
-    setFormData({ name: "", email: "", password: "", role: "Regular Admin" });
+    setFormData({ name: "", email: "", password: "", role: "", isFocalPerson: false });
     setFormError("");
     setShowModal(true);
   };
 
   const openEditModal = (admin) => {
     setEditingAdmin(admin);
-    setFormData({ name: admin.name, email: admin.email, password: "", role: admin.role });
+    setFormData({ name: admin.name, email: admin.email, password: "", role: admin.role, isFocalPerson: !!admin.isFocalPerson });
     setFormError("");
     setShowModal(true);
   };
@@ -149,18 +150,33 @@ export default function ManageUsers() {
       setFormError("Password must be at least 6 characters.");
       return;
     }
+    if (!formData.role) {
+      setFormError("Please select a role.");
+      return;
+    }
 
     setSubmitting(true);
     try {
+      if (formData.isFocalPerson) {
+        const currentFocal = admins.find(
+          (a) => a.role === formData.role && a.isFocalPerson && a.id !== editingAdmin?.id
+        );
+        if (currentFocal) {
+          await updateDoc(doc(db, "admins", currentFocal.id), { isFocalPerson: false });
+        }
+      }
       if (editingAdmin) {
         // Edit existing admin
         await updateDoc(doc(db, "admins", editingAdmin.id), {
           name: formData.name,
           role: formData.role,
+          isFocalPerson: formData.isFocalPerson,
         });
         setAdmins((prev) =>
           prev.map((a) =>
-            a.id === editingAdmin.id ? { ...a, name: formData.name, role: formData.role } : a
+            a.id === editingAdmin.id
+              ? { ...a, name: formData.name, role: formData.role, isFocalPerson: formData.isFocalPerson }
+              : (formData.isFocalPerson && a.role === formData.role ? { ...a, isFocalPerson: false } : a)
           )
         );
       } else {
@@ -175,18 +191,25 @@ export default function ManageUsers() {
           name: formData.name,
           email: formData.email.toLowerCase(),
           role: formData.role,
+          isFocalPerson: formData.isFocalPerson,
           status: "Active",
           createdAt: serverTimestamp(),
           createdBy: auth.currentUser?.email || "unknown",
         });
-        setAdmins((prev) => [...prev, {
-          id: userCred.user.uid,
-          name: formData.name,
-          email: formData.email.toLowerCase(),
-          role: formData.role,
-          status: "Active",
-          createdBy: auth.currentUser?.email || "unknown",
-        }]);
+        setAdmins((prev) => [
+           ...prev.map((a) =>
+             formData.isFocalPerson && a.role === formData.role ? { ...a, isFocalPerson: false } : a
+           ),
+           {
+             id: userCred.user.uid,
+             name: formData.name,
+             email: formData.email.toLowerCase(),
+             role: formData.role,
+             isFocalPerson: formData.isFocalPerson,
+             status: "Active",
+             createdBy: auth.currentUser?.email || "unknown",
+           },
+         ]);
       }
       setShowModal(false);
     } catch (err) {
@@ -219,7 +242,7 @@ export default function ManageUsers() {
 
   const getRoleClass = (role) => {
     if (role === "Master Admin") return "mu-badge mu-badge--master";
-    return "mu-badge mu-badge--regular";
+    return "mu-badge mu-badge--office";
   };
 
   const getStatusClass = (status) => {
@@ -269,6 +292,7 @@ export default function ManageUsers() {
                   <tr key={admin.id}>
                     <td>
                       {admin.name}
+                      {admin.isFocalPerson && <span className="mu-focal-badge" title="Focal Person">★ Focal</span>}
                       {admin.id === auth.currentUser?.uid && (
                         <span className="mu-you"> (you)</span>
                       )}
@@ -312,6 +336,7 @@ export default function ManageUsers() {
             <div className="mu-card-top">
               <span className="mu-card-name">
                 {admin.name}
+                {admin.isFocalPerson && <span className="mu-focal-badge" title="Focal Person">★ Focal</span>}
                 {admin.id === auth.currentUser?.uid && <span className="mu-you"> (you)</span>}
               </span>
               <span className={getRoleClass(admin.role)}>{admin.role}</span>
@@ -391,9 +416,21 @@ export default function ManageUsers() {
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 >
-                  <option>Regular Admin</option>
-                  <option>Master Admin</option>
+                  <option value="" disabled>Select a role...</option>
+                  {OFFICE_ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
                 </select>
+              </div>
+
+                <div className="mu-field">
+                <label className="mu-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={formData.isFocalPerson}
+                    onChange={(e) => setFormData({ ...formData, isFocalPerson: e.target.checked })}
+                  />
+                  Focal Person for this office
+                </label>
+                <span className="mu-note">Only one focal person per office — checking this unsets any existing one.</span>
               </div>
             </div>
 

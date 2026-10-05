@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, collectionGroup, getDocs, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
+import { officeForRole } from "../../constants/offices";
 import "./AdminLayout.css";
 import { BellIcon } from "../../components/Icons";
 import { useAdminTour } from "../../context/AdminTourContext";
@@ -13,12 +14,19 @@ export default function AdminLayout({ children }) {
   const location = useLocation();
   const [isMasterAdmin, setIsMasterAdmin] = useState(false);
   const [currentAdmin, setCurrentAdmin] = useState(null);
+  const [currentOffice, setCurrentOffice] = useState(null);
   const [collapsed, setCollapsed] = useState(() => {
     return localStorage.getItem("al2-sidebar-collapsed") === "true";
   });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pendingReports, setPendingReports] = useState([]);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [notifTab, setNotifTab] = useState('new');
+
+  useEffect(() => {
+    if (isMasterAdmin) setNotifTab('activity');
+  }, [isMasterAdmin]);
+  const [activityItems, setActivityItems] = useState([]);
   const { tourSteps, tourKey, showTour, setShowTour, setCurrentStepIndex } = useAdminTour();
 
   useEffect(() => {
@@ -52,6 +60,32 @@ export default function AdminLayout({ children }) {
       unsubSnapshot();
     };
   }, []);
+
+  useEffect(() => {
+    if (currentAdmin === null) return; // hindi pa resolved ang role
+    const notifyTarget = isMasterAdmin ? 'MASTER' : currentOffice;
+    if (!notifyTarget) return;
+
+    const q = query(
+      collectionGroup(db, "statusHistory"),
+      where("notifyOffice", "==", notifyTarget),
+      orderBy("timestamp", "desc"),
+      limit(15)
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map((d) => ({
+        id: d.id,
+        reportId: d.ref.parent.parent.id,
+        ...d.data(),
+      }));
+      setActivityItems(items);
+    }, (err) => {
+      console.error("Activity listener error:", err);
+    });
+
+    return () => unsub();
+  }, [currentAdmin, isMasterAdmin, currentOffice]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -120,6 +154,7 @@ export default function AdminLayout({ children }) {
         const data = current?.data();
         setIsMasterAdmin(data?.role === "Master Admin");
         setCurrentAdmin(data || null);
+        setCurrentOffice(officeForRole(data?.role));
       } catch (err) {
         console.error("Error checking admin role:", err);
       }
@@ -140,6 +175,13 @@ export default function AdminLayout({ children }) {
   ];
 
   const visibleNavItems = navItems.filter((item) => !item.masterOnly || isMasterAdmin);
+
+  const visiblePendingReports = isMasterAdmin
+    ? pendingReports.filter((r) => r.needsReview === true)
+    : pendingReports.filter((r) =>
+        r.primaryOffice === currentOffice ||
+        (r.jurisdictionCandidates || []).includes(currentOffice)
+      );
 
   const getInitials = (name) => {
     if (!name) return "?";
@@ -181,44 +223,80 @@ export default function AdminLayout({ children }) {
           <div className="al2-notif-wrapper">
             <button className="al2-notif-btn" onClick={(e) => { e.stopPropagation(); setShowNotifs(!showNotifs); }}>
               <BellIcon />
-              {pendingReports.length > 0 && (
-                <span className="al2-notif-count">{pendingReports.length}</span>
+              {(visiblePendingReports.length + activityItems.length) > 0 && (
+                <span className="al2-notif-count">{visiblePendingReports.length + activityItems.length}</span>
               )}
             </button>
 
             {showNotifs && (
               <div className="al2-notif-dropdown">
-                <div className="al2-notif-header">New Reports</div>
-                {pendingReports.length === 0 ? (
-                  <p className="al2-notif-empty">No new reports.</p>
+                <div className="al2-notif-tabs">
+                  {!isMasterAdmin && (
+                    <button
+                      className={`al2-notif-tab ${notifTab === 'new' ? 'al2-notif-tab--active' : ''}`}
+                      onClick={() => setNotifTab('new')}
+                    >
+                      New Reports{visiblePendingReports.length > 0 ? ` (${visiblePendingReports.length})` : ''}
+                    </button>
+                  )}
+                  <button
+                    className={`al2-notif-tab ${notifTab === 'activity' ? 'al2-notif-tab--active' : ''}`}
+                    onClick={() => setNotifTab('activity')}
+                  >
+                    Coordination{activityItems.length > 0 ? ` (${activityItems.length})` : ''}
+                  </button>
+                </div>
+
+                {notifTab === 'new' ? (
+                  visiblePendingReports.length === 0 ? (
+                    <p className="al2-notif-empty">No new reports.</p>
+                  ) : (
+                    <>
+                      {visiblePendingReports.slice(0, 10).map((r) => (
+                        <button
+                          key={r.id}
+                          className="al2-notif-item"
+                          onClick={() => {
+                            setShowNotifs(false);
+                            navigate(`/admin/reports?report=${r.id}`);
+                          }}
+                        >
+                          <span className="al2-notif-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</span>
+                          <span className="al2-notif-desc">{r.category}</span>
+                          <span className="al2-notif-time">{formatNotifDate(r.createdAt)}</span>
+                        </button>
+                      ))}
+                      {visiblePendingReports.length > 10 && (
+                        <button
+                          className="al2-notif-viewall"
+                          onClick={() => {
+                            setShowNotifs(false);
+                            navigate("/admin/reports?status=Pending");
+                          }}
+                        >
+                          View all {visiblePendingReports.length} pending reports →
+                        </button>
+                      )}
+                    </>
+                  )
                 ) : (
-                  <>
-                    {pendingReports.slice(0, 10).map((r) => (
+                  activityItems.length === 0 ? (
+                    <p className="al2-notif-empty">No coordination activity.</p>
+                  ) : (
+                    activityItems.map((item) => (
                       <button
-                        key={r.id}
+                        key={item.id}
                         className="al2-notif-item"
                         onClick={() => {
                           setShowNotifs(false);
-                          navigate(`/admin/reports?report=${r.id}`);
+                          navigate(`/admin/reports?report=${item.reportId}`);
                         }}
                       >
-                        <span className="al2-notif-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</span>
-                        <span className="al2-notif-desc">{r.category}</span>
-                        <span className="al2-notif-time">{formatNotifDate(r.createdAt)}</span>
+                        <span className="al2-notif-desc">{item.notes || item.action}</span>
+                        <span className="al2-notif-time">{formatNotifDate(item.timestamp)}</span>
                       </button>
-                    ))}
-                    {pendingReports.length > 10 && (
-                      <button
-                        className="al2-notif-viewall"
-                        onClick={() => {
-                          setShowNotifs(false);
-                          navigate("/admin/reports?status=Pending");
-                        }}
-                      >
-                        View all {pendingReports.length} pending reports →
-                      </button>
-                    )}
-                  </>
+                    ))
+                  )
                 )}
               </div>
             )}
@@ -260,8 +338,8 @@ export default function AdminLayout({ children }) {
                 >
                   <span className="al2-nav-icon">{item.icon}</span>
                   {(!collapsed || mobileOpen) && <span>{item.label}</span>}
-                  {item.path === "/admin/reports" && pendingReports.length > 0 && (
-                    <span className="al2-nav-badge">{pendingReports.length}</span>
+                  {item.path === "/admin/reports" && visiblePendingReports.length > 0 && (
+                    <span className="al2-nav-badge">{visiblePendingReports.length}</span>
                   )}
                 </button>
               ))}

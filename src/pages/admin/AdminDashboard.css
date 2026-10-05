@@ -820,3 +820,27 @@
   .ad-table { display: none; }
   .ad-cards { display: flex; flex-direction: column; gap: 0; }
 }
+
+.mu-badge--office { background: #e3edf7; color: #1565c0; }
+
+.mu-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #333;
+  font-family: sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.mu-focal-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #fff3cd;
+  color: #8a6d1a;
+}

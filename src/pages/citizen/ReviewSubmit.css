@@ -206,3 +206,17 @@
 .back-btn {
   font-size: 15px;
 }
+
+.summary-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.summary-photo-grid .summary-photo {
+  width: 100%;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+}

@@ -3,8 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../logowhite2.png';
 import embLogo from '../../emb-logo.png';
 import './ReviewSubmit.css';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
+import { routeReport } from '../../utils/routingRules';
 import '../../styles/CitizenHeader.css';
 import { TrashIcon, CameraIcon, ClipboardIcon, PinIcon, MailIcon, XIcon, ArrowLeftIcon, UserIcon } from '../../components/Icons';
 
@@ -36,14 +37,19 @@ function ReviewSubmit() {
     try {
       const reportId = 'WI' + Math.random().toString(36).substring(2, 7).toUpperCase();
 
-      let photoBase64 = null;
-      if (form?.photo) {
-        photoBase64 = await compressPhoto(form.photo);
+      let photosBase64 = [];
+      if (form?.photos?.length) {
+        photosBase64 = await Promise.all(form.photos.map((f) => compressPhoto(f)));
       }
 
       const savedReports = JSON.parse(localStorage.getItem('cityecomap_my_reports') || '[]');
 
-      await addDoc(collection(db, 'reports'), {
+      const routing = routeReport({
+        category: form?.selectedCategory,
+        subCategory: form?.subCategory,
+      });
+
+      const reportRef = await addDoc(collection(db, 'reports'), {
         reportId,
         fullName: form?.fullName || null,
         category: form?.selectedCategory,
@@ -54,9 +60,32 @@ function ReviewSubmit() {
         location: form?.location || null,
         addressInput: form?.addressInput || null,
         locationDescription: form?.locationDescription || null,
-        photo: photoBase64,
+        photos: photosBase64,
+        photo: photosBase64[0] || null,
         status: 'Pending',
         createdAt: serverTimestamp(),
+        primaryOffice: routing.primaryOffice,
+        supportingOffices: [],
+        needsReview: routing.needsReview || false,
+        ...(routing.jurisdictionCandidates
+          ? { jurisdictionCandidates: routing.jurisdictionCandidates }
+          : {}),
+      });
+
+      await setDoc(doc(db, 'reports', reportRef.id, 'private', 'contact'), {
+        contactNumber: form?.contactNumber,
+      });
+
+      await addDoc(collection(db, 'reports', reportRef.id, 'statusHistory'), {
+        status: 'Pending',
+        action: 'AUTO_ROUTED',
+        timestamp: serverTimestamp(),
+        adminEmail: 'system',
+        notes: routing.primaryOffice
+          ? `Auto-routed to ${routing.primaryOffice}`
+          : routing.jurisdictionCandidates
+            ? `Routed to Jurisdiction Verification queue (${routing.jurisdictionCandidates.join(' / ')})`
+            : 'Flagged for manual review — no matching routing rule',
       });
 
       savedReports.unshift({ reportId, submittedAt: new Date().toISOString() });
@@ -138,6 +167,14 @@ function ReviewSubmit() {
             </div>
             <hr />
             <div className="summary-row">
+              <div className="summary-icon"><PinIcon /></div>
+              <div className="summary-info">
+                <span className="summary-label">Contact Number</span>
+                <span className="summary-value">{form?.contactNumber || 'Not provided'}</span>
+              </div>
+            </div>
+            <hr />
+            <div className="summary-row">
               <div className="summary-icon"><TrashIcon /></div>
               <div className="summary-info">
                 <span className="summary-label">Report Type</span>
@@ -157,15 +194,19 @@ function ReviewSubmit() {
             <div className="summary-row">
               <div className="summary-icon"><CameraIcon /></div>
               <div className="summary-info">
-                <span className="summary-label">Photo</span>
+                <span className="summary-label">Photos</span>
                 <span className="summary-value">
-                  {form?.photoPreview ? '1 photo attached' : 'No photo attached'}
+                  {form?.photoPreviews?.length ? `${form.photoPreviews.length} photos attached` : 'No photos attached'}
                 </span>
               </div>
-              {form?.photoPreview && (
-                <img src={form.photoPreview} alt="Report" className="summary-photo" />
-              )}
             </div>
+            {form?.photoPreviews?.length > 0 && (
+              <div className="summary-photo-grid">
+                {form.photoPreviews.map((src, i) => (
+                  <img key={i} src={src} alt={`Report ${i + 1}`} className="summary-photo" />
+                ))}
+              </div>
+            )}
             <hr />
             <div className="summary-row">
               <div className="summary-icon"><ClipboardIcon /></div>

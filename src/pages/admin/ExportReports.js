@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, getDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import jsPDF from "jspdf";
+import { ALL_OFFICE_LABELS, isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import AdminLayout from "./AdminLayout";
@@ -60,6 +61,11 @@ const loadImageAsDataURL = (src) =>
       img.src = src;
     });
 
+const localDateStamp = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 export default function ExportReports() {
   const navigate = useNavigate();
   const [reports, setReports] = useState([]);
@@ -81,6 +87,8 @@ export default function ExportReports() {
   const [chartView, setChartView] = useState("category"); // "category" | "subcategory" | "status"
   const [chartParentCategory, setChartParentCategory] = useState("Waste Issue");
   const [adminNames, setAdminNames] = useState({});
+  const [currentOffice, setCurrentOffice] = useState(null);
+  const [isMaster, setIsMaster] = useState(false);
   const { registerTour, showTour, currentStepIndex } = useAdminTour();
 
   useEffect(() => {
@@ -108,7 +116,7 @@ export default function ExportReports() {
   }, [showTour, currentStepIndex]);
 
   const WASTE_SUBCATEGORIES = ["Illegal Dumping", "Uncollected Garbage", "Waste Affecting Rivers, Waterways, and Natural Water Bodies", "Other"];
-  const DRAINAGE_SUBCATEGORIES = ["Blocked Drainage", "Damaged Drainage", "Flooding", "Other"];
+  const DRAINAGE_SUBCATEGORIES = ["Clogged Drainage", "Blocked Drainage", "Damaged Drainage", "Flooding", "Other"];
 
   const KNOWN_SUBCATEGORIES = new Set([
     ...WASTE_SUBCATEGORIES.filter((s) => s !== "Other"),
@@ -147,6 +155,20 @@ export default function ExportReports() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       if (!user) navigate("/admin");
+      else {
+       (async () => {
+         try {
+           const snap = await getDoc(doc(db, "admins", user.uid));
+           if (snap.exists()) {
+             const role = snap.data().role;
+             setIsMaster(isMasterRole(role));
+             setCurrentOffice(officeForRole(role));
+           }
+         } catch (err) {
+           console.error("Error resolving admin role:", err);
+         }
+       })();
+     }
     });
     return () => unsub();
   }, [navigate]);
@@ -201,17 +223,25 @@ export default function ExportReports() {
   }, [reports]);
 
   const fetchExportHistory = async () => {
-  try {
-    const snapshot = await getDocs(collection(db, "exportedReports"));
-    const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-    data.sort((a, b) => (b.exportedAt?.toDate?.() || 0) - (a.exportedAt?.toDate?.() || 0));
-    setExportHistory(data);
-  } catch (err) {
-    console.error("Error fetching export history:", err);
-  }
-};
+    try {
+      const snapshot = await getDocs(collection(db, "exportedReports"));
+      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      data.sort((a, b) => (b.exportedAt?.toDate?.() || 0) - (a.exportedAt?.toDate?.() || 0));
+      setExportHistory(data);
+    } catch (err) {
+      console.error("Error fetching export history:", err);
+    }
+  };
 
-  const filtered = reports.filter((r) => {
+  const visibleReports = isMaster
+    ? reports
+    : reports.filter((r) =>
+        r.primaryOffice === currentOffice ||
+        (r.supportingOfficeIds || []).includes(currentOffice) ||
+        (r.jurisdictionCandidates || []).includes(currentOffice)
+      );
+
+  const filtered = visibleReports.filter((r) => {
     const matchStatus = filterStatus === "All" || r.status === filterStatus;
     const matchCategory = filterCategory === "All" || r.category === filterCategory;
     const matchSubCategory = (() => {
@@ -220,7 +250,8 @@ export default function ExportReports() {
       if (filterSubCategory === "Other::Drainage") return r.category === "Drainage Issue" && isOtherSubCategory(r.subCategory);
       return r.subCategory === filterSubCategory;
     })();
-  const matchAssigned = filterAssigned === "All" || r.assignedTo === filterAssigned;
+
+    const matchAssigned = filterAssigned === "All" || r.primaryOffice === filterAssigned;
 
     const cleanedSearch = searchQuery.replace(/#/g, "").trim().toLowerCase();
       const matchSearch = cleanedSearch === "" ||
@@ -428,14 +459,14 @@ export default function ExportReports() {
         formatDate(r.createdAt),
         r.description || '—',
         locationParts.join(' — ') || '—',
-        r.assignedTo || '—',
+        officeLabel(r),
         r.status || 'Pending',
       ];
     });
 
   const headers = [
     "Report ID", "Submitted By", "Email", "Category", "Sub-Category", "Type of Area",
-    "Date Submitted", "Description", "Location", "Assigned To", "Status"
+    "Date Submitted", "Description", "Location", "Primary Office", "Status"
   ];
 
   const logExport = async (format) => {
@@ -549,6 +580,7 @@ export default function ExportReports() {
     });
 
     docPdf.save(`CityEcoMap_Reports_${new Date().toISOString().slice(0, 10)}.pdf`);
+    docPdf.save(`CityEcoMap_Reports_${localDateStamp()}.pdf`);
     logExport("PDF");
   };
 
@@ -580,11 +612,18 @@ export default function ExportReports() {
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Reports");
-    XLSX.writeFile(wb, `CityEcoMap_Reports_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.writeFile(wb, `CityEcoMap_Reports_${localDateStamp()}.xlsx`);
     logExport("Excel");
   };
 
   const handleGenerateSingleReport = async (r) => {
+    let contactNumber = null;
+    try {
+      const snap = await getDoc(doc(db, "reports", r.id, "private", "contact"));
+      if (snap.exists()) contactNumber = snap.data().contactNumber;
+    } catch (err) {
+      console.error("Error fetching contact number for PDF:", err);
+    }
     const docPdf = new jsPDF({ orientation: "portrait" });
     const marginX = 14;
     const pageWidth = 210;
@@ -688,6 +727,9 @@ export default function ExportReports() {
       ["Submitted By", r.fullName || "—"],
       ["Email", r.email || "Not provided"],
     ]);
+    fieldRow([
+      ["Contact Number", contactNumber || "Not provided"],
+    ]);
 
     y += 2;
 
@@ -736,7 +778,7 @@ export default function ExportReports() {
     docPdf.setFont(undefined, 'normal');
     docPdf.setFontSize(8);
     docPdf.setTextColor(80);
-    docPdf.text(`Assigned: ${r.assignedTo || "—"}`, marginX + halfWidth + 34, rowTop + 9.3);
+    docPdf.text(`Office: ${officeLabel(r)}`, marginX + halfWidth + 34, rowTop + 9.3);
 
     const rowHeight = 13;
     docPdf.setDrawColor(230);
@@ -769,30 +811,40 @@ export default function ExportReports() {
     y += descBoxHeight + 1.5;
 
     // ---- Photo Documentation ----
-    if (r.photo) {
+    const photosForPdf = r.photos?.length ? r.photos : (r.photo ? [r.photo] : []);
+    if (photosForPdf.length > 0) {
       checkPageBreak(90);
       sectionHeader("Photo Documentation");
-      try {
-        const props = docPdf.getImageProperties(r.photo);
-        const maxWidth = contentWidth - 4;
-        const maxHeight = 78;
-        const scale = Math.min(maxWidth / props.width, maxHeight / props.height);
-        const imgW = props.width * scale;
-        const imgH = props.height * scale;
-        const imgX = marginX + (contentWidth - imgW) / 2;
-        docPdf.addImage(r.photo, "JPEG", imgX, y + 3, imgW, imgH);
-        y += imgH + 6;
-        docPdf.setFontSize(8);
-        docPdf.setTextColor(110);
-        docPdf.setFont(undefined, 'italic');
-        const caption = `Figure 1. Photo of the reported issue${r.locationDescription ? ` at ${r.locationDescription}` : ""}.`;
-        const capLines = docPdf.splitTextToSize(caption, contentWidth - 4);
-        docPdf.text(capLines, marginX + 2, y);
-        docPdf.setFont(undefined, 'normal');
-        y += capLines.length * 4 + 4;
-      } catch (err) {
-        console.error("Failed to embed photo:", err);
-      }
+      const gap = 4;
+      const colWidth = (contentWidth - 4 - gap * (photosForPdf.length - 1)) / photosForPdf.length;
+      const maxPhotoHeight = 70;
+      let rowHeight = 0;
+      const placements = [];
+      photosForPdf.forEach((src, i) => {
+        try {
+          const props = docPdf.getImageProperties(src);
+          const scale = Math.min(colWidth / props.width, maxPhotoHeight / props.height);
+          const imgW = props.width * scale;
+          const imgH = props.height * scale;
+          placements.push({
+            src, imgW, imgH,
+            x: marginX + 2 + i * (colWidth + gap) + (colWidth - imgW) / 2,
+          });
+          rowHeight = Math.max(rowHeight, imgH);
+        } catch (err) {
+          console.error("Failed to read photo properties:", err);
+        }
+      });
+      placements.forEach((p) => docPdf.addImage(p.src, "JPEG", p.x, y + 3, p.imgW, p.imgH));
+      y += rowHeight + 6;
+      docPdf.setFontSize(8);
+      docPdf.setTextColor(110);
+      docPdf.setFont(undefined, 'italic');
+      const caption = `${photosForPdf.length > 1 ? `Figures 1–${photosForPdf.length}` : 'Figure 1'}. Photo${photosForPdf.length > 1 ? 's' : ''} of the reported issue${r.locationDescription ? ` at ${r.locationDescription}` : ""}.`;
+      const capLines = docPdf.splitTextToSize(caption, contentWidth - 4);
+      docPdf.text(capLines, marginX + 2, y);
+      docPdf.setFont(undefined, 'normal');
+      y += capLines.length * 4 + 4;
     }
 
     // ---- Footer on every page ----
@@ -964,12 +1016,11 @@ export default function ExportReports() {
           </select>
         </div>
         <div className="er-filter-group">
-          <label>Assigned To</label>
-          <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
-            <option>All</option>
-            <option>EMB</option>
-            <option>LGU</option>
-          </select>
+          <label>Primary Office</label>
+            <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
+              <option>All</option>
+              {ALL_OFFICE_LABELS.map((o) => <option key={o}>{o}</option>)}
+            </select>
         </div>
         <div className="er-filter-group">
           <label>Search</label>
@@ -1296,7 +1347,7 @@ export default function ExportReports() {
                   <th>Date Submitted</th>
                   <th>Description</th>
                   <th>Location</th>
-                  <th>Assigned To</th>
+                  <th>Primary Office</th>
                   <th>Status</th>
                   <th>Report</th>
                 </tr>
@@ -1332,7 +1383,7 @@ export default function ExportReports() {
                           ) : null}
                           {!r.locationDescription && !r.addressInput && !r.location && '—'}
                         </td>
-                        <td>{r.assignedTo || "—"}</td>
+                        <td>{officeLabel(r)}</td>
                         <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
                         <td>
                           <button
@@ -1371,7 +1422,7 @@ export default function ExportReports() {
                 <div className="er-card-row er-card-sub">
                   {r.locationDescription || r.addressInput || (r.location ? (addresses[r.id] || 'Resolving...') : '—')}
                 </div>
-                <div className="er-card-row er-card-sub">Assigned: {r.assignedTo || "—"}</div>
+                <div className="er-card-row er-card-sub">Office: {officeLabel(r)}</div>
                 <button
                   className="er-generate-btn er-card-generate-btn"
                   onClick={() => handleGenerateSingleReport(r)}
