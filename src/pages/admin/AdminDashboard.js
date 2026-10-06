@@ -124,7 +124,6 @@ export default function AdminDashboard() {
     ? reports
     : reports.filter((r) =>
         r.primaryOffice === currentOffice ||
-        (r.supportingOfficeIds || []).includes(currentOffice) ||
         (r.jurisdictionCandidates || []).includes(currentOffice)
       );
 
@@ -160,6 +159,32 @@ export default function AdminDashboard() {
   const ongoing = visibleReports.filter((r) => r.status === "Ongoing" || r.status === "In Progress").length;
   const resolved = visibleReports.filter((r) => r.status === "Resolved").length;
   const rejected = visibleReports.filter((r) => r.status === "Rejected").length;
+
+  // --- Coordination Overview — coordination RECORDS, hindi citizen reports ---
+  const isPendingSupportFor = (r) =>
+    (r.supportingOffices || []).some((so) => so.status === "pending" &&
+      (isMaster || so.officeId === currentOffice || r.primaryOffice === currentOffice)
+    );
+  const pendingSupportRequests = reports.filter(isPendingSupportFor).length;
+
+  const isActiveCoordinationFor = (r) => {
+    const hasActiveSupport = (r.supportingOffices || []).some((so) => ["accepted", "ongoing"].includes(so.status));
+    const hasActiveReroute = r.rerouteRequest?.status === "pending";
+    if (!hasActiveSupport && !hasActiveReroute) return false;
+    if (isMaster) return true;
+    const involvedViaSupport = (r.supportingOffices || []).some(
+      (so) => ["accepted", "ongoing"].includes(so.status) &&
+        (so.officeId === currentOffice || r.primaryOffice === currentOffice)
+    );
+    const involvedViaReroute = hasActiveReroute &&
+      (r.primaryOffice === currentOffice || r.rerouteRequest?.targetOffice === currentOffice);
+    return involvedViaSupport || involvedViaReroute;
+  };
+  const activeCoordination = reports.filter(isActiveCoordinationFor).length;
+
+  const escalatedReports = reports.filter((r) =>
+    r.escalation?.status === "open" && (isMaster || r.primaryOffice === currentOffice)
+  ).length;
 
   const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const currentYear = new Date().getFullYear();
@@ -504,6 +529,27 @@ export default function AdminDashboard() {
               <span className="ad-stat-label">Rejected</span>
               <span className="ad-stat-number">{rejected}</span>
               <span className="ad-stat-desc">Not approved for action</span>
+            </div>
+          </div>
+
+          <div className="ad-coordination-section">
+            <h3 className="ad-coordination-title">Coordination Overview</h3>
+            <div className="ad-coordination-stats">
+              <div className="ad-coord-card ad-coord-card--active">
+                <span className="ad-coord-label">Active Coordination</span>
+                <span className="ad-coord-number">{activeCoordination}</span>
+                <span className="ad-coord-desc">Accepted support or pending re-route in progress</span>
+              </div>
+              <div className="ad-coord-card ad-coord-card--pending">
+                <span className="ad-coord-label">Pending Support Requests</span>
+                <span className="ad-coord-number">{pendingSupportRequests}</span>
+                <span className="ad-coord-desc">Awaiting a response from the receiving office</span>
+              </div>
+              <div className="ad-coord-card ad-coord-card--escalated">
+                <span className="ad-coord-label">Escalated Reports</span>
+                <span className="ad-coord-number">{escalatedReports}</span>
+                <span className="ad-coord-desc">Awaiting Master Admin resolution</span>
+              </div>
             </div>
           </div>
 

@@ -197,16 +197,12 @@
 /* Detail modal — centered popup version, used inside .mr-modal-overlay */
 .mr-detail--modal {
   width: 100%;
-  max-width: 520px;
+  max-width: 920px;
   min-width: 0;
   flex-shrink: initial;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-}
-
-.mr-detail--modal .mr-detail-body {
-  max-height: calc(85vh - 60px);
 }
 
 .mr-detail-header {
@@ -217,6 +213,12 @@
   border-bottom: 1px solid #eee;
   background: #f9f7f2;
 }
+
+.mr-detail-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
 
 .mr-detail-header h3 {
   font-size: 0.95rem;
@@ -240,6 +242,48 @@
   gap: 0.9rem;
   max-height: calc(100vh - 200px);
   overflow-y: auto;
+}
+
+.mr-detail-columns {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.mr-detail-col-left,
+.mr-detail-col-right {
+  flex: 1;
+  min-width: 0;
+  padding: 1.25rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.mr-detail-col-left {
+  border-right: 1px solid #eee;
+}
+
+@media (max-width: 800px) {
+  .mr-detail--modal {
+    max-width: 94vw;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  .mr-detail-columns {
+    flex-direction: column;
+    overflow: visible;
+  }
+  .mr-detail-col-left,
+  .mr-detail-col-right {
+    overflow: visible;
+    border-right: none;
+  }
+  .mr-detail-col-left {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+  }
 }
 
 .mr-detail-row {

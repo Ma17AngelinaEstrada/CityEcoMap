@@ -93,6 +93,7 @@ export default function ManageReports() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [filterAssigned, setFilterAssigned] = useState("All");
+  const [filterSupporting, setFilterSupporting] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterCategory, setFilterCategory] = useState("All");
@@ -1107,7 +1108,9 @@ export default function ManageReports() {
       if (filterSubCategory === "Other::Drainage") return r.category === "Drainage Issue" && isOtherSubCategory(r.subCategory);
       return r.subCategory === filterSubCategory;
     })();
-    const matchAssigned = filterAssigned === "All" || r.primaryOffice === filterAssigned;
+    const matchAssigned = !isMaster || filterAssigned === "All" || r.primaryOffice === filterAssigned;
+    const matchSupporting = filterSupporting === "All" ||
+      (r.supportingOffices || []).some((so) => so.officeId === filterSupporting);
     const cleanedSearch = searchQuery.replace(/#/g, "").trim().toLowerCase();
     const matchSearch = cleanedSearch === "" ||
         (r.reportId && r.reportId.toLowerCase().includes(cleanedSearch)) ||
@@ -1126,7 +1129,7 @@ export default function ManageReports() {
       }
     }
 
-    return matchStatus && matchCategory && matchSubCategory && matchAssigned && matchSearch && matchDate;
+    return matchStatus && matchCategory && matchSubCategory && matchAssigned && matchSupporting && matchSearch && matchDate;
   });
 
   const getStatusClass = (status) => {
@@ -1344,11 +1347,20 @@ export default function ManageReports() {
             </optgroup>
           </select>
         </div>
+        {isMaster && (
+          <div className="mr-filter-group">
+            <label>Primary Office</label>
+            <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
+              <option>All</option>
+              {ACTIVE_OFFICE_LIST.map((o) => <option key={o}>{o}</option>)}
+            </select>
+          </div>
+        )}
         <div className="mr-filter-group">
-          <label>Assigned To</label>
-          <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
+          <label>Supporting Office</label>
+          <select value={filterSupporting} onChange={(e) => setFilterSupporting(e.target.value)}>
             <option>All</option>
-            {ALL_OFFICE_LABELS.map((o) => <option key={o}>{o}</option>)}
+            {ACTIVE_OFFICE_LIST.map((o) => <option key={o}>{o}</option>)}
           </select>
         </div>
         <div className="mr-filter-group">
@@ -1406,6 +1418,7 @@ export default function ManageReports() {
               setFilterCategory("All");
               setFilterSubCategory("All");
               setFilterAssigned("All");
+              setFilterSupporting("All");
               setSearchQuery("");
               setDateFrom("");
               setDateTo("");
@@ -1530,15 +1543,22 @@ export default function ManageReports() {
         </div>
       )}
 
-      {/* Detail modal */}
       {selectedReport && (
-        <div className="mr-modal-overlay" onClick={() => setSelectedReport(null)}>
-          <div className="mr-detail mr-detail--modal" onClick={(e) => e.stopPropagation()}>
-            <div className="mr-detail-header">
+      <div className="mr-modal-overlay" onClick={() => setSelectedReport(null)}>
+        <div className="mr-detail mr-detail--modal" onClick={(e) => e.stopPropagation()}>
+          <div className="mr-detail-header">
+            <div className="mr-detail-header-left">
               <h3>#{selectedReport.reportId || selectedReport.id.slice(0, 6).toUpperCase()}</h3>
-              <button className="mr-close" onClick={() => setSelectedReport(null)}>✕</button>
+              <span className={getStatusClass(selectedReport.status)}>
+                {selectedReport.status || "Pending"}
+              </span>
             </div>
-            <div className="mr-detail-body">
+            <button className="mr-close" onClick={() => setSelectedReport(null)}>✕</button>
+          </div>
+
+          <div className="mr-detail-columns">
+            {/* LEFT COLUMN — Report Information */}
+            <div className="mr-detail-col-left">
               <div className="mr-detail-row">
                 <span className="mr-detail-label">Submitted By</span>
                 <span className="mr-detail-value">{selectedReport.fullName || "—"}</span>
@@ -1593,7 +1613,6 @@ export default function ManageReports() {
                       : '—'}
                 </span>
               </div>
-
               {selectedPhotos.length > 0 && (
                 <div className="mr-detail-photo">
                   <span className="mr-detail-label">Photos</span>
@@ -1611,10 +1630,32 @@ export default function ManageReports() {
                   <span className="mr-photo-hint">Click a photo to enlarge</span>
                 </div>
               )}
-
               <div className="mr-detail-row">
                 <span className="mr-detail-label">Primary Office</span>
                 <span className="mr-detail-value">{officeLabel(selectedReport)}</span>
+              </div>
+            </div>
+
+            {/* RIGHT COLUMN — Actions / Coordination / History */}
+            <div className="mr-detail-col-right">
+              {selectedReport.status === "Rejected" && (
+                <div className="mr-detail-row">
+                  <span className="mr-detail-label">Rejection Reason</span>
+                  <span className="mr-detail-value mr-detail-value--rejected">
+                    {selectedReport.rejectionReason || "—"}
+                  </span>
+                </div>
+              )}
+
+              <div className="mr-status-actions">
+                <p className="mr-detail-label">Actions</p>
+                {selectedReport.escalation?.status === "open" && (
+                  <div className="mr-escalation-banner">
+                    <strong>Escalated by {selectedReport.escalation.raisedByOffice}</strong>
+                    <span>{selectedReport.escalation.reason}</span>
+                  </div>
+                )}
+                {renderActions()}
               </div>
 
               <div className="mr-support-section">
@@ -1631,7 +1672,7 @@ export default function ManageReports() {
                         {so.remarks && (
                           <span className="mr-support-remarks">Remarks: {so.remarks}</span>
                         )}
-                        {so.status === "pending" && actingOffice === so.officeId && (
+                        {so.status === "pending" && currentOffice === so.officeId && (
                           <div className="mr-support-actions">
                             <button className="mr-action-btn mr-action-btn--approve" onClick={() => openAcceptConfirm(so)} disabled={supportBusy}>
                               Accept
@@ -1641,7 +1682,7 @@ export default function ManageReports() {
                             </button>
                           </div>
                         )}
-                        {so.status === "accepted" && actingOffice === so.officeId && (
+                        {so.status === "accepted" && currentOffice === so.officeId && (
                           <>
                             {["Approved", "Ongoing"].includes(selectedReport.status) ? (
                               <div className="mr-support-actions">
@@ -1654,18 +1695,18 @@ export default function ManageReports() {
                             )}
                           </>
                         )}
-                        {so.status === "ongoing" && actingOffice === so.officeId && (
-                         <>
-                              {["Approved", "Ongoing"].includes(selectedReport.status) ? (
-                                <div className="mr-support-actions">
-                                  <button className="mr-action-btn mr-action-btn--resolved" onClick={() => handleUpdateSupportProgress(so, "completed")} disabled={supportBusy}>
-                                    ✔ Mark Our Part as Completed
-                                  </button>
-                                </div>
-                              ) : (
-                                <span className="mr-support-waiting">Waiting for Primary Office to approve the report first.</span>
-                              )}
-                         </>
+                        {so.status === "ongoing" && currentOffice === so.officeId && (
+                          <>
+                            {["Approved", "Ongoing"].includes(selectedReport.status) ? (
+                              <div className="mr-support-actions">
+                                <button className="mr-action-btn mr-action-btn--resolved" onClick={() => handleUpdateSupportProgress(so, "completed")} disabled={supportBusy}>
+                                  ✔ Mark Our Part as Completed
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="mr-support-waiting">Waiting for Primary Office to approve the report first.</span>
+                            )}
+                          </>
                         )}
                         {so.status === "declined" && so.declineReason && (
                           <span className="mr-support-decline-reason">Reason: {so.declineReason}</span>
@@ -1674,7 +1715,7 @@ export default function ManageReports() {
                     ))}
                   </div>
                 )}
-                {actingOffice === selectedReport.primaryOffice &&
+                {currentOffice === selectedReport.primaryOffice &&
                   selectedReport.status !== "Resolved" &&
                   selectedReport.status !== "Rejected" && (
                   <button
@@ -1694,7 +1735,7 @@ export default function ManageReports() {
                     <span className="mr-reroute-target">→ {selectedReport.rerouteRequest.targetOffice}</span>
                     <span className="mr-support-status mr-support-status--pending">pending</span>
                     <span className="mr-support-reason">{selectedReport.rerouteRequest.reason}</span>
-                    {actingOffice === selectedReport.rerouteRequest.targetOffice && (
+                    {currentOffice === selectedReport.rerouteRequest.targetOffice && (
                       <div className="mr-support-actions">
                         <button className="mr-action-btn mr-action-btn--approve" onClick={openRerouteAcceptConfirm} disabled={rerouteBusy}>
                           Accept
@@ -1704,19 +1745,19 @@ export default function ManageReports() {
                         </button>
                       </div>
                     )}
-                    {actingOffice === selectedReport.primaryOffice && actingOffice !== selectedReport.rerouteRequest.targetOffice && (
+                    {currentOffice === selectedReport.primaryOffice && currentOffice !== selectedReport.rerouteRequest.targetOffice && (
                       <span className="mr-no-action">Awaiting response from {selectedReport.rerouteRequest.targetOffice}.</span>
                     )}
                   </div>
                 ) : (
                   <p className="mr-no-action">No active re-route request.</p>
                 )}
-                {actingOffice === selectedReport.primaryOffice &&
+                {currentOffice === selectedReport.primaryOffice &&
                   !selectedReport.rerouteRequest &&
                   selectedReport.status !== "Resolved" &&
                   selectedReport.status !== "Rejected" && (
                     (selectedReport.rerouteCount || 0) >= MAX_REROUTES ? (
-                      <p className="mr-no-action">Maximum re-routes reached for this report. Use Escalate instead (coming soon).</p>
+                      <p className="mr-no-action">Maximum re-routes reached for this report. Use Escalate instead.</p>
                     ) : (
                       <button
                         className="mr-action-btn mr-action-btn--ongoing"
@@ -1730,7 +1771,7 @@ export default function ManageReports() {
               </div>
 
               <div className="mr-escalation-section">
-                {actingOffice === selectedReport.primaryOffice &&
+                {currentOffice === selectedReport.primaryOffice &&
                   selectedReport.escalation?.status !== "open" &&
                   selectedReport.status !== "Resolved" &&
                   selectedReport.status !== "Rejected" && (
@@ -1742,32 +1783,6 @@ export default function ManageReports() {
                     ⚠ Escalate to Master Admin
                   </button>
                 )}
-              </div>
-
-              {selectedReport.status === "Rejected" && (
-                <div className="mr-detail-row">
-                  <span className="mr-detail-label">Rejection Reason</span>
-                  <span className="mr-detail-value mr-detail-value--rejected">
-                    {selectedReport.rejectionReason || "—"}
-                  </span>
-                </div>
-              )}
-
-              <div className="mr-detail-row">
-                <span className="mr-detail-label">Current Status</span>
-                <span className={getStatusClass(selectedReport.status)}>
-                  {selectedReport.status || "Pending"}
-                </span>
-              </div>
-              <div className="mr-status-actions">
-                <p className="mr-detail-label">Actions</p>
-                {selectedReport.escalation?.status === "open" && (
-                  <div className="mr-escalation-banner">
-                    <strong>Escalated by {selectedReport.escalation.raisedByOffice}</strong>
-                    <span>{selectedReport.escalation.reason}</span>
-                  </div>
-                )}
-                {renderActions()}
               </div>
 
               <div className="mr-history-section">
@@ -1794,7 +1809,8 @@ export default function ManageReports() {
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* Reject Reason Modal */}
       {rejectModal && (

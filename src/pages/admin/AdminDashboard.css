@@ -844,3 +844,42 @@
   background: #fff3cd;
   color: #8a6d1a;
 }
+
+.ad-coordination-section { margin-bottom: 1.5rem; }
+
+.ad-coordination-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  font-family: 'Inter', -apple-system, sans-serif;
+  margin-bottom: 0.75rem;
+}
+
+.ad-coordination-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.ad-coord-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  border: 1px solid #e0ddd5;
+  border-left: 4px solid #ccc;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ad-coord-card--active { border-left-color: #1565c0; }
+.ad-coord-card--pending { border-left-color: #f9a825; }
+.ad-coord-card--escalated { border-left-color: #e53935; }
+
+.ad-coord-label { font-size: 0.78rem; color: #4a6b4a; font-family: sans-serif; }
+.ad-coord-number { font-size: 1.6rem; font-weight: 700; color: #1a4a1a; font-family: 'Inter', -apple-system, sans-serif; }
+.ad-coord-desc { font-size: 0.72rem; color: #777; font-family: sans-serif; }
+
+@media (max-width: 700px) {
+  .ad-coordination-stats { grid-template-columns: 1fr; }
+}

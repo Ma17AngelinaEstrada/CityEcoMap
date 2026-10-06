@@ -4,7 +4,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs, getDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import jsPDF from "jspdf";
-import { ALL_OFFICE_LABELS, isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
+import { ACTIVE_OFFICE_LIST, isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import AdminLayout from "./AdminLayout";
@@ -241,6 +241,11 @@ export default function ExportReports() {
         (r.jurisdictionCandidates || []).includes(currentOffice)
       );
 
+  const exportIdentityLabel = isMaster
+    ? "CityEcoMap — City-wide Report"
+    : `${currentOffice} — CityEcoMap`;
+
+
   const filtered = visibleReports.filter((r) => {
     const matchStatus = filterStatus === "All" || r.status === filterStatus;
     const matchCategory = filterCategory === "All" || r.category === filterCategory;
@@ -251,7 +256,7 @@ export default function ExportReports() {
       return r.subCategory === filterSubCategory;
     })();
 
-    const matchAssigned = filterAssigned === "All" || r.primaryOffice === filterAssigned;
+    const matchAssigned = !isMaster || filterAssigned === "All" || r.primaryOffice === filterAssigned;
 
     const cleanedSearch = searchQuery.replace(/#/g, "").trim().toLowerCase();
       const matchSearch = cleanedSearch === "" ||
@@ -542,7 +547,7 @@ export default function ExportReports() {
     docPdf.setTextColor(255, 255, 255);
     docPdf.setFontSize(9);
     docPdf.text(
-      `Report Summary — Environmental Management Bureau, Lucena City | Generated: ${new Date().toLocaleString("en-PH")}`,
+      `Report Summary — ${exportIdentityLabel} | Generated: ${new Date().toLocaleString("en-PH")}`,
       textStartX, bannerHeight / 2 + 3
     );
 
@@ -662,7 +667,7 @@ export default function ExportReports() {
     }
 
     docPdf.setFontSize(9.5);
-    docPdf.text("Incident Report — Environmental Management Bureau, Lucena City", textStartX, 9.5);
+    docPdf.text(`Incident Report — ${exportIdentityLabel}`, textStartX, 9.5);
     docPdf.setFontSize(7.5);
     docPdf.text(`Generated: ${new Date().toLocaleString("en-PH")}`, textStartX, 14);
 
@@ -1015,13 +1020,15 @@ export default function ExportReports() {
             </optgroup>
           </select>
         </div>
-        <div className="er-filter-group">
-          <label>Primary Office</label>
-            <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
-              <option>All</option>
-              {ALL_OFFICE_LABELS.map((o) => <option key={o}>{o}</option>)}
-            </select>
-        </div>
+        {isMaster && (
+          <div className="er-filter-group">
+            <label>Primary Office</label>
+              <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
+                <option>All</option>
+                {ACTIVE_OFFICE_LIST.map((o) => <option key={o}>{o}</option>)}
+              </select>
+          </div>
+        )}
         <div className="er-filter-group">
           <label>Search</label>
           <input
