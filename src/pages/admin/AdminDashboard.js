@@ -39,6 +39,11 @@ const DASHBOARD_TOUR_STEPS = [
     description: 'These cards show the total number of reports and how many are Pending, Approved, Ongoing, Resolved, or Rejected.',
   },
   {
+    selector: '.ad-coordination-section',
+    title: 'Coordination Overview',
+    description: 'Active Coordination, Pending Support Requests, and Escalated Reports — these track coordination activity and are kept separate from the report statistics above, so a Supporting Office request never inflates your report counts.',
+  },
+  {
     selector: '.ad-overview-left',
     title: 'Report Trends',
     description: 'View report volume over time. Switch between By Category, By Sub-Category, or By Status using the dropdowns, and adjust the time range.',

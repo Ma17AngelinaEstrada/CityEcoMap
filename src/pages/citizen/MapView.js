@@ -4,7 +4,6 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import { GoogleMap, MarkerF, InfoWindowF } from '@react-google-maps/api';
 import logo from '../../logowhite2.png';
-import embLogo from '../../emb-logo.png';
 import './MapView.css';
 import '../../styles/CitizenHeader.css';
 import { SearchIcon, CalendarIcon, PinIcon, BuildingIcon, HomeIcon, TrackIcon, AboutIcon } from '../../components/Icons';
@@ -280,8 +279,7 @@ function MapView() {
       <div className="citizen-header">
         <div className="header-logo">
           <img src={logo} alt="CityEcoMap" className="logo-img" />
-          <span className="logo-divider" />
-          <img src={embLogo} alt="EMB" className="partner-logo-img" />
+          
         </div>
         <div className="header-right">
           <nav className="header-nav">

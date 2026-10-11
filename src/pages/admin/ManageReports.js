@@ -7,7 +7,7 @@ import AdminLayout from "./AdminLayout";
 import "./ManageReports.css";
 import { reverseGeocode, isCached } from '../../utils/geocode';
 import { useAdminTour } from "../../context/AdminTourContext";
-import { ACTIVE_OFFICE_LIST, ALL_OFFICE_LABELS, isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
+import { ACTIVE_OFFICE_LIST, isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
 
 const sendEmailNotification = async (to, subject, body) => {
   if (!to) return;
@@ -57,7 +57,7 @@ const MANAGE_REPORTS_TOUR_STEPS = [
   {
     selector: '.mr-filters',
     title: 'Filter Reports',
-    description: 'Narrow down the report list by status, category, sub-category, assigned office, date range, or a keyword/Report ID search.',
+    description: 'Narrow down the report list by status, category, sub-category, Primary Office (Master Admin), Supporting Office, date range, or a keyword/Report ID search.',
   },
   {
     selector: '.mr-table-card',
@@ -70,9 +70,9 @@ const MANAGE_REPORTS_TOUR_STEPS = [
     description: 'This is a sample preview of what you\u2019ll see when you click a report — full details, photo, and current status.',
   },
   {
-    selector: '.mr-status-actions',
+    selector: '.mr-workflow-group',   // dating '.mr-status-actions'
     title: 'Take Action',
-    description: 'Depending on the report\u2019s status, you can Approve, Reject, mark it Ongoing, or mark it Resolved here.',
+    description: 'Available actions depend on your role, office, and the report\u2019s current status. ...',
   },
   {
     selector: '.mr-history-section',
@@ -85,6 +85,11 @@ const generateSupportId = () =>
   (window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
 
 const MAX_REROUTES = 3;
+
+const supportingOfficesLabel = (r) => {
+  const offices = [...new Set((r.supportingOffices || []).map((so) => so.officeId))];
+  return offices.length ? offices.join(", ") : "—";
+};
 
 export default function ManageReports() {
   const navigate = useNavigate();
@@ -151,7 +156,7 @@ export default function ManageReports() {
 
   useEffect(() => {
     if (showTour && currentStepIndex >= SAMPLE_MODAL_STEP_INDEX) {
-      setSelectedReport(SAMPLE_REPORT);
+      setSelectedReport({ ...SAMPLE_REPORT, primaryOffice: currentOffice || SAMPLE_REPORT.primaryOffice });
       setStatusHistory(SAMPLE_HISTORY);
     } else if (selectedReport?.id === 'SAMPLE_REPORT') {
       setSelectedReport(null);
@@ -1445,8 +1450,9 @@ export default function ManageReports() {
                 <col style={{ width: "10%" }} />
                 <col style={{ width: "7%" }} />
                 <col style={{ width: "9%" }} />
-                <col style={{ width: "19%" }} />
-                <col style={{ width: "20%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "7%" }} />
                 <col style={{ width: "7%" }} />
                 <col style={{ width: "9%" }} />
               </colgroup>
@@ -1461,12 +1467,13 @@ export default function ManageReports() {
                   <th>Description</th>
                   <th>Location</th>
                   <th>Primary Office</th>
+                  <th>Supporting Office</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan="10" className="mr-empty">No reports found.</td></tr>
+                  <tr><td colSpan="11" className="mr-empty">No reports found.</td></tr>
                 ) : (
                   filtered.map((r) => (
                     <tr
@@ -1500,6 +1507,7 @@ export default function ManageReports() {
                         {!r.locationDescription && !r.addressInput && !r.location && '—'}
                       </td>
                       <td>{officeLabel(r)}</td>
+                      <td>{supportingOfficesLabel(r)}</td>
                       <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
                     </tr>
                   ))
@@ -1536,6 +1544,7 @@ export default function ManageReports() {
                     {r.locationDescription || r.addressInput || (r.location ? (addresses[r.id] || 'Resolving...') : '—')}
                   </div>
                   <div className="mr-card-row mr-card-sub">Office: {officeLabel(r)}</div>
+                  <div className="mr-card-row mr-card-sub">Supporting: {supportingOfficesLabel(r)}</div>
                 </div>
               ))
             )}
@@ -1635,6 +1644,10 @@ export default function ManageReports() {
                 <span className="mr-detail-value">{officeLabel(selectedReport)}</span>
               </div>
             </div>
+            <div className="mr-detail-row">
+               <span className="mr-detail-label">Supporting Office</span>
+               <span className="mr-detail-value">{supportingOfficesLabel(selectedReport)}</span>
+            </div>
 
             {/* RIGHT COLUMN — Actions / Coordination / History */}
             <div className="mr-detail-col-right">
@@ -1647,6 +1660,7 @@ export default function ManageReports() {
                 </div>
               )}
 
+            <div className="mr-workflow-group">
               <div className="mr-status-actions">
                 <p className="mr-detail-label">Actions</p>
                 {selectedReport.escalation?.status === "open" && (
@@ -1784,6 +1798,7 @@ export default function ManageReports() {
                   </button>
                 )}
               </div>
+            </div>
 
               <div className="mr-history-section">
                 <p className="mr-detail-label">Status History</p>

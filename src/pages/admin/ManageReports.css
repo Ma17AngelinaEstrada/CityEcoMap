@@ -930,3 +930,9 @@
   .mr-lightbox-nav--prev { left: 8px; }
   .mr-lightbox-nav--next { right: 8px; }
 }
+
+.mr-workflow-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}

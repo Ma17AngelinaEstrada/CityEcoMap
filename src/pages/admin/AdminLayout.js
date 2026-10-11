@@ -205,8 +205,7 @@ export default function AdminLayout({ children }) {
         </button>
         <div className="al2-logo-group">
           <img src="/logowhite2.png" alt="CityEcoMap" className="al2-logo" />
-          <span className="al2-logo-divider" />
-          <img src="/emb-logo.png" alt="EMB" className="al2-partner-logo" />
+    
         </div>
 
         <div className="al2-topbar-right">

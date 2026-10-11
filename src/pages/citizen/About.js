@@ -97,7 +97,7 @@ function About() {
               <div className="category-box">
                 <span className="cat-icon"><WaveIcon /></span>
                 <strong>Drainage Issue</strong>
-                <p>Report drainage problems or flooding caused by blocked or damaged drainage systems in your area.</p>
+                <p>Report drainage problems or flooding caused by clogged or damaged drainage systems in your area.</p>
               </div>
             </div>
           </div>
