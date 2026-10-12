@@ -936,3 +936,48 @@
   flex-direction: column;
   gap: 0.9rem;
 }
+
+/* ── Suggested Priority (informational; separate from status) ── */
+.mr-priority-cell { margin-top: 4px; }
+
+.mr-priority-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 0;
+  background: #fafafa;
+}
+
+.mr-priority-reason { margin: 2px 0 0; font-size: 0.82rem; color: #333; }
+.mr-priority-evidence { margin: 2px 0 0; padding-left: 18px; font-size: 0.78rem; color: #444; }
+.mr-priority-evidence li span { font-weight: 600; }
+.mr-priority-note { margin: 4px 0 0; font-size: 0.72rem; color: #777; font-style: italic; }
+
+/* Table cell is narrow: let the Suggested Priority chip wrap instead of clipping */
+.mr-priority-cell .pb {
+  flex-wrap: wrap;
+  white-space: normal;
+  border-radius: 10px;
+  line-height: 1.25;
+}
+.mr-priority-cell .pb-level {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* Hide the empty Escalate wrapper (no button for this user/report) so it leaves no blank gap */
+.mr-escalation-section:empty {
+  display: none;
+}
+
+/* Mobile: keep the detail modal below the fixed top bar and let its header wrap */
+@media (max-width: 900px) {
+  .mr-modal-overlay { padding-top: 64px; box-sizing: border-box; }
+  .mr-detail--modal { max-height: calc(100vh - 72px); max-height: calc(100dvh - 72px); }
+}
+.mr-detail-header-left { flex-wrap: wrap; row-gap: 6px; min-width: 0; }
+.mr-detail-header-left .pb { white-space: normal; }

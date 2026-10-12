@@ -8,6 +8,8 @@ import "./ManageReports.css";
 import { reverseGeocode, isCached } from '../../utils/geocode';
 import { useAdminTour } from "../../context/AdminTourContext";
 import { ACTIVE_OFFICE_LIST, isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
+import PriorityBadge from "../../components/PriorityBadge";
+import { suggestPriority } from "../../utils/priorityRules";
 
 const sendEmailNotification = async (to, subject, body) => {
   if (!to) return;
@@ -1287,6 +1289,10 @@ export default function ManageReports() {
     );
   };
 
+  // Suggested Priority is calculated from the report each time it is shown.
+  // Nothing is saved, and it never changes status, offices, or escalation.
+  const selSuggestion = selectedReport ? suggestPriority(selectedReport) : null;
+
   return (
     <AdminLayout>
       {toast && (
@@ -1454,7 +1460,7 @@ export default function ManageReports() {
                 <col style={{ width: "16%" }} />
                 <col style={{ width: "7%" }} />
                 <col style={{ width: "7%" }} />
-                <col style={{ width: "9%" }} />
+                <col style={{ width: "10%" }} />
               </colgroup>
               <thead>
                 <tr>
@@ -1508,7 +1514,12 @@ export default function ManageReports() {
                       </td>
                       <td>{officeLabel(r)}</td>
                       <td>{supportingOfficesLabel(r)}</td>
-                      <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
+                      <td>
+                        <span className={getStatusClass(r.status)}>{r.status || "Pending"}</span>
+                        <div className="mr-priority-cell">
+                          <PriorityBadge level={suggestPriority(r).level} compact />
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -1545,6 +1556,9 @@ export default function ManageReports() {
                   </div>
                   <div className="mr-card-row mr-card-sub">Office: {officeLabel(r)}</div>
                   <div className="mr-card-row mr-card-sub">Supporting: {supportingOfficesLabel(r)}</div>
+                  <div className="mr-card-row">
+                    <PriorityBadge level={suggestPriority(r).level} compact />
+                  </div>
                 </div>
               ))
             )}
@@ -1561,6 +1575,7 @@ export default function ManageReports() {
               <span className={getStatusClass(selectedReport.status)}>
                 {selectedReport.status || "Pending"}
               </span>
+              <PriorityBadge level={selSuggestion.level} compact />
             </div>
             <button className="mr-close" onClick={() => setSelectedReport(null)}>✕</button>
           </div>
@@ -1643,14 +1658,30 @@ export default function ManageReports() {
                 <span className="mr-detail-label">Primary Office</span>
                 <span className="mr-detail-value">{officeLabel(selectedReport)}</span>
               </div>
-            </div>
-            <div className="mr-detail-row">
-               <span className="mr-detail-label">Supporting Office</span>
-               <span className="mr-detail-value">{supportingOfficesLabel(selectedReport)}</span>
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Supporting Office</span>
+                <span className="mr-detail-value">{supportingOfficesLabel(selectedReport)}</span>
+              </div>
             </div>
 
             {/* RIGHT COLUMN — Actions / Coordination / History */}
             <div className="mr-detail-col-right">
+              <div className="mr-priority-section">
+                <p className="mr-detail-label">Suggested Priority</p>
+                <PriorityBadge level={selSuggestion.level} />
+                <p className="mr-priority-reason">{selSuggestion.reason}</p>
+                {selSuggestion.indicators.length > 0 && (
+                  <ul className="mr-priority-evidence">
+                    {selSuggestion.indicators.map((g) => (
+                      <li key={g.id}>
+                        <span>{g.label}:</span> {g.matched.join(", ")}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                
+              </div>
+              
               {selectedReport.status === "Rejected" && (
                 <div className="mr-detail-row">
                   <span className="mr-detail-label">Rejection Reason</span>

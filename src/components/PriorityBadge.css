@@ -1,0 +1,43 @@
+.pb {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+  background: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.pb-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.pb-kind {
+  font-weight: 500;
+  color: #555;
+}
+
+.pb-level {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pb--critical { color: #b71c1c; }
+.pb--high     { color: #d84315; }
+.pb--medium   { color: #9a6a00; }
+.pb--low      { color: #00796b; }
+.pb--na       { color: #616161; border-style: dashed; }
+
+.pb--compact {
+  font-size: 0.68rem;
+  padding: 1px 6px;
+}
