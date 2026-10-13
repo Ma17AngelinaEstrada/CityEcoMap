@@ -130,6 +130,11 @@ function MapView() {
     });
   };
 
+  
+  // Gumagamit ng `photos` (listahan) kung meron; bumabalik sa `photo` para sa lumang reports
+  const getReportPhotos = (r) =>
+    r.photos?.length ? r.photos : (r.photo ? [r.photo] : []);
+
   const handleSearch = async (e) => {
     if (e.key !== 'Enter') return;
     if (!searchQuery.trim()) return;
@@ -347,8 +352,20 @@ function MapView() {
                       {report.assignedTo && (
                         <p className="popup-assigned"><BuildingIcon /> Assigned to: {report.assignedTo}</p>
                       )}
-                      {report.photo && (
-                        <img src={report.photo} alt="Report" className="popup-photo" />
+                      {getReportPhotos(report).length === 1 && (
+                        <img src={getReportPhotos(report)[0]} alt="Report" className="popup-photo" />
+                      )}
+                      {getReportPhotos(report).length > 1 && (
+                        <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                          {getReportPhotos(report).map((src, i) => (
+                            <img
+                              key={i}
+                              src={src}
+                              alt={`Report ${i + 1}`}
+                              style={{ flex: 1, minWidth: 0, height: 70, objectFit: 'cover', borderRadius: 6 }}
+                            />
+                          ))}
+                        </div>
                       )}
                     </div>
                   </InfoWindowF>
