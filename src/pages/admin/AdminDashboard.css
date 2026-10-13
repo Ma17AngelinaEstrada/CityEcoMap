@@ -883,3 +883,10 @@
 @media (max-width: 700px) {
   .ad-coordination-stats { grid-template-columns: 1fr; }
 }
+
+/* Suggested Priority chip placement (Dashboard) */
+.ad-priority-cell { margin-top: 6px; }
+.ad-priority-cell .pb { white-space: normal; max-width: 100%; }
+
+/* Suggested Priority chip inside the Recent Reports table */
+.ad-table .pb { white-space: normal; max-width: 100%; text-align: left; }

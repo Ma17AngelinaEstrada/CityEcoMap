@@ -15,6 +15,8 @@ import { SearchIcon, CalendarIcon, PinIcon, BuildingIcon } from '../../component
 import { useGoogleMapsLoaded } from "../../context/GoogleMapsLoaderContext";
 import { useAdminTour } from "../../context/AdminTourContext";
 import { isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
+import PriorityBadge from "../../components/PriorityBadge";
+import { suggestPriority } from "../../utils/priorityRules";
 
 const statusColors = {
   'Pending':  '#e53935',
@@ -26,6 +28,11 @@ const statusColors = {
 
 const LUCENA_CENTER = { lat: 13.9394, lng: 121.6169 };
 const adminMapContainerStyle = { width: '100%', height: '100%' };
+
+const supportingOfficesLabel = (r) => {
+  const offices = [...new Set((r.supportingOffices || []).map((so) => so.officeId))];
+  return offices.length ? offices.join(", ") : "—";
+};
 
 const DASHBOARD_TOUR_STEPS = [
   {
@@ -867,6 +874,9 @@ export default function AdminDashboard() {
                                   }}>
                                     {report.status || 'Pending'}
                                   </span>
+                                  <div style={{ marginBottom: 4 }}>
+                                    <PriorityBadge level={suggestPriority(report).level} compact />
+                                  </div>
                                   {report.description && (
                                     <p style={{ fontSize: '0.78rem', color: '#555', marginTop: 4, borderTop: '1px solid #eee', paddingTop: 4 }}>
                                       {report.description}
@@ -964,6 +974,9 @@ export default function AdminDashboard() {
                             )}
                           </div>
                           <div className="ad-sidebar-item-date">{formatDate(report.createdAt)}</div>
+                          <div className="ad-priority-cell">
+                            <PriorityBadge level={suggestPriority(report).level} compact />
+                          </div>
                             <button
                               className="ad-sidebar-manage-btn"
                               onClick={(e) => {
@@ -993,16 +1006,18 @@ export default function AdminDashboard() {
             </div>
             <table className="ad-table">
               <colgroup>
+                <col style={{ width: "7%" }} />
                 <col style={{ width: "8%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "10%" }} />
+                <col style={{ width: "7%" }} />
                 <col style={{ width: "9%" }} />
-                <col style={{ width: "15%" }} />
-                <col style={{ width: "16%" }} />
-                <col style={{ width: "16%" }} />
+                <col style={{ width: "6%" }} />
                 <col style={{ width: "9%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "8%" }} />
                 <col style={{ width: "9%" }} />
+                <col style={{ width: "11%" }} />
               </colgroup>
               <thead>
                 <tr>
@@ -1015,12 +1030,14 @@ export default function AdminDashboard() {
                   <th>Description</th>
                   <th>Location</th>
                   <th>Primary Office</th>
+                  <th>Supporting Office</th>
                   <th>Status</th>
+                  <th>Suggested Priority</th>
                 </tr>
               </thead>
               <tbody>
                 {recent.length === 0 ? (
-                  <tr><td colSpan="10" className="ad-empty">No reports yet.</td></tr>
+                  <tr><td colSpan="12" className="ad-empty">No reports yet.</td></tr>
                 ) : (
                   recent.map((r) => (
                     <tr key={r.id}>
@@ -1050,10 +1067,14 @@ export default function AdminDashboard() {
                         {!r.locationDescription && !r.addressInput && !r.location && '—'}
                       </td>
                       <td>{officeLabel(r)}</td>
+                      <td>{supportingOfficesLabel(r)}</td>
                       <td>
                         <span className={getStatusClass(r.status)}>
                           {r.status || "Pending"}
                         </span>
+                      </td>
+                      <td>
+                        <PriorityBadge level={suggestPriority(r).level} />
                       </td>
                     </tr>
                   ))
@@ -1082,6 +1103,10 @@ export default function AdminDashboard() {
                   <div className="ad-card-row ad-card-sub">{r.areaType || "—"} · {formatDate(r.createdAt)}</div>
                   {r.description && <div className="ad-card-row ad-card-desc">{r.description}</div>}
                   <div className="ad-card-row ad-card-sub">Office: {officeLabel(r)}</div>
+                  <div className="ad-card-row ad-card-sub">Supporting: {supportingOfficesLabel(r)}</div>
+                  <div className="ad-card-row">
+                    <PriorityBadge level={suggestPriority(r).level} compact />
+                  </div>
                 </div>
               ))
             )}

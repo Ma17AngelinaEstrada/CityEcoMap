@@ -433,3 +433,9 @@
     width: 100% !important;
   }
 }
+
+/* Suggested Priority chip inside the export table */
+.er-table .pb { white-space: normal; max-width: 100%; text-align: left; }
+
+/* Keep the Generate button inside its column */
+.er-table .er-generate-btn { padding: 5px 8px; }

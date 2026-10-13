@@ -981,3 +981,6 @@
 }
 .mr-detail-header-left { flex-wrap: wrap; row-gap: 6px; min-width: 0; }
 .mr-detail-header-left .pb { white-space: normal; }
+
+/* Suggested Priority chip in its own table column */
+.mr-table .pb { white-space: normal; max-width: 100%; text-align: left; }

@@ -1450,17 +1450,18 @@ export default function ManageReports() {
           <div className="mr-table-card">
             <table className="mr-table">
               <colgroup>
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "7%" }} />
                 <col style={{ width: "8%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "15%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "16%" }} />
-                <col style={{ width: "16%" }} />
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "10%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "11%" }} />
               </colgroup>
               <thead>
                 <tr>
@@ -1475,11 +1476,12 @@ export default function ManageReports() {
                   <th>Primary Office</th>
                   <th>Supporting Office</th>
                   <th>Status</th>
+                  <th>Suggested Priority</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan="11" className="mr-empty">No reports found.</td></tr>
+                  <tr><td colSpan="12" className="mr-empty">No reports found.</td></tr>
                 ) : (
                   filtered.map((r) => (
                     <tr
@@ -1514,12 +1516,8 @@ export default function ManageReports() {
                       </td>
                       <td>{officeLabel(r)}</td>
                       <td>{supportingOfficesLabel(r)}</td>
-                      <td>
-                        <span className={getStatusClass(r.status)}>{r.status || "Pending"}</span>
-                        <div className="mr-priority-cell">
-                          <PriorityBadge level={suggestPriority(r).level} compact />
-                        </div>
-                      </td>
+                      <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
+                      <td><PriorityBadge level={suggestPriority(r).level} /></td>
                     </tr>
                   ))
                 )}

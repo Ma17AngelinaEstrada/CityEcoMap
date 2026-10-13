@@ -16,6 +16,8 @@ import {
   Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
 import { useAdminTour } from "../../context/AdminTourContext";
+import PriorityBadge from "../../components/PriorityBadge";
+import { suggestPriority } from "../../utils/priorityRules";
 
 const EXPORT_REPORTS_TOUR_STEPS = [
   {
@@ -477,13 +479,15 @@ export default function ExportReports() {
         r.description || '—',
         locationParts.join(' — ') || '—',
         officeLabel(r),
+        supportingOfficesLabel(r),
         r.status || 'Pending',
+        suggestPriority(r).level,
       ];
     });
 
   const headers = [
     "Report ID", "Submitted By", "Email", "Category", "Sub-Category", "Type of Area",
-    "Date Submitted", "Description", "Location", "Primary Office", "Status"
+    "Date Submitted", "Description", "Location", "Primary Office", "Supporting Office", "Status", "Suggested Priority"
   ];
 
   const logExport = async (format) => {
@@ -588,7 +592,21 @@ export default function ExportReports() {
       columnStyles: { 6: { cellWidth: 40 }, 7: { cellWidth: 45 } },
     });
 
-    docPdf.save(`CityEcoMap_Reports_${new Date().toISOString().slice(0, 10)}.pdf`);
+    const afterTableY = docPdf.lastAutoTable?.finalY;
+    if (afterTableY) {
+      let noteY = afterTableY + 6;
+      if (noteY > 200) {
+        docPdf.addPage();
+        noteY = 15;
+      }
+      docPdf.setFontSize(7.5);
+      docPdf.setTextColor(110);
+      docPdf.text(
+        "Suggested Priority is a system-generated suggestion based only on the citizen's description. It is not an official EMB, CENRO or City Engineering classification.",
+        14, noteY
+      );
+    }
+
     docPdf.save(`CityEcoMap_Reports_${localDateStamp()}.pdf`);
     logExport("PDF");
   };
@@ -804,6 +822,9 @@ export default function ExportReports() {
       ["Primary Office", officeLabel(r)],
       ["Supporting Office", supportingOfficesLabel(r)],
     ]);
+
+    const suggested = suggestPriority(r);
+    fieldRow([["Suggested Priority (system-generated)", `${suggested.level} — ${suggested.reason}`]]);
  
     y += 2;
 
@@ -1343,18 +1364,20 @@ export default function ExportReports() {
         <>
           <div className="er-table-card">
             <table className="er-table">
-              <colgroup>
+                <colgroup>
                 <col style={{ width: "7%" }} />
-                <col style={{ width: "9%" }} />
                 <col style={{ width: "9%" }} />
                 <col style={{ width: "7%" }} />
                 <col style={{ width: "8%" }} />
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "18%" }} />
                 <col style={{ width: "6%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "10%" }} />
                 <col style={{ width: "8%" }} />
                 <col style={{ width: "9%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "10%" }} />
               </colgroup>
               <thead>
                 <tr>
@@ -1367,13 +1390,15 @@ export default function ExportReports() {
                   <th>Description</th>
                   <th>Location</th>
                   <th>Primary Office</th>
+                  <th>Supporting Office</th>
                   <th>Status</th>
+                  <th>Suggested Priority</th>
                   <th>Report</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan="11" className="er-empty">No reports match the selected filters.</td></tr>
+                  <tr><td colSpan="13" className="er-empty">No reports match the selected filters.</td></tr>
                   ) : (
                     filtered.map((r) => (
                       <tr key={r.id}>
@@ -1403,7 +1428,9 @@ export default function ExportReports() {
                           {!r.locationDescription && !r.addressInput && !r.location && '—'}
                         </td>
                         <td>{officeLabel(r)}</td>
+                        <td>{supportingOfficesLabel(r)}</td>
                         <td><span className={getStatusClass(r.status)}>{r.status || "Pending"}</span></td>
+                        <td><PriorityBadge level={suggestPriority(r).level} /></td>
                         <td>
                           <button
                             className="er-generate-btn"
@@ -1442,6 +1469,10 @@ export default function ExportReports() {
                   {r.locationDescription || r.addressInput || (r.location ? (addresses[r.id] || 'Resolving...') : '—')}
                 </div>
                 <div className="er-card-row er-card-sub">Office: {officeLabel(r)}</div>
+                <div className="er-card-row er-card-sub">Supporting: {supportingOfficesLabel(r)}</div>
+                <div className="er-card-row">
+                  <PriorityBadge level={suggestPriority(r).level} compact />
+                </div>
                 <button
                   className="er-generate-btn er-card-generate-btn"
                   onClick={() => handleGenerateSingleReport(r)}
