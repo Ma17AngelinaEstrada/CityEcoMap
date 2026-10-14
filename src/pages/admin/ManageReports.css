@@ -984,3 +984,122 @@
 
 /* Suggested Priority chip in its own table column */
 .mr-table .pb { white-space: normal; max-width: 100%; text-align: left; }
+
+
+/* ── Report modal: action sections (two-column rows, separate cards) ── */
+
+/* Two columns: title + description left, buttons right (aligned in a fixed right column) */
+.mr-action-row,
+.mr-section-head {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  column-gap: 16px;
+  row-gap: 10px;
+  align-items: start;
+}
+
+/* renderActions() output becomes direct grid items of the row */
+.mr-action-controls { display: contents; }
+
+.mr-action-info,
+.mr-section-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mr-action-help {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #666;
+  font-family: sans-serif;
+  line-height: 1.4;
+}
+
+.mr-action-row .mr-status-btns,
+.mr-section-head > .mr-action-btn {
+  grid-column: 2;
+  justify-self: end;
+  justify-content: flex-end;
+}
+
+/* Messages, the assign/resolve form, and the Approve/Reject explanations use the full row */
+.mr-action-row > .mr-no-action,
+.mr-action-row > .mr-needs-review-form,
+.mr-section-head > .mr-no-action,
+.mr-action-help-full {
+  grid-column: 1 / -1;
+  margin: 0;
+  text-align: left;
+}
+
+.mr-action-help-full {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed #dcd8cc;
+}
+
+.mr-section-head + .mr-support-list,
+.mr-section-head + .mr-reroute-pending,
+.mr-section-head + .mr-no-action {
+  margin-top: 10px;
+}
+
+/* Each action section is its own card */
+.mr-status-actions,
+.mr-support-section,
+.mr-reroute-section,
+.mr-escalation-section {
+  margin-top: 0;
+  padding: 12px 14px;
+  background: #fafaf8;
+  border: 1px solid #e3dfd3;
+  border-radius: 10px;
+}
+
+.mr-status-actions {
+  background: #f5f9fd;
+  border-color: #cfdff0;
+  border-left: 4px solid #1565c0;
+}
+
+.mr-escalation-section {
+  background: #fff8f7;
+  border-color: #f1d0cc;
+  border-left: 4px solid #e53935;
+}
+
+.mr-status-actions .mr-detail-label,
+.mr-support-section .mr-detail-label,
+.mr-reroute-section .mr-detail-label,
+.mr-escalation-section .mr-detail-label {
+  font-weight: 700;
+  color: #555;
+}
+
+.mr-status-actions .mr-escalation-banner { margin: 10px 0 0; }
+
+/* Modal scrolling: keep the right column's content from being squashed or clipped */
+.mr-detail-col-left,
+.mr-detail-col-right { overscroll-behavior: contain; }
+.mr-detail-col-right { padding-bottom: 1.75rem; }
+.mr-detail-col-right > * { flex-shrink: 0; }
+.mr-detail-header { flex-shrink: 0; }
+
+/* Narrow screens: stack text and buttons; keep the header visible while the modal scrolls */
+@media (max-width: 560px) {
+  .mr-action-row,
+  .mr-section-head { grid-template-columns: 1fr; }
+  .mr-action-row .mr-status-btns,
+  .mr-section-head > .mr-action-btn {
+    grid-column: 1;
+    justify-self: start;
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 800px) {
+  .mr-detail-header { position: sticky; top: 0; z-index: 3; }
+}

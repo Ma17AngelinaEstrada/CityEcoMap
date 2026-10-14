@@ -1,6 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './OnboardingTour.css';
 
+// Returns the first VISIBLE element matching the selector (supports comma-separated lists).
+// Lets a step target e.g. a desktop table or its mobile card layout, whichever is shown.
+function findVisible(selector) {
+  const all = document.querySelectorAll(selector);
+  for (const el of all) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 || r.height > 0) return el;
+  }
+  return all[0] || null;
+}
+
 function OnboardingTour({ steps, onFinish, storageKey = 'cityecomap_tour_seen', onStepChange }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [targetRect, setTargetRect] = useState(null);
@@ -78,7 +89,7 @@ function OnboardingTour({ steps, onFinish, storageKey = 'cityecomap_tour_seen', 
 
     const waitForElement = (attemptsLeft) => {
       if (cancelled) return;
-      const el = document.querySelector(step.selector);
+      const el = findVisible(step.selector);
 
       if (!el) {
         if (attemptsLeft <= 0) {
@@ -105,7 +116,7 @@ function OnboardingTour({ steps, onFinish, storageKey = 'cityecomap_tour_seen', 
     rafId = requestAnimationFrame(() => waitForElement(60));
 
     const handleResize = () => {
-      const el = document.querySelector(step.selector);
+      const el = findVisible(step.selector);
       if (el) setTargetRect(el.getBoundingClientRect());
     };
     window.addEventListener('resize', handleResize);
@@ -157,8 +168,13 @@ function OnboardingTour({ steps, onFinish, storageKey = 'cityecomap_tour_seen', 
     : null;
 
   const TOOLTIP_H_ESTIMATE = 190;
+  const TOOLTIP_W = 280;
   let tooltipStyle = {};
-  if (targetRect) {
+  if (targetRect && step.placement === 'left' && targetRect.left - TOOLTIP_W - 16 >= 16) {
+    // Place the tooltip beside the target (to its left) so it doesn't cover the target's own controls.
+    const topPos = Math.min(Math.max(16, targetRect.top), window.innerHeight - TOOLTIP_H_ESTIMATE - 16);
+    tooltipStyle = { top: topPos, left: targetRect.left - TOOLTIP_W - 16 };
+  } else if (targetRect) {
     const viewportH = window.innerHeight;
     const spaceBelow = viewportH - targetRect.bottom;
     const spaceAbove = targetRect.top;

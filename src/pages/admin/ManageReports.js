@@ -62,9 +62,9 @@ const MANAGE_REPORTS_TOUR_STEPS = [
     description: 'Narrow down the report list by status, category, sub-category, Primary Office (Master Admin), Supporting Office, date range, or a keyword/Report ID search.',
   },
   {
-    selector: '.mr-table-card',
+    selector: '.mr-table-card, .mr-card',
     title: 'Reports Table',
-    description: 'All matching reports appear here. Click any row to open its full details.',
+    description: 'All matching reports appear here. Click any report to open its full details.',
   },
   {
     selector: '.mr-detail--modal',
@@ -72,9 +72,28 @@ const MANAGE_REPORTS_TOUR_STEPS = [
     description: 'This is a sample preview of what you\u2019ll see when you click a report — full details, photo, and current status.',
   },
   {
-    selector: '.mr-workflow-group',   // dating '.mr-status-actions'
+    selector: '.mr-status-actions',
+    placement: 'left',
     title: 'Take Action',
-    description: 'Available actions depend on your role, office, and the report\u2019s current status. ...',
+    description: 'Approve or reject the report here. The actions you see depend on your office and the report\u2019s current status.',
+  },
+  {
+    selector: '.mr-support-section',
+    placement: 'left',
+    title: 'Supporting Offices',
+    description: 'Ask another office to assist while your office remains the primary owner. Requests and their responses are listed here.',
+  },
+  {
+    selector: '.mr-reroute-section',
+    placement: 'left',
+    title: 'Re-route',
+    description: 'Request to transfer report ownership to another office. The receiving office must accept the request.',
+  },
+  {
+    selector: '.mr-escalation-section',
+    placement: 'left',
+    title: 'Escalate',
+    description: 'Send the report to the Master Admin when it needs system-wide attention or cannot be resolved through the normal office workflow.',
   },
   {
     selector: '.mr-history-section',
@@ -1258,14 +1277,20 @@ export default function ManageReports() {
     }
 
     if (s === "Pending") return (
-      <div className="mr-status-btns">
-        <button className="mr-action-btn mr-action-btn--approve" onClick={handleApprove} disabled={busy || isSample}>
-          ✔ Approve
-        </button>
-        <button className="mr-action-btn mr-action-btn--reject" onClick={handleRejectClick} disabled={busy || isSample}>
-          ✕ Reject
-        </button>
-      </div>
+      <>
+        <div className="mr-status-btns">
+          <button className="mr-action-btn mr-action-btn--approve" onClick={handleApprove} disabled={busy || isSample}>
+            ✔ Approve
+          </button>
+          <button className="mr-action-btn mr-action-btn--reject" onClick={handleRejectClick} disabled={busy || isSample}>
+            ✕ Reject
+          </button>
+        </div>
+        <div className="mr-action-help-full">
+          <p className="mr-action-help"><strong>Approve</strong> – accepts this report as valid. Its status becomes Approved and the citizen is notified by email.</p>
+          <p className="mr-action-help"><strong>Reject</strong> – the report will not be acted on. You must enter a reason and confirm before it is rejected.</p>
+        </div>
+      </>
     );
 
     if (s === "Approved") return (
@@ -1292,6 +1317,20 @@ export default function ManageReports() {
   // Suggested Priority is calculated from the report each time it is shown.
   // Nothing is saved, and it never changes status, offices, or escalation.
   const selSuggestion = selectedReport ? suggestPriority(selectedReport) : null;
+
+  // Which action explanations to show (same conditions the buttons already use).
+  const isPrimaryActive =
+    !!selectedReport &&
+    currentOffice === selectedReport.primaryOffice &&
+    !["Resolved", "Rejected"].includes(selectedReport.status);
+  const canRequestReroute =
+    isPrimaryActive &&
+    !selectedReport.rerouteRequest &&
+    (selectedReport.rerouteCount || 0) < MAX_REROUTES;
+  const rerouteLimitReached =
+    isPrimaryActive &&
+    !selectedReport.rerouteRequest &&
+    (selectedReport.rerouteCount || 0) >= MAX_REROUTES;
 
   return (
     <AdminLayout>
@@ -1691,18 +1730,42 @@ export default function ManageReports() {
 
             <div className="mr-workflow-group">
               <div className="mr-status-actions">
-                <p className="mr-detail-label">Actions</p>
+                <div className="mr-action-row">
+                  <div className="mr-action-info">
+                    <p className="mr-detail-label">Actions</p>
+                    <p className="mr-action-help">Review the report and choose the appropriate action.</p>
+                  </div>
+                  <div className="mr-action-controls">
+                    {renderActions()}
+                  </div>
+                </div>
                 {selectedReport.escalation?.status === "open" && (
                   <div className="mr-escalation-banner">
                     <strong>Escalated by {selectedReport.escalation.raisedByOffice}</strong>
                     <span>{selectedReport.escalation.reason}</span>
                   </div>
                 )}
-                {renderActions()}
               </div>
 
               <div className="mr-support-section">
-                <p className="mr-detail-label">Supporting Offices</p>
+                <div className="mr-section-head">
+                  <div className="mr-section-info">
+                    <p className="mr-detail-label">Supporting Offices</p>
+                    {isPrimaryActive && (
+                      <p className="mr-action-help">Ask another office to assist while your office remains the primary owner.</p>
+                    )}
+                  </div>
+                  {isPrimaryActive && (
+                    <button
+                      className="mr-action-btn mr-action-btn--ongoing"
+                      onClick={openSupportModal}
+                      disabled={selectedReport.id === 'SAMPLE_REPORT'}
+                    >
+                      + Request Supporting Office
+                    </button>
+                  )}
+                </div>
+
                 {(selectedReport.supportingOffices || []).length === 0 ? (
                   <p className="mr-no-action">No supporting offices requested.</p>
                 ) : (
@@ -1758,21 +1821,30 @@ export default function ManageReports() {
                     ))}
                   </div>
                 )}
-                {currentOffice === selectedReport.primaryOffice &&
-                  selectedReport.status !== "Resolved" &&
-                  selectedReport.status !== "Rejected" && (
-                  <button
-                    className="mr-action-btn mr-action-btn--ongoing"
-                    onClick={openSupportModal}
-                    disabled={selectedReport.id === 'SAMPLE_REPORT'}
-                  >
-                    + Request Supporting Office
-                  </button>
-                )}
               </div>
 
               <div className="mr-reroute-section">
-                <p className="mr-detail-label">Re-route</p>
+                <div className="mr-section-head">
+                  <div className="mr-section-info">
+                    <p className="mr-detail-label">Re-route</p>
+                    {canRequestReroute && (
+                      <p className="mr-action-help">Request to transfer report ownership to another office. The receiving office must accept the request.</p>
+                    )}
+                  </div>
+                  {canRequestReroute && (
+                    <button
+                      className="mr-action-btn mr-action-btn--ongoing"
+                      onClick={openRerouteModal}
+                      disabled={selectedReport.id === 'SAMPLE_REPORT'}
+                    >
+                      ⇄ Request Re-route
+                    </button>
+                  )}
+                  {rerouteLimitReached && (
+                    <p className="mr-no-action">Maximum re-routes reached for this report. Use Escalate instead.</p>
+                  )}
+                </div>
+
                 {selectedReport.rerouteRequest ? (
                   <div className="mr-reroute-pending">
                     <span className="mr-reroute-target">→ {selectedReport.rerouteRequest.targetOffice}</span>
@@ -1795,36 +1867,23 @@ export default function ManageReports() {
                 ) : (
                   <p className="mr-no-action">No active re-route request.</p>
                 )}
-                {currentOffice === selectedReport.primaryOffice &&
-                  !selectedReport.rerouteRequest &&
-                  selectedReport.status !== "Resolved" &&
-                  selectedReport.status !== "Rejected" && (
-                    (selectedReport.rerouteCount || 0) >= MAX_REROUTES ? (
-                      <p className="mr-no-action">Maximum re-routes reached for this report. Use Escalate instead.</p>
-                    ) : (
-                      <button
-                        className="mr-action-btn mr-action-btn--ongoing"
-                        onClick={openRerouteModal}
-                        disabled={selectedReport.id === 'SAMPLE_REPORT'}
-                      >
-                        ⇄ Request Re-route
-                      </button>
-                    )
-                  )}
               </div>
 
               <div className="mr-escalation-section">
-                {currentOffice === selectedReport.primaryOffice &&
-                  selectedReport.escalation?.status !== "open" &&
-                  selectedReport.status !== "Resolved" &&
-                  selectedReport.status !== "Rejected" && (
-                  <button
-                    className="mr-action-btn mr-action-btn--reject"
-                    onClick={openEscalateModal}
-                    disabled={selectedReport.id === 'SAMPLE_REPORT'}
-                  >
-                    ⚠ Escalate to Master Admin
-                  </button>
+                {isPrimaryActive && selectedReport.escalation?.status !== "open" && (
+                  <div className="mr-section-head">
+                    <div className="mr-section-info">
+                      <p className="mr-detail-label">Escalate</p>
+                      <p className="mr-action-help">Send this report to the Master Admin for review when it needs system-wide attention or cannot be resolved through the normal office workflow.</p>
+                    </div>
+                    <button
+                      className="mr-action-btn mr-action-btn--reject"
+                      onClick={openEscalateModal}
+                      disabled={selectedReport.id === 'SAMPLE_REPORT'}
+                    >
+                      ⚠ Escalate to Master Admin
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
