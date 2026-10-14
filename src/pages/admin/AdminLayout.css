@@ -588,3 +588,89 @@
 .al2-avatar--cenro       { background-color: #2E7D32; color: #ffffff; }
 .al2-avatar--emb         { background-color: #B89B52; color: #FFFFFF; }
 .al2-avatar--engineering { background-color: #1976D2; color: #ffffff; }
+
+
+/* ── Dashboard submenu ── */
+.al2-nav-chevron svg { width: 16px; height: 16px; }
+
+.al2-submenu {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 0 6px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.al2-submenu-item {
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-family: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  padding: 0.55rem 1.5rem 0.55rem 3.3rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.al2-submenu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+.al2-submenu-item--active {
+  color: #ffffff;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.1);
+  border-left-color: #7eb87e;
+}
+
+/* leave a little room above a section when scrolled into view */
+#dash-overview,
+#dash-coordination,
+#dash-statistics,
+#dash-map,
+#dash-recent { scroll-margin-top: 16px; }
+
+
+/* ── Dashboard submenu: separate arrow button + compact (collapsed sidebar) mode ── */
+.al2-nav-row { position: relative; }
+.al2-nav-row .al2-nav-item { width: 100%; box-sizing: border-box; }
+
+.al2-nav-chevron-btn {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.al2-nav-chevron-btn:hover { background: rgba(255, 255, 255, 0.15); color: #ffffff; }
+.al2-nav-chevron-btn svg { width: 16px; height: 16px; transition: transform 0.2s; }
+.al2-nav-chevron-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+.al2-submenu--compact { align-items: center; padding: 4px 0 8px; }
+.al2-submenu--compact .al2-submenu-item {
+  width: 100%;
+  padding: 0.5rem 0;
+  display: flex;
+  justify-content: center;
+}
+.al2-submenu-icon { width: 16px; height: 16px; }
+
+
+/* Expanded sidebar: icon + label side by side */
+.al2-submenu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 2.1rem;
+}
+.al2-submenu-icon { flex-shrink: 0; }

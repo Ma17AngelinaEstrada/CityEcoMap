@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { collection, collectionGroup, getDocs, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
@@ -9,6 +9,19 @@ import { BellIcon } from "../../components/Icons";
 import { useAdminTour } from "../../context/AdminTourContext";
 import OnboardingTour from "../../components/OnboardingTour";
 
+// Sections of the existing Dashboard page (ids are set in AdminDashboard.js)
+const DASHBOARD_SECTIONS = [
+  { id: "dash-overview", label: "Report Overview",
+    icon: "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z M14 3v5h5 M9 13h6 M9 17h6" },
+  { id: "dash-coordination", label: "Coordination Overview",
+    icon: "M17 3l4 4-4 4 M21 7H9a4 4 0 0 0-4 4 M7 21l-4-4 4-4 M3 17h12a4 4 0 0 0 4-4" },
+  { id: "dash-statistics", label: "Report Statistics",
+    icon: "M18 20V10 M12 20V4 M6 20v-6" },
+  { id: "dash-map", label: "Report Map",
+    icon: "M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z M12 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z" },
+  { id: "dash-recent", label: "Recent Reports",
+    icon: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 7v5l3 2" },
+];
 
 // Avatar color class per existing admin role (colors are defined in AdminLayout.css).
 // Unknown roles get no modifier and keep the original green avatar.
@@ -29,6 +42,84 @@ export default function AdminLayout({ children }) {
     return localStorage.getItem("al2-sidebar-collapsed") === "true";
   });
   const [mobileOpen, setMobileOpen] = useState(false);
+    const isDashboard = location.pathname === "/admin/dashboard";
+  const [dashOpen, setDashOpen] = useState(() => {
+    try { return localStorage.getItem("al2-dash-submenu-open") !== "false"; } catch { return true; }
+  });
+  const toggleDash = () => {
+    setDashOpen((o) => {
+      const next = !o;
+      try { localStorage.setItem("al2-dash-submenu-open", String(next)); } catch {}
+      return next;
+    });
+  };
+  const [activeSection, setActiveSection] = useState(DASHBOARD_SECTIONS[0].id);
+  const scrollLockRef = useRef(0);
+
+  // Highlight the section currently in view while scrolling the dashboard
+  useEffect(() => {
+    if (!isDashboard) return;
+    const main = document.querySelector(".al2-main");
+    if (!main) return;
+    const onScroll = () => {
+      // ignore scroll events right after a submenu click (smooth scroll in progress)
+      if (Date.now() - scrollLockRef.current < 900) return;
+      const atBottom = main.scrollTop + main.clientHeight >= main.scrollHeight - 2;
+      if (atBottom) {
+        setActiveSection(DASHBOARD_SECTIONS[DASHBOARD_SECTIONS.length - 1].id);
+        return;
+      }
+      const line = main.getBoundingClientRect().top + 90;
+      let current = DASHBOARD_SECTIONS[0].id;
+      for (const s of DASHBOARD_SECTIONS) {
+        const el = document.getElementById(s.id);
+        if (el && el.getBoundingClientRect().top <= line) current = s.id;
+      }
+      setActiveSection(current);
+    };
+    main.addEventListener("scroll", onScroll, { passive: true });
+    return () => main.removeEventListener("scroll", onScroll);
+  }, [isDashboard]);
+
+  const handleSectionClick = (id) => {
+    // From another page: go to the dashboard first, then scroll once it has loaded
+    if (!isDashboard) {
+      try { sessionStorage.setItem("al2-pending-section", id); } catch {}
+      navigate("/admin/dashboard");
+      setMobileOpen(false);
+      return;
+    }
+    const el = document.getElementById(id);
+    if (!el) return;
+    scrollLockRef.current = Date.now();
+    setActiveSection(id);
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    setMobileOpen(false);
+  };
+
+  // After arriving from another page, scroll to the requested section when it appears
+  useEffect(() => {
+    if (!isDashboard) return;
+    let id = null;
+    try { id = sessionStorage.getItem("al2-pending-section"); } catch {}
+    if (!id) return;
+    let tries = 0;
+    let raf;
+    const attempt = () => {
+      const el = document.getElementById(id);
+      if (el) {
+        try { sessionStorage.removeItem("al2-pending-section"); } catch {}
+        scrollLockRef.current = Date.now();
+        setActiveSection(id);
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      if (tries++ < 600) raf = requestAnimationFrame(attempt);
+    };
+    attempt();
+    return () => cancelAnimationFrame(raf);
+  }, [isDashboard]);
+
   const [pendingReports, setPendingReports] = useState([]);
   const [showNotifs, setShowNotifs] = useState(false);
   const [notifTab, setNotifTab] = useState('new');
@@ -338,20 +429,66 @@ export default function AdminLayout({ children }) {
             )}
 
             <nav className="al2-nav">
-              {visibleNavItems.map((item) => (
-                <button
-                  key={item.path}
-                  className={`al2-nav-item ${location.pathname === item.path ? "al2-nav-item--active" : ""}`}
-                  onClick={() => { navigate(item.path); setMobileOpen(false); }}
-                  title={collapsed ? item.label : undefined}
-                >
-                  <span className="al2-nav-icon">{item.icon}</span>
-                  {(!collapsed || mobileOpen) && <span>{item.label}</span>}
-                  {item.path === "/admin/reports" && visiblePendingReports.length > 0 && (
-                    <span className="al2-nav-badge">{visiblePendingReports.length}</span>
-                  )}
-                </button>
-              ))}
+              {visibleNavItems.map((item) => {
+                const isDashItem = item.path === "/admin/dashboard";
+                const showLabels = !collapsed || mobileOpen;
+                const itemButton = (
+                  <button
+                    className={`al2-nav-item ${location.pathname === item.path ? "al2-nav-item--active" : ""}`}
+                    onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <span className="al2-nav-icon">{item.icon}</span>
+                    {showLabels && <span>{item.label}</span>}
+                    {item.path === "/admin/reports" && visiblePendingReports.length > 0 && (
+                      <span className="al2-nav-badge">{visiblePendingReports.length}</span>
+                    )}
+                  </button>
+                );
+
+                if (!isDashItem) return <Fragment key={item.path}>{itemButton}</Fragment>;
+
+                // Icon-only (collapsed) sidebar always shows the compact submenu
+                const showSubmenu = !showLabels || dashOpen;
+                return (
+                  <Fragment key={item.path}>
+                    <div className="al2-nav-row">
+                      {itemButton}
+                      {showLabels && (
+                        <button
+                          className="al2-nav-chevron-btn"
+                          onClick={toggleDash}
+                          aria-expanded={dashOpen}
+                          aria-label={dashOpen ? "Collapse dashboard sections" : "Expand dashboard sections"}
+                          title={dashOpen ? "Collapse sections" : "Expand sections"}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M6 9l6 6 6-6" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    {showSubmenu && (
+                      <div className={`al2-submenu ${showLabels ? "" : "al2-submenu--compact"}`}>
+                        {DASHBOARD_SECTIONS.map((s) => (
+                          <button
+                            key={s.id}
+                            className={`al2-submenu-item ${isDashboard && activeSection === s.id ? "al2-submenu-item--active" : ""}`}
+                            onClick={() => handleSectionClick(s.id)}
+                            title={s.label}
+                          >
+                            <svg className="al2-submenu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d={s.icon} />
+                            </svg>
+                            {showLabels && <span>{s.label}</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </Fragment>
+                );
+              })}
             </nav>
             <button className="al2-logout" onClick={handleLogout} title={collapsed ? "Logout" : undefined}>
               <span className="al2-nav-icon">{icons.logout}</span>

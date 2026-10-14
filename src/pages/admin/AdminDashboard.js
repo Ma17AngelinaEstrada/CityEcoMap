@@ -508,7 +508,7 @@ export default function AdminDashboard() {
         <p className="ad-loading">Loading reports...</p>
       ) : (
         <>
-          <div className="ad-stats">
+          <div className="ad-stats" id="dash-overview">
             <div className="ad-stat-card ad-stat-card--total">
               <span className="ad-stat-label">Total Reports</span>
               <span className="ad-stat-number">{total}</span>
@@ -544,7 +544,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="ad-coordination-section">
+          <div className="ad-coordination-section" id="dash-coordination">
             <h3 className="ad-coordination-title">Coordination Overview</h3>
             <div className="ad-coordination-stats">
               <div className="ad-coord-card ad-coord-card--active">
@@ -565,7 +565,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="ad-overview-row">
+          <div className="ad-overview-row" id="dash-statistics">
             <div className="ad-overview-left">
               <div className="ad-chart-header">
                 <h3 className="ad-chart-title">Report Statistics — {RANGE_LABELS[chartTimeRange]}</h3>
@@ -742,7 +742,7 @@ export default function AdminDashboard() {
           </div>
 
           <div className="ad-bottom">
-            <div className="ad-map-card">
+            <div className="ad-map-card" id="dash-map">
               <div className="ad-map-header">
                 <h3 className="ad-map-title">Report Map</h3>
                 <button
@@ -994,7 +994,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="ad-table-card">
+          <div className="ad-table-card" id="dash-recent">
             <div className="ad-table-header">
               <h3 className="ad-table-title">Recent Reports</h3>
               <button
