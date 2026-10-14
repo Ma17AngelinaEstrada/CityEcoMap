@@ -581,3 +581,10 @@
   color: #1a4a1a;
   border-bottom-color: #1a4a1a;
 }
+
+
+/* Avatar colors by admin role (fallback = default green above) */
+.al2-avatar--master      { background-color: #475569; color: #ffffff; }
+.al2-avatar--cenro       { background-color: #2E7D32; color: #ffffff; }
+.al2-avatar--emb         { background-color: #B89B52; color: #FFFFFF; }
+.al2-avatar--engineering { background-color: #1976D2; color: #ffffff; }

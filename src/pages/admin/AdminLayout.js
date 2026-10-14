@@ -9,6 +9,16 @@ import { BellIcon } from "../../components/Icons";
 import { useAdminTour } from "../../context/AdminTourContext";
 import OnboardingTour from "../../components/OnboardingTour";
 
+
+// Avatar color class per existing admin role (colors are defined in AdminLayout.css).
+// Unknown roles get no modifier and keep the original green avatar.
+const AVATAR_ROLE_CLASS = {
+  "Master Admin": "al2-avatar--master",
+  "CENRO Admin": "al2-avatar--cenro",
+  "EMB Admin": "al2-avatar--emb",
+  "City Engineering Admin": "al2-avatar--engineering",
+};
+
 export default function AdminLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -317,7 +327,7 @@ export default function AdminLayout({ children }) {
           >
             {currentAdmin && (
               <div className="al2-profile">
-                <div className="al2-avatar">{getInitials(currentAdmin.name)}</div>
+                <div className={`al2-avatar ${AVATAR_ROLE_CLASS[currentAdmin.role] || ""}`}>{getInitials(currentAdmin.name)}</div>
                 {(!collapsed || mobileOpen) && (
                   <div className="al2-profile-info">
                     <span className="al2-profile-name">{currentAdmin.name}</span>
