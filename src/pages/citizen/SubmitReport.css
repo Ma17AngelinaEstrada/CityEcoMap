@@ -542,3 +542,25 @@
   margin: 0;
   gap: 10px;
 }
+
+
+/* Flooding situation options */
+.flood-options { display: flex; flex-direction: column; gap: 8px; }
+
+.flood-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.flood-option:hover { border-color: #1a6b3c; }
+.flood-option--selected { border-color: #1a6b3c; background: #f3faf5; }
+.flood-option input { margin-top: 3px; accent-color: #1a6b3c; flex-shrink: 0; }
+
+.flood-option-text { display: flex; flex-direction: column; gap: 2px; }
+.flood-option-label { font-size: 14px; font-weight: 600; color: #222; }
+.flood-option-desc { font-size: 12px; color: #666; line-height: 1.4; }

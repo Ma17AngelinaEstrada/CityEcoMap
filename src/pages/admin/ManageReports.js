@@ -1538,6 +1538,11 @@ export default function ManageReports() {
                             ? (r.subCategoryOther || "Other")
                             : (r.subCategory || "—")}
                         </div>
+                        {r.floodingCause && (
+                          <div style={{ fontSize: '0.75rem', color: '#888', fontStyle: 'italic' }}>
+                            {r.floodingCause}
+                          </div>
+                        )}
                       </td>
                       <td>{r.areaType || "—"}</td>
                       <td>{formatDate(r.createdAt)}</td>
@@ -1586,6 +1591,7 @@ export default function ManageReports() {
                       <span className="mr-card-sub"> — {r.subCategory === "Other" ? (r.subCategoryOther || "Other") : r.subCategory}</span>
                     )}
                   </div>
+                  {r.floodingCause && <div className="mr-card-row mr-card-sub">{r.floodingCause}</div>}
                   <div className="mr-card-row mr-card-sub">{r.areaType || "—"} · {formatDate(r.createdAt)}</div>
                   {r.description && <div className="mr-card-row mr-card-desc">{r.description}</div>}
                   <div className="mr-card-row mr-card-sub">
@@ -1646,6 +1652,12 @@ export default function ManageReports() {
                     : (selectedReport.subCategory || "—")}
                 </span>
               </div>
+              {selectedReport.floodingCause && (
+                <div className="mr-detail-row">
+                  <span className="mr-detail-label">Flooding Situation</span>
+                  <span className="mr-detail-value">{selectedReport.floodingCause}</span>
+                </div>
+              )}
               <div className="mr-detail-row">
                 <span className="mr-detail-label">Type of Area</span>
                 <span className="mr-detail-value">{selectedReport.areaType || "—"}</span>

@@ -81,6 +81,7 @@ function TrackReport() {
         id: data.reportId,
         category: data.category,
         subCategory: data.subCategory,
+        floodingCause: data.floodingCause || null,
         areaType: data.areaType,
         description: data.description,
         status: data.status,
@@ -137,6 +138,12 @@ function TrackReport() {
                 <span className="detail-label"><TrashIcon /> Category</span>
                 <span className="detail-value">{data.category}</span>
               </div>
+              {data.floodingCause && (
+                <div className="detail-box">
+                  <span className="detail-label"><TrashIcon /> Flooding Situation</span>
+                  <span className="detail-value">{data.floodingCause}</span>
+                </div>
+              )}
               <div className="detail-box">
                 <span className="detail-label"><TrashIcon /> Specific Issue</span>
                 <span className="detail-value">{data.subCategory || '—'}</span>

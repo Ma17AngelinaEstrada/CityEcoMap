@@ -54,6 +54,7 @@ function ReviewSubmit() {
         fullName: form?.fullName || null,
         category: form?.selectedCategory,
         subCategory: form?.subCategory || null,
+        floodingCause: form?.floodingCause || null,
         areaType: form?.areaType || null,
         description: form?.description,
         email: form?.email || null,
@@ -179,6 +180,9 @@ function ReviewSubmit() {
                 <span className="summary-label">Report Type</span>
                 <span className="summary-value">{form?.selectedCategory || 'Not selected'}</span>
                 <span className="summary-desc">{form?.subCategory || ''}</span>
+                {form?.floodingCause && (
+                  <span className="summary-desc">Flooding situation: {form.floodingCause}</span>
+                )}
               </div>
             </div>
             <hr />

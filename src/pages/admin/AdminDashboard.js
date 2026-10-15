@@ -859,6 +859,11 @@ export default function AdminDashboard() {
                                       ? (report.subCategoryOther || "Other")
                                       : (report.subCategory || "—")}
                                   </p>
+                                  {report.floodingCause && (
+                                    <p style={{ fontSize: '0.78rem', color: '#777', marginBottom: 4 }}>
+                                      {report.floodingCause}
+                                    </p>
+                                  )}
                                   <p style={{ fontSize: '0.78rem', color: '#888', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
                                     <CalendarIcon /> {formatDate(report.createdAt)}
                                   </p>
@@ -973,6 +978,9 @@ export default function AdminDashboard() {
                               </span>
                             )}
                           </div>
+                          {report.floodingCause && (
+                            <div className="ad-sidebar-item-date">{report.floodingCause}</div>
+                          )}
                           <div className="ad-sidebar-item-date">{formatDate(report.createdAt)}</div>
                           <div className="ad-priority-cell">
                             <PriorityBadge level={suggestPriority(report).level} compact />
@@ -1051,6 +1059,11 @@ export default function AdminDashboard() {
                             ? (r.subCategoryOther || "Other")
                             : (r.subCategory || "—")}
                         </div>
+                        {r.floodingCause && (
+                          <div style={{ fontSize: '0.75rem', color: '#888', fontStyle: 'italic' }}>
+                            {r.floodingCause}
+                          </div>
+                        )}
                       </td>
                       <td>{r.areaType || "—"}</td>
                       <td>{formatDate(r.createdAt)}</td>
@@ -1100,6 +1113,7 @@ export default function AdminDashboard() {
                       <span className="ad-card-sub"> — {r.subCategory === "Other" ? (r.subCategoryOther || "Other") : r.subCategory}</span>
                     )}
                   </div>
+                  {r.floodingCause && <div className="ad-card-row ad-card-sub">{r.floodingCause}</div>}
                   <div className="ad-card-row ad-card-sub">{r.areaType || "—"} · {formatDate(r.createdAt)}</div>
                   {r.description && <div className="ad-card-row ad-card-desc">{r.description}</div>}
                   <div className="ad-card-row ad-card-sub">Office: {officeLabel(r)}</div>

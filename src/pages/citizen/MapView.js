@@ -336,6 +336,8 @@ function MapView() {
                     <div className="map-popup">
                       <p className="popup-id">#{report.reportId || report.id.slice(0, 6).toUpperCase()}</p>
                       <p className="popup-type">{report.category}</p>
+                      {report.subCategory && <p className="popup-sub">{report.subCategory}</p>}
+                      {report.floodingCause && <p className="popup-sub">{report.floodingCause}</p>}
                       <p className="popup-date"><CalendarIcon /> {formatDate(report.createdAt)}</p>
                       <span
                         className="popup-status"
@@ -496,6 +498,7 @@ function MapView() {
                     </span>
                     <p className="report-mini-id">#{r.reportId}</p>
                     <p className="report-mini-category">{r.category}{r.subCategory ? ` — ${r.subCategory}` : ''}</p>
+                      {r.floodingCause && <p className="report-mini-flood">{r.floodingCause}</p>}
                     <p className="report-mini-date">{formatDate(r.createdAt)}</p>
                     {r.description && (
                       <p className="report-mini-desc">
@@ -529,6 +532,7 @@ function MapView() {
                       </span>
                       <p className="report-mini-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</p>
                       <p className="report-mini-category">{r.category}{r.subCategory ? ` — ${r.subCategory}` : ''}</p>
+                        {r.floodingCause && <p className="report-mini-flood">{r.floodingCause}</p>}
                       <p className="report-mini-date">{formatDate(r.createdAt)}</p>
                       {r.description && (
                         <p className="report-mini-desc">

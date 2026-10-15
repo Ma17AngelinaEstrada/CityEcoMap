@@ -473,7 +473,8 @@ export default function ExportReports() {
         r.fullName || '—',
         r.email || 'Not provided',
         r.category || '—',
-        r.subCategory === "Other" ? (r.subCategoryOther || "Other") : (r.subCategory || '—'),
+        (r.subCategory === "Other" ? (r.subCategoryOther || "Other") : (r.subCategory || '—'))
+          + (r.floodingCause ? ` — ${r.floodingCause}` : ''),
         r.areaType || '—',
         formatDate(r.createdAt),
         r.description || '—',
@@ -741,6 +742,9 @@ export default function ExportReports() {
       ["Category", r.category || "—"],
       ["Sub-Category", r.subCategory === "Other" ? (r.subCategoryOther || "Other") : (r.subCategory || "—")],
     ]);
+    if (r.floodingCause) {
+      fieldRow([["Flooding Situation", r.floodingCause]]);
+    }
     fieldRow([
       ["Submitted By", r.fullName || "—"],
       ["Email", r.email || "Not provided"],
@@ -1412,6 +1416,11 @@ export default function ExportReports() {
                               ? (r.subCategoryOther || "Other")
                               : (r.subCategory || "—")}
                           </div>
+                          {r.floodingCause && (
+                            <div style={{ fontSize: '0.75rem', color: '#888', fontStyle: 'italic' }}>
+                              {r.floodingCause}
+                            </div>
+                          )}
                         </td>
                         <td>{r.areaType || "—"}</td>
                         <td>{formatDate(r.createdAt)}</td>
@@ -1463,6 +1472,7 @@ export default function ExportReports() {
                     <span className="er-card-sub"> — {r.subCategory === "Other" ? (r.subCategoryOther || "Other") : r.subCategory}</span>
                   )}
                 </div>
+                {r.floodingCause && <div className="er-card-row er-card-sub">{r.floodingCause}</div>}
                 <div className="er-card-row er-card-sub">{r.areaType || "—"} · {formatDate(r.createdAt)}</div>
                 {r.description && <div className="er-card-row er-card-desc">{r.description}</div>}
                 <div className="er-card-row er-card-sub">

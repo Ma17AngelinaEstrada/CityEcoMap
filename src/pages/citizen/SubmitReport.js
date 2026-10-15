@@ -42,6 +42,31 @@ const SUB_CATEGORIES = {
   ],
 };
 
+// Follow-up question shown only when Drainage Issue > Flooding is selected.
+// The English label is what gets saved in the report (floodingCause).
+const FLOODING_CAUSES = [
+  {
+    label: 'Flooding associated with clogged drainage',
+    tagalog: 'Pagbaha na may kaugnayan sa baradong drainage o daluyan ng tubig.',
+  },
+  {
+    label: 'Flooding associated with damaged drainage',
+    tagalog: 'Pagbaha na may kaugnayan sa sirang drainage o daluyan ng tubig.',
+  },
+  {
+    label: 'Flooding associated with clogged creeks/natural waterways',
+    tagalog: 'Pagbaha na may kaugnayan sa baradong sapa o natural na daluyan ng tubig.',
+  },
+  {
+    label: 'Flooding during heavy rain',
+    tagalog: 'Pagbaha tuwing malakas ang ulan.',
+  },
+  {
+    label: 'Other / Cause unknown',
+    tagalog: 'Iba pa / Hindi alam ang sanhi.',
+  },
+];
+
 const AREA_TYPES = [
   'Road',
   'Sidewalk',
@@ -118,6 +143,8 @@ function SubmitReport() {
   const [selectedCategory, setSelectedCategory] = useState(previousForm?.selectedCategory || '');
   const [subCategory, setSubCategory] = useState(previousForm?.subCategory || '');
   const [otherSubCategory, setOtherSubCategory] = useState(previousForm?.otherSubCategory || '');
+  const [floodingCause, setFloodingCause] = useState(previousForm?.floodingCause || '');
+  const isFlooding = selectedCategory === 'Drainage Issue' && subCategory === 'Flooding';
   const [areaType, setAreaType] = useState(previousForm?.areaType || '');
   const [otherAreaType, setOtherAreaType] = useState(previousForm?.otherAreaType || '');
   const [description, setDescription] = useState(previousForm?.description || '');
@@ -322,6 +349,10 @@ function SubmitReport() {
       alert('Please select a specific issue type.');
       return;
     }
+    if (isFlooding && !floodingCause) {
+      alert('Please select the flooding situation.');
+      return;
+    }
     if (subCategory === 'Other' && !otherSubCategory.trim()) {
   alert('Please specify the issue type.');
   return;
@@ -369,6 +400,7 @@ function SubmitReport() {
           contactNumber,
           selectedCategory,
           subCategory: subCategory === 'Other' ? otherSubCategory : subCategory,
+          floodingCause: isFlooding ? floodingCause : null,
           areaType: areaType === 'Other' ? otherAreaType : areaType,
           description,
           email,
@@ -481,6 +513,33 @@ function SubmitReport() {
                 />
               )}
               </>
+              )}
+
+              {isFlooding && (
+                <>
+                  <div className="section-label">FLOODING SITUATION <span className="required">(Required)</span></div>
+                  <p className="notify-note">Choose the option that best describes the flooding.</p>
+                  <div className="flood-options" id="field-flooding-cause">
+                    {FLOODING_CAUSES.map((opt) => (
+                      <label
+                        key={opt.label}
+                        className={`flood-option ${floodingCause === opt.label ? 'flood-option--selected' : ''}`}
+                      >
+                        <input
+                          type="radio"
+                          name="floodingCause"
+                          value={opt.label}
+                          checked={floodingCause === opt.label}
+                          onChange={() => setFloodingCause(opt.label)}
+                        />
+                        <span className="flood-option-text">
+                          <span className="flood-option-label">{opt.label}</span>
+                          <span className="flood-option-desc">{opt.tagalog}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </>
               )}
 
               {selectedCategory && (

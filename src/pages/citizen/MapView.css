@@ -656,3 +656,6 @@
   color: #1a4a1a;
   border-bottom-color: #1a6b3c;
 }
+
+.popup-sub { margin: 0 0 4px; font-size: 12px; color: #777; font-style: italic; }
+.report-mini-flood { margin: 0; font-size: 12px; color: #777; font-style: italic; }
