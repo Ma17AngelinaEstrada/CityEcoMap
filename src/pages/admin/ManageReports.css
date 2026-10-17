@@ -1103,3 +1103,164 @@
 @media (max-width: 800px) {
   .mr-detail-header { position: sticky; top: 0; z-index: 3; }
 }
+
+/* ── Page header: title/subtitle on the left, search on the right ── */
+.mr-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  flex-wrap: wrap;
+}
+
+.mr-header-text {
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+.mr-header-search {
+  flex: 0 1 320px;
+  min-width: 220px;
+}
+
+.mr-header-search .mr-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  font-size: 0.85rem;
+}
+
+/* ── Filter card ── */
+.mr-filters {
+  background: #fff;
+  border: 1px solid #e0ddd5;
+  border-radius: 10px;
+  padding: 14px 16px 16px;
+  gap: 0.75rem 0.9rem;
+}
+
+.mr-filters-head {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mr-filters-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: sans-serif;
+}
+
+@media (max-width: 900px) {
+  .mr-filters-head { grid-column: 1 / -1; }
+  .mr-filters-head .mr-clear-btn {
+    grid-column: auto;
+    width: auto;
+  }
+}
+
+/* ── Table toolbar (total count, integrated with the table card) ── */
+.mr-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e0ddd5;
+}
+
+.mr-table-title {
+  font-family: sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1a4a1a;
+}
+
+.mr-table-count {
+  font-weight: 500;
+  color: #888;
+  margin-left: 4px;
+}
+
+.mr-cards-count {
+  font-family: sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1a4a1a;
+}
+
+/* ── Reports table: balanced columns, readable at desktop widths ── */
+
+.mr-table th {
+  background: #f9f7f2;
+  color: #555;
+  font-size: 0.76rem;
+  vertical-align: middle;
+  padding: 0.7rem 0.65rem;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.mr-table td {
+  padding: 0.75rem 0.65rem;
+  line-height: 1.45;
+  border-bottom: 1px solid #eeebe2;
+  /* wrap at spaces; only break a word if it truly cannot fit (long emails/addresses) */
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Keep short, fixed-format columns on one line: Report ID (1) and Status (11) */
+.mr-table th:nth-child(1),
+.mr-table td:nth-child(1),
+.mr-table th:nth-child(11),
+.mr-table td:nth-child(11) {
+  white-space: nowrap;
+}
+.mr-table td.mr-empty { white-space: normal; }
+
+/* Office names: break at spaces, never inside "Engineering" */
+.mr-table td:nth-child(9),
+.mr-table td:nth-child(10) {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.mr-table .mr-badge {
+  white-space: nowrap;
+  padding: 4px 10px;
+}
+
+/* Narrow desktops (no horizontal scroll): tighten text and padding a little so columns still fit */
+@media (min-width: 901px) and (max-width: 1500px) {
+  .mr-table { font-size: 0.74rem; }
+  .mr-table th { font-size: 0.72rem; padding: 0.6rem 0.45rem; }
+  .mr-table td { padding: 0.65rem 0.45rem; }
+  .mr-table .mr-badge { padding: 3px 8px; font-size: 0.72rem; }
+}
+
+/* Search icon inside the header search box */
+.mr-header-search { position: relative; }
+
+.mr-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: #888;
+  pointer-events: none;
+}
+
+.mr-header-search .mr-search { padding-left: 36px; }
+
+/* ── Tighter gap between the page title and the Filters card ── */
+.mr-header {
+  margin-bottom: 1rem;
+}
+

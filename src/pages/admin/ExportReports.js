@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useLayoutEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs, getDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
@@ -6,7 +6,7 @@ import { auth, db } from "../../firebase/firebase";
 import jsPDF from "jspdf";
 import { ACTIVE_OFFICE_LIST, isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import AdminLayout from "./AdminLayout";
 import "./ExportReports.css";
 import { reverseGeocode, isCached } from '../../utils/geocode';
@@ -23,7 +23,7 @@ const EXPORT_REPORTS_TOUR_STEPS = [
   {
     selector: '.er-filters',
     title: 'Filter Before Exporting',
-    description: 'Narrow down which reports to export by status, category, sub-category, Primary Office (Master Admin), date range, or a keyword/Report ID search.',
+    description: 'Narrow down which reports to export by status, category, sub-category, Primary Office (Master Admin), Supporting Office, or date range. Use the search bar in this card to find a keyword or Report ID.',
   },
   {
     selector: '.er-summary-bar',
@@ -32,8 +32,8 @@ const EXPORT_REPORTS_TOUR_STEPS = [
   },
   {
     selector: '.er-chart-preview',
-    title: 'Include a Chart',
-    description: 'Turn on "Include chart" to add a visual summary (by Category, Sub-Category, or Status) to your PDF export.',
+    title: 'Charts',
+    description: 'The charts always show a summary of the reports that match your filters. Use "Chart View" to switch between Category, Sub-Category, and Status. Check "Include chart in PDF" in Export Options to add them to your PDF export.',
   },
   {
     selector: '.er-table-card',
@@ -77,6 +77,7 @@ export default function ExportReports() {
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterCategory, setFilterCategory] = useState("All");
   const [filterAssigned, setFilterAssigned] = useState("All");
+  const [filterSupporting, setFilterSupporting] = useState("All");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [exportHistory, setExportHistory] = useState([]);
@@ -85,7 +86,38 @@ export default function ExportReports() {
   const [quickRange, setQuickRange] = useState("custom");
   const [specificMonth, setSpecificMonth] = useState("");
   const [includeChart, setIncludeChart] = useState(false);
+  
   const chartRef = useRef(null);
+
+  // Tracks whether the sticky filters/export zone is docked at the top while scrolling
+  const zoneRef = useRef(null);
+  const [isStuck, setIsStuck] = useState(false);
+
+  useEffect(() => {
+    const update = () => {
+      const zone = zoneRef.current;
+      const scroller = zone && zone.closest(".al2-main");
+      if (!zone || !scroller) return;
+      setIsStuck(zone.getBoundingClientRect().top <= scroller.getBoundingClientRect().top + 1);
+    };
+    update();
+    document.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      document.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  // Keep the cursor in the search box when it swaps between header and sticky bar
+  useLayoutEffect(() => {
+    const headerInput = document.querySelector(".er-header .er-search");
+    const stickyInput = document.querySelector(".er-sticky-search .er-search");
+    const active = document.activeElement;
+    if (isStuck && active === headerInput && stickyInput) stickyInput.focus();
+    else if (!isStuck && active === stickyInput && headerInput) headerInput.focus();
+  }, [isStuck]);
+
   const [chartView, setChartView] = useState("category"); // "category" | "subcategory" | "status"
   const [chartParentCategory, setChartParentCategory] = useState("Waste Issue");
   const [adminNames, setAdminNames] = useState({});
@@ -100,17 +132,12 @@ export default function ExportReports() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const CHART_STEP_INDEX = 2;
-  const HISTORY_STEP_INDEX = 4;
+    const HISTORY_STEP_INDEX = 4;
 
   useEffect(() => {
     if (!showTour) {
-      setIncludeChart(false);
       setShowHistory(false);
       return;
-    }
-    if (currentStepIndex === CHART_STEP_INDEX) {
-      setIncludeChart(true);
     }
     if (currentStepIndex === HISTORY_STEP_INDEX) {
       setShowHistory(true);
@@ -271,6 +298,8 @@ export default function ExportReports() {
     })();
 
     const matchAssigned = !isMaster || filterAssigned === "All" || r.primaryOffice === filterAssigned;
+    const matchSupporting = filterSupporting === "All" ||
+      (r.supportingOffices || []).some((so) => so.officeId === filterSupporting);
 
     const cleanedSearch = searchQuery.replace(/#/g, "").trim().toLowerCase();
       const matchSearch = cleanedSearch === "" ||
@@ -289,7 +318,7 @@ export default function ExportReports() {
           }
         }
       }
-      return matchStatus && matchCategory && matchSubCategory && matchAssigned && matchSearch && matchDate;
+        return matchStatus && matchCategory && matchSubCategory && matchAssigned && matchSupporting && matchSearch && matchDate;
     });
 
   const formatDate = (ts) => {
@@ -478,7 +507,7 @@ export default function ExportReports() {
         r.areaType || '—',
         formatDate(r.createdAt),
         r.description || '—',
-        locationParts.join(' — ') || '—',
+        locationParts.join('\n') || '—',
         officeLabel(r),
         supportingOfficesLabel(r),
         r.status || 'Pending',
@@ -590,7 +619,23 @@ export default function ExportReports() {
       body: buildRows(),
       styles: { fontSize: 7, cellPadding: 2 },
       headStyles: { fillColor: [26, 74, 26], textColor: 255 },
-      columnStyles: { 6: { cellWidth: 40 }, 7: { cellWidth: 45 } },
+      rowPageBreak: 'avoid',
+      // Fixed widths (mm) for all 13 columns. Total = 269 mm = A4 landscape width minus 14 mm margins.
+      columnStyles: {
+        0:  { cellWidth: 18 },  // Report ID
+        1:  { cellWidth: 17 },  // Submitted By
+        2:  { cellWidth: 20 },  // Email
+        3:  { cellWidth: 16 },  // Category
+        4:  { cellWidth: 22 },  // Sub-Category
+        5:  { cellWidth: 18 },  // Type of Area
+        6:  { cellWidth: 21 },  // Date Submitted
+        7:  { cellWidth: 24 },  // Description
+        8:  { cellWidth: 42 },  // Location
+        9:  { cellWidth: 19 },  // Primary Office
+        10: { cellWidth: 19 },  // Supporting Office
+        11: { cellWidth: 15 },  // Status
+        12: { cellWidth: 18 },  // Suggested Priority
+      },
     });
 
     const afterTableY = docPdf.lastAutoTable?.finalY;
@@ -624,19 +669,32 @@ export default function ExportReports() {
     const wsData = [headers, ...rows];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    const MIN_WIDTH = 10;
-    const MAX_WIDTH = 45;
-    ws["!cols"] = headers.map((header, colIndex) => {
-      let maxLen = String(header).length;
-      rows.forEach((row) => {
-        const cell = row[colIndex];
-        if (cell != null) {
-          const len = String(cell).length;
-          if (len > maxLen) maxLen = len;
-        }
-      });
-      return { wch: Math.min(Math.max(maxLen + 2, MIN_WIDTH), MAX_WIDTH) };
-    });
+    // Fixed column widths (characters). Text wraps inside each cell, so long columns stay readable.
+    const COL_WIDTHS = [12, 16, 24, 16, 28, 20, 22, 40, 48, 16, 20, 12, 18];
+    ws["!cols"] = COL_WIDTHS.map((wch) => ({ wch }));
+    ws["!rows"] = [{ hpt: 26 }]; // taller header row; data rows auto-fit to their wrapped text
+
+    const thin = { style: "thin", color: { rgb: "D9D6CC" } };
+    const borders = { top: thin, bottom: thin, left: thin, right: thin };
+
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+        if (!cell) continue;
+        cell.s = R === 0
+          ? {
+              font: { bold: true, color: { rgb: "FFFFFF" } },
+              fill: { fgColor: { rgb: "1A4A1A" } },
+              alignment: { vertical: "center", horizontal: "left", wrapText: true },
+              border: borders,
+            }
+          : {
+              alignment: { vertical: "top", horizontal: "left", wrapText: true },
+              border: borders,
+            };
+      }
+    }
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Reports");
@@ -695,41 +753,77 @@ export default function ExportReports() {
     };
 
     const sectionHeader = (title) => {
-      checkPageBreak(9);
+      checkPageBreak(17); // keep the header together with at least one row
       docPdf.setFillColor(232, 245, 232);
-      docPdf.rect(marginX, y, contentWidth, 7, 'F');
+      docPdf.rect(marginX, y, contentWidth, 6, 'F');
       docPdf.setDrawColor(210);
-      docPdf.rect(marginX, y, contentWidth, 7);
-      docPdf.setFontSize(8.5);
+      docPdf.rect(marginX, y, contentWidth, 6);
+      docPdf.setFontSize(8);
       docPdf.setFont(undefined, 'bold');
       docPdf.setTextColor(26, 74, 26);
-      docPdf.text(title.toUpperCase(), marginX + 3, y + 4.8);
+      docPdf.text(title.toUpperCase(), marginX + 3, y + 4.2);
       docPdf.setFont(undefined, 'normal');
-      y += 7;
+      y += 6;
     };
 
-    const fieldRow = (pairs) => {
-      checkPageBreak(13);
-      const colWidth = contentWidth / pairs.length;
+    // cells: [label, value]. value is text, or { badge: "Pending", color: [r, g, b] }
+    // weights (optional): relative column widths, e.g. [2, 1, 1]
+    const fieldRow = (cells, weights) => {
+      const w = weights || cells.map(() => 1);
+      const totalW = w.reduce((a, b) => a + b, 0);
+      const colWidths = w.map((x) => (contentWidth * x) / totalW);
+
+      docPdf.setFont(undefined, 'normal');
+      docPdf.setFontSize(9);
+      const prepared = cells.map(([label, value], i) => ({
+        label,
+        value,
+        lines: value !== null && typeof value === "object"
+          ? []
+          : docPdf.splitTextToSize(String(value || "—"), colWidths[i] - 4),
+      }));
+      const maxLines = Math.max(1, ...prepared.map((c) => c.lines.length));
+      const rowHeight = 6.2 + maxLines * 3.7;
+      checkPageBreak(rowHeight);
+
       const rowStartY = y;
-      let maxLines = 1;
-      pairs.forEach(([label, value], i) => {
-        docPdf.setFontSize(7.5);
+      let x = marginX;
+      prepared.forEach((c, i) => {
+        docPdf.setFont(undefined, 'normal');
+        docPdf.setFontSize(6.5);
         docPdf.setTextColor(120);
-        docPdf.text(label.toUpperCase(), marginX + i * colWidth + 2, rowStartY + 3.8);
-        docPdf.setFontSize(10);
-        docPdf.setTextColor(30);
-        const lines = docPdf.splitTextToSize(value || "—", colWidth - 4);
-        docPdf.text(lines, marginX + i * colWidth + 2, rowStartY + 8.5);
-        maxLines = Math.max(maxLines, lines.length);
+        docPdf.text(c.label.toUpperCase(), x + 2, rowStartY + 3.3);
+        if (c.value !== null && typeof c.value === "object") {
+          const text = c.value.badge;
+          docPdf.setFontSize(8);
+          docPdf.setFont(undefined, 'bold');
+          const badgeW = docPdf.getTextWidth(text) + 7;
+          docPdf.setFillColor(...c.value.color);
+          docPdf.roundedRect(x + 2, rowStartY + 4.3, badgeW, 5, 2.5, 2.5, 'F');
+          docPdf.setTextColor(255, 255, 255);
+          docPdf.text(text, x + 2 + badgeW / 2, rowStartY + 7.8, { align: 'center' });
+          docPdf.setFont(undefined, 'normal');
+        } else {
+          docPdf.setFontSize(9);
+          docPdf.setTextColor(30);
+          docPdf.text(c.lines, x + 2, rowStartY + 7.4);
+        }
+        x += colWidths[i];
       });
-      const rowHeight = 8 + maxLines * 4.3 + 1;
+
       docPdf.setDrawColor(230);
       docPdf.rect(marginX, rowStartY, contentWidth, rowHeight);
-      if (pairs.length > 1) {
-        docPdf.line(marginX + colWidth, rowStartY, marginX + colWidth, rowStartY + rowHeight);
-      }
+      let lineX = marginX;
+      colWidths.slice(0, -1).forEach((cw) => {
+        lineX += cw;
+        docPdf.line(lineX, rowStartY, lineX, rowStartY + rowHeight);
+      });
       y = rowStartY + rowHeight;
+    };
+
+    const statusColorMap = {
+      Pending: [229, 57, 53], Approved: [21, 101, 192], Ongoing: [249, 168, 37],
+      Resolved: [46, 125, 50], Rejected: [117, 117, 117],
     };
 
     // ---- Report Information ----
@@ -737,145 +831,166 @@ export default function ExportReports() {
     fieldRow([
       ["Report ID", `#${r.reportId || r.id.slice(0, 6).toUpperCase()}`],
       ["Date Submitted", formatDate(r.createdAt)],
+      ["Status", { badge: r.status || "Pending", color: statusColorMap[r.status] || [117, 117, 117] }],
     ]);
-    fieldRow([
+    const categoryCells = [
       ["Category", r.category || "—"],
       ["Sub-Category", r.subCategory === "Other" ? (r.subCategoryOther || "Other") : (r.subCategory || "—")],
-    ]);
+    ];
     if (r.floodingCause) {
-      fieldRow([["Flooding Situation", r.floodingCause]]);
+      categoryCells.push(["Flooding Situation", r.floodingCause]);
     }
+    fieldRow(categoryCells);
     fieldRow([
       ["Submitted By", r.fullName || "—"],
       ["Email", r.email || "Not provided"],
-    ]);
-    fieldRow([
       ["Contact Number", contactNumber || "Not provided"],
     ]);
 
-    y += 2;
-
-    // ---- Location ----
-    sectionHeader("Location");
-    fieldRow([["Address", r.addressInput || "—"]]);
-    fieldRow([["Exact Spot", r.locationDescription || "Not provided by citizen"]]);
-    if (r.location?.lat && r.location?.lng) {
-      fieldRow([
-        ["Latitude", r.location.lat.toFixed(5)],
-        ["Longitude", r.location.lng.toFixed(5)],
-      ]);
-    }
-
-    y += 2;
-
-    // ---- Type of Area & Status (side by side) ----
-    sectionHeader("Type of Area & Status");
-    checkPageBreak(20);
-    const halfWidth = contentWidth / 2;
-    const rowTop = y;
-
-    // Kaliwa: Type of Area (simpleng text field na lang, hindi na checkbox grid)
-    docPdf.setFontSize(7);
-    docPdf.setTextColor(120);
-    docPdf.text("TYPE OF AREA", marginX + 2, rowTop + 4);
-    docPdf.setFontSize(10);
-    docPdf.setTextColor(30);
-    docPdf.text(r.areaType || "Not specified", marginX + 2, rowTop + 9);
-
-    // Kanan: Status badge + Assigned To
-    const statusColorMap = {
-      Pending: [229, 57, 53], Approved: [21, 101, 192], Ongoing: [249, 168, 37],
-      Resolved: [46, 125, 50], Rejected: [117, 117, 117],
-    };
-    const [sr, sg, sb] = statusColorMap[r.status] || [117, 117, 117];
-    docPdf.setFontSize(7);
-    docPdf.setTextColor(120);
-    docPdf.text("STATUS", marginX + halfWidth + 2, rowTop + 4);
-    docPdf.setFillColor(sr, sg, sb);
-    docPdf.roundedRect(marginX + halfWidth + 2, rowTop + 5.5, 28, 6, 3, 3, 'F');
-    docPdf.setFontSize(8);
-    docPdf.setTextColor(255, 255, 255);
-    docPdf.setFont(undefined, 'bold');
-    docPdf.text(r.status || "Pending", marginX + halfWidth + 16, rowTop + 9.3, { align: 'center' });
-    docPdf.setFont(undefined, 'normal');
-    docPdf.setFontSize(8);
-    docPdf.setTextColor(80);
-    docPdf.text(`Office: ${officeLabel(r)}`, marginX + halfWidth + 34, rowTop + 9.3);
-
-    const rowHeight = 13;
-    docPdf.setDrawColor(230);
-    docPdf.rect(marginX, rowTop, contentWidth, rowHeight);
-    docPdf.line(marginX + halfWidth, rowTop, marginX + halfWidth, rowTop + rowHeight);
-    y = rowTop + rowHeight;
-
     if (r.status === "Rejected" && r.rejectionReason) {
-      checkPageBreak(10);
-      const lines = docPdf.splitTextToSize(`Rejection Reason: ${r.rejectionReason}`, contentWidth - 4);
       docPdf.setFontSize(8.5);
-      docPdf.setTextColor(183, 28, 28);
       docPdf.setFont(undefined, 'italic');
+      const lines = docPdf.splitTextToSize(`Rejection Reason: ${r.rejectionReason}`, contentWidth - 4);
+      checkPageBreak(lines.length * 4 + 4);
+      docPdf.setTextColor(183, 28, 28);
       docPdf.text(lines, marginX + 2, y + 4);
       docPdf.setFont(undefined, 'normal');
       y += lines.length * 4 + 4;
     }
-    y += 2;
+
+    y += 1.5;
+
+    // ---- Location ----
+    sectionHeader("Location");
+    fieldRow([["Address", r.addressInput || "—"]]);
+    const spotCells = [["Exact Spot", r.locationDescription || "Not provided by citizen"]];
+    if (r.location?.lat && r.location?.lng) {
+      spotCells.push(["Latitude", r.location.lat.toFixed(5)]);
+      spotCells.push(["Longitude", r.location.lng.toFixed(5)]);
+    }
+    fieldRow(spotCells, spotCells.length === 3 ? [2, 1, 1] : undefined);
+
+    y += 1.5;
 
     // ---- Coordination ----
     sectionHeader("Coordination");
     fieldRow([
       ["Primary Office", officeLabel(r)],
       ["Supporting Office", supportingOfficesLabel(r)],
+      ["Type of Area", r.areaType || "Not specified"],
     ]);
-
     const suggested = suggestPriority(r);
     fieldRow([["Suggested Priority (system-generated)", `${suggested.level} — ${suggested.reason}`]]);
- 
-    y += 2;
+
+    y += 1.5;
+
+    // ---- Prepare photos first (needed to size the Description and photo areas) ----
+    const photosForPdf = r.photos?.length ? r.photos : (r.photo ? [r.photo] : []);
+    const PHOTO_MAX_H = 70; // preferred (existing) maximum photo height, mm
+    const PHOTO_MIN_H = 40; // below this, photos move to the next page instead of shrinking
+    const photoGap = 4;
+    const photoItems = [];
+    photosForPdf.forEach((src) => {
+      try {
+        photoItems.push({ src, props: docPdf.getImageProperties(src) });
+      } catch (err) {
+        console.error("Failed to read photo properties:", err);
+      }
+    });
+    const photoColWidth = photoItems.length
+      ? (contentWidth - 4 - photoGap * (photoItems.length - 1)) / photoItems.length
+      : 0;
+    docPdf.setFont(undefined, 'italic');
+    docPdf.setFontSize(8);
+    const caption = `${photosForPdf.length > 1 ? `Figures 1–${photosForPdf.length}` : 'Figure 1'}. Photo${photosForPdf.length > 1 ? 's' : ''} of the reported issue${r.locationDescription ? ` at ${r.locationDescription}` : ""}.`;
+    const capLines = docPdf.splitTextToSize(caption, contentWidth - 4);
+    docPdf.setFont(undefined, 'normal');
+    const photoOverhead = 19 + capLines.length * 4; // everything in the photo area except the images
+    const naturalPhotoH = photoItems.length
+      ? Math.max(...photoItems.map(({ props }) => Math.min(PHOTO_MAX_H, (props.height * photoColWidth) / props.width)))
+      : 0;
+    const photoNeedH = Math.min(naturalPhotoH, PHOTO_MIN_H);
+
+    // Draws text in a bordered box and continues on a new page if the text does not fit (nothing is cut off)
+    const drawTextBox = (lines, fontSize, perLine, extra) => {
+      let rest = lines;
+      while (rest.length > 0) {
+        let cap = Math.floor((280 - y - extra) / perLine);
+        if (cap < 1) {
+          docPdf.addPage();
+          y = 18;
+          cap = Math.floor((280 - y - extra) / perLine);
+        }
+        const chunk = rest.slice(0, cap);
+        rest = rest.slice(cap);
+        docPdf.setFont(undefined, 'normal');
+        docPdf.setFontSize(fontSize);
+        docPdf.setTextColor(40);
+        docPdf.text(chunk, marginX + 2, y + 5);
+        const boxH = chunk.length * perLine + extra;
+        docPdf.setDrawColor(230);
+        docPdf.rect(marginX, y, contentWidth, boxH);
+        y += boxH;
+        if (rest.length > 0) {
+          docPdf.addPage();
+          y = 18;
+        }
+      }
+    };
 
     // ---- Description ----
     sectionHeader("Description");
-    checkPageBreak(20);
-    const descLines = docPdf.splitTextToSize(r.description || "—", contentWidth - 4);
+    docPdf.setFont(undefined, 'normal');
     docPdf.setFontSize(10);
-    docPdf.setTextColor(40);
-    docPdf.text(descLines, marginX + 2, y + 5);
-    const descBoxHeight = descLines.length * 5 + 5;
-    docPdf.setDrawColor(230);
-    docPdf.rect(marginX, y, contentWidth, descBoxHeight);
-    y += descBoxHeight + 1.5;
+    let descLines = docPdf.splitTextToSize(r.description || "—", contentWidth - 4);
+    let descFont = 10;
+    let descPerLine = 5;
+    let descExtra = 5;
+    if (photoItems.length > 0) {
+      // Keep the normal box when the photos still fit; compact it only when that is what makes them fit
+      const needed = photoOverhead + photoNeedH;
+      const spaceAfter = (boxH) => 280 - (y + boxH + 1.5);
+      if (spaceAfter(descLines.length * 5 + 5) < needed) {
+        docPdf.setFontSize(9);
+        const compactLines = docPdf.splitTextToSize(r.description || "—", contentWidth - 4);
+        if (spaceAfter(compactLines.length * 3.9 + 4.5) >= needed) {
+          descLines = compactLines;
+          descFont = 9;
+          descPerLine = 3.9;
+          descExtra = 4.5;
+        }
+      }
+    }
+    drawTextBox(descLines, descFont, descPerLine, descExtra);
+    y += 1.5;
 
     // ---- Photo Documentation ----
-    const photosForPdf = r.photos?.length ? r.photos : (r.photo ? [r.photo] : []);
-    if (photosForPdf.length > 0) {
-      checkPageBreak(90);
+    if (photoItems.length > 0) {
+      let availH = 280 - y - photoOverhead;
+      if (availH < photoNeedH) {
+        // not enough room to keep the photos readable here: continue on a new page
+        docPdf.addPage();
+        y = 18;
+        availH = 280 - y - photoOverhead;
+      }
+      const maxPhotoHeight = Math.min(PHOTO_MAX_H, availH);
       sectionHeader("Photo Documentation");
-      const gap = 4;
-      const colWidth = (contentWidth - 4 - gap * (photosForPdf.length - 1)) / photosForPdf.length;
-      const maxPhotoHeight = 70;
       let rowHeight = 0;
-      const placements = [];
-      photosForPdf.forEach((src, i) => {
-        try {
-          const props = docPdf.getImageProperties(src);
-          const scale = Math.min(colWidth / props.width, maxPhotoHeight / props.height);
-          const imgW = props.width * scale;
-          const imgH = props.height * scale;
-          placements.push({
-            src, imgW, imgH,
-            x: marginX + 2 + i * (colWidth + gap) + (colWidth - imgW) / 2,
-          });
-          rowHeight = Math.max(rowHeight, imgH);
-        } catch (err) {
-          console.error("Failed to read photo properties:", err);
-        }
+      const placements = photoItems.map(({ src, props }, i) => {
+        const scale = Math.min(photoColWidth / props.width, maxPhotoHeight / props.height);
+        const imgW = props.width * scale;
+        const imgH = props.height * scale;
+        rowHeight = Math.max(rowHeight, imgH);
+        return {
+          src, imgW, imgH,
+          x: marginX + 2 + i * (photoColWidth + photoGap) + (photoColWidth - imgW) / 2,
+        };
       });
       placements.forEach((p) => docPdf.addImage(p.src, "JPEG", p.x, y + 3, p.imgW, p.imgH));
       y += rowHeight + 6;
       docPdf.setFontSize(8);
       docPdf.setTextColor(110);
       docPdf.setFont(undefined, 'italic');
-      const caption = `${photosForPdf.length > 1 ? `Figures 1–${photosForPdf.length}` : 'Figure 1'}. Photo${photosForPdf.length > 1 ? 's' : ''} of the reported issue${r.locationDescription ? ` at ${r.locationDescription}` : ""}.`;
-      const capLines = docPdf.splitTextToSize(caption, contentWidth - 4);
       docPdf.text(capLines, marginX + 2, y);
       docPdf.setFont(undefined, 'normal');
       y += capLines.length * 4 + 4;
@@ -1001,11 +1116,80 @@ export default function ExportReports() {
   return (
     <AdminLayout>
       <div className="er-header">
-        <h2 className="er-title">Generate & Export Reports</h2>
-        <p className="er-subtitle">Filter reports and export them as PDF or Excel for record-keeping.</p>
+        <div className="er-header-text">
+          <h2 className="er-title">Generate & Export Reports</h2>
+          <p className="er-subtitle">Filter reports and export them as PDF or Excel for record-keeping.</p>
+        </div>
+        <div className="er-header-search">
+          <svg
+            className="er-search-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            className="er-search"
+            placeholder="Search Report ID or keyword..."
+            aria-label="Search reports"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
-      <div className="er-filters">
+      <div ref={zoneRef} className={`er-sticky-zone${isStuck ? " er-sticky-zone--stuck" : ""}`}>
+        <div className="er-filters">
+        <div className="er-filters-head">
+          <span className="er-filters-title">Filters</span>
+            <div className="er-header-search er-sticky-search">
+            <svg
+              className="er-search-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              className="er-search"
+              placeholder="Search Report ID or keyword..."
+              aria-label="Search reports"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <button
+            className="er-clear-btn"
+            onClick={() => {
+              setFilterStatus("All");
+              setFilterCategory("All");
+              setFilterSubCategory("All");
+              setFilterAssigned("All");
+              setFilterSupporting("All");
+              setSearchQuery("");
+              setDateFrom("");
+              setDateTo("");
+              setQuickRange("custom");
+              setSpecificMonth("");
+            }}
+          >
+            Clear Filters
+          </button>
+        </div>
         <div className="er-filter-group">
           <label>Status</label>
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
@@ -1067,13 +1251,11 @@ export default function ExportReports() {
           </div>
         )}
         <div className="er-filter-group">
-          <label>Search</label>
-          <input
-            type="text"
-            placeholder="Report ID or keyword..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          <label>Supporting Office</label>
+          <select value={filterSupporting} onChange={(e) => setFilterSupporting(e.target.value)}>
+            <option>All</option>
+            {ACTIVE_OFFICE_LIST.map((o) => <option key={o}>{o}</option>)}
+          </select>
         </div>
         <div className="mr-filters-tail">
           <div className="er-filter-group">
@@ -1113,56 +1295,24 @@ export default function ExportReports() {
               />
             </div>
           </div>
-          <button
-            className="er-clear-btn"
-            onClick={() => {
-              setFilterStatus("All");
-              setFilterCategory("All");
-              setFilterSubCategory("All");
-              setFilterAssigned("All");
-              setSearchQuery("");
-              setDateFrom("");
-              setDateTo("");
-              setQuickRange("custom");
-              setSpecificMonth("");
-            }}
-          >
-            Clear Filters
-          </button>
         </div>
       </div>
 
-      <div className="er-summary-bar">
-        <span className="er-count">{filtered.length} report{filtered.length !== 1 ? "s" : ""} match your filters</span>
+      <div className="er-summary-bar er-export-options">
+        <div className="er-options-text">
+          <span className="er-options-title">Export Options</span>
+          <p className="er-options-hint">
+            Charts are always shown on this page. "Include chart in PDF" only adds them to the exported PDF.
+          </p>
+        </div>
         <div className="er-export-btns">
-          {includeChart && (
-            <>
-              <div className="er-filter-group" style={{ marginBottom: 0 }}>
-                <label>Chart View</label>
-                <select value={chartView} onChange={(e) => setChartView(e.target.value)}>
-                  <option value="category">By Category</option>
-                  <option value="subcategory">By Sub-Category</option>
-                  <option value="status">By Status</option>
-                </select>
-              </div>
-              {chartView === "subcategory" && (
-                <div className="er-filter-group" style={{ marginBottom: 0 }}>
-                  <label>Category</label>
-                  <select value={chartParentCategory} onChange={(e) => setChartParentCategory(e.target.value)}>
-                    <option value="Waste Issue">Waste Issue</option>
-                    <option value="Drainage Issue">Drainage Issue</option>
-                  </select>
-                </div>
-              )}
-            </>
-          )}
           <label className="er-chart-toggle">
             <input
               type="checkbox"
               checked={includeChart}
               onChange={(e) => setIncludeChart(e.target.checked)}
             />
-            Include chart
+            Include chart in PDF
           </label>
           <button className="er-export-btn er-export-btn--pdf" onClick={handleExportPDF} disabled={filtered.length === 0}>
             📄 Export as PDF
@@ -1180,6 +1330,7 @@ export default function ExportReports() {
             🕒 Export History
           </button>
         </div>
+      </div>
       </div>
 
       {showHistory && (
@@ -1214,7 +1365,33 @@ export default function ExportReports() {
         </div>
       )}
 
-            {includeChart && (
+      <div className="er-chart-section">
+        <div className="er-section-head">
+          <div className="er-section-text">
+            <h3 className="er-section-title">Charts</h3>
+            <p className="er-section-sub">Summary of the reports that match your filters.</p>
+          </div>
+          <div className="er-chart-controls">
+            <div className="er-filter-group">
+              <label>Chart View</label>
+              <select value={chartView} onChange={(e) => setChartView(e.target.value)}>
+                <option value="category">By Category</option>
+                <option value="subcategory">By Sub-Category</option>
+                <option value="status">By Status</option>
+              </select>
+            </div>
+            {chartView === "subcategory" && (
+              <div className="er-filter-group">
+                <label>Category</label>
+                <select value={chartParentCategory} onChange={(e) => setChartParentCategory(e.target.value)}>
+                  <option value="Waste Issue">Waste Issue</option>
+                  <option value="Drainage Issue">Drainage Issue</option>
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div
           ref={chartRef}
           className="er-chart-preview"
@@ -1222,8 +1399,6 @@ export default function ExportReports() {
             background: "#fff",
             padding: "20px",
             width: "100%",
-            maxWidth: "1400px",
-            marginBottom: "24px",
             borderRadius: "10px",
             border: "1px solid #e0ddd5",
             display: "flex",
@@ -1360,28 +1535,31 @@ export default function ExportReports() {
             )}
           </div>
         </div>
-      )}
+      </div>
 
       {loading ? (
         <p className="er-loading">Loading reports...</p>
       ) : (
         <>
           <div className="er-table-card">
+            <div className="er-table-toolbar">
+              <span className="er-table-toolbar-title">Reports · {filtered.length} total</span>
+            </div>
             <table className="er-table">
                 <colgroup>
+                <col style={{ width: "8%" }} />
                 <col style={{ width: "7%" }} />
-                <col style={{ width: "9%" }} />
                 <col style={{ width: "7%" }} />
                 <col style={{ width: "8%" }} />
                 <col style={{ width: "6%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "10%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "7%" }} />
                 <col style={{ width: "8%" }} />
                 <col style={{ width: "9%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "10%" }} />
+                <col style={{ width: "8%" }} />
               </colgroup>
               <thead>
                 <tr>
@@ -1455,6 +1633,7 @@ export default function ExportReports() {
             </table>
           </div>
          <div className="er-cards">
+          <p className="er-cards-count">Reports · {filtered.length} total</p>
           {filtered.length === 0 ? (
             <p className="er-empty">No reports match the selected filters.</p>
           ) : (

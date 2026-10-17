@@ -439,3 +439,318 @@
 
 /* Keep the Generate button inside its column */
 .er-table .er-generate-btn { padding: 5px 8px; }
+
+/* ── Page header: title/subtitle on the left, search on the right ── */
+.er-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  flex-wrap: wrap;
+}
+
+.er-header-text {
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+.er-header-search {
+  position: relative;
+  flex: 0 1 320px;
+  min-width: 220px;
+}
+
+.er-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: #888;
+  pointer-events: none;
+}
+
+.er-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px 9px 36px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: sans-serif;
+  background: #fff;
+  color: #333;
+  outline: none;
+}
+
+.er-search:focus {
+  border-color: #1a4a1a;
+  box-shadow: 0 0 0 3px rgba(26, 74, 26, 0.1);
+}
+
+/* Small screens: search drops below the title and uses the full width */
+@media (max-width: 700px) {
+  .er-header-search {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+}
+
+/* ── Filter card ── */
+.er-filters {
+  background: #fff;
+  border: 1px solid #e0ddd5;
+  border-radius: 10px;
+  padding: 14px 16px 16px;
+  gap: 0.75rem 0.9rem;
+}
+
+.er-filters-head {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.er-filters-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: sans-serif;
+}
+
+@media (max-width: 900px) {
+  .er-filters-head { grid-column: 1 / -1; }
+  .er-filters-head .er-clear-btn {
+    grid-column: auto;
+    width: auto;
+  }
+}
+
+/* ── Export Options card ── */
+.er-options-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: sans-serif;
+}
+
+.er-options-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #777;
+  font-family: sans-serif;
+}
+
+.er-export-options .er-chart-toggle {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #faf9f5;
+}
+
+/* Desktop: title and hint on top, controls in a wrapping row below.
+   (Mobile keeps its existing stacked/grid layout.) */
+.er-options-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Desktop: text on the left, controls on the right (wrap onto a second row only if needed) */
+@media (min-width: 901px) {
+  .er-export-options {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+  }
+  .er-options-text {
+    flex: 1 1 260px;
+    min-width: 0;
+  }
+  .er-export-options .er-export-btns {
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: flex-end;
+    gap: 10px;
+  }
+  .er-export-options .er-export-btn,
+  .er-export-options .er-history-btn {
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+}
+
+/* ── Charts section (always visible) ── */
+.er-chart-section { margin-bottom: 1.25rem; }
+
+.er-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.er-section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.er-section-sub {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: #777;
+  font-family: sans-serif;
+}
+
+.er-chart-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .er-chart-controls { width: 100%; }
+  .er-chart-controls .er-filter-group { flex: 1; }
+}
+
+/* ── Sticky filters + export zone (desktop only) ── */
+@media (min-width: 901px) and (min-height: 600px) {
+  .er-sticky-zone {
+    position: sticky;
+    top: -2rem;              /* cancels the 2rem padding of .al2-main so it docks flush at the top */
+    z-index: 20;
+    background: #f3ede3;
+    padding-top: 0.75rem;    /* solid strip above the cards, so nothing shows through */
+    padding-bottom: 0.25rem; /* keeps the gap under Export Options inside the solid background */
+  }
+}
+
+/* ── Search inside the Filters card: shown only while the zone is docked (desktop) ── */
+.er-filters-head {
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+}
+
+.er-sticky-search { display: none; }
+
+@media (min-width: 901px) and (min-height: 600px) {
+  .er-sticky-zone--stuck .er-sticky-search {
+    display: block;
+    flex: 1 1 280px;
+    max-width: 360px;
+    min-width: 200px;
+    margin-left: auto;
+  }
+  .er-sticky-search .er-search {
+    padding-top: 7px;
+    padding-bottom: 7px;
+    font-size: 0.8rem;
+  }
+}
+
+/* ── Guided tour: no sticky zone, and the search moves inside the Filters card ── */
+body:has(.tour-overlay) .er-sticky-zone {
+  position: static;
+}
+
+body:has(.tour-overlay) .er-sticky-search {
+  display: block;
+  flex: 1 1 280px;
+  max-width: 360px;
+  min-width: 200px;
+  margin-left: auto;
+}
+
+body:has(.tour-overlay) .er-sticky-search .er-search {
+  padding-top: 7px;
+  padding-bottom: 7px;
+  font-size: 0.8rem;
+}
+
+body:has(.tour-overlay) .er-header > .er-header-search {
+  display: none;
+}
+
+/* ── Table toolbar: report count (matches Manage Reports) ── */
+.er-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.er-table-toolbar-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.er-cards-count {
+  margin: 0 0 2px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1a4a1a;
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+/* ── Tighter spacing inside the sticky zone ── */
+.er-sticky-zone {
+  margin-bottom: 1.25rem;          /* the normal gap below the zone, outside the docked background */
+}
+
+.er-sticky-zone .er-filters {
+  margin-bottom: 0.6rem;           /* was 1.25rem: gap between Filters and Export Options */
+}
+
+.er-sticky-zone .er-export-options {
+  margin-bottom: 0;                /* no extra gap under the bar inside the docked background */
+}
+
+@media (min-width: 901px) and (min-height: 600px) {
+  .er-sticky-zone {
+    padding-bottom: 0.4rem;        /* thin solid strip under Export Options while docked */
+  }
+}
+
+/* ── Tighter gap between the page title and the Filters card ── */
+.er-header {
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 901px) and (min-height: 600px) {
+  .er-header {
+    margin-bottom: 0.25rem;   /* the zone's own 0.75rem top padding adds the rest */
+  }
+}
+
+/* ── Reports table: stay readable on narrower desktops without a horizontal scrollbar ── */
+@media (min-width: 901px) and (max-width: 1500px) {
+  .er-table-card .er-table th,
+  .er-table-card .er-table td {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font-size: 0.76rem;
+  }
+  .er-table-card .er-table .er-generate-btn {
+    padding: 5px 6px;
+    font-size: 0.7rem;
+  }
+}
+

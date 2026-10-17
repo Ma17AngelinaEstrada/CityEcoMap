@@ -1340,12 +1340,57 @@ export default function ManageReports() {
         </div>
       )}
       <div className="mr-header">
-        <h2 className="mr-title">Manage & Resolve Reports</h2>
-        <p className="mr-subtitle">Review, approve, reject, and resolve citizen-submitted reports.</p>
+        <div className="mr-header-text">
+          <h2 className="mr-title">Manage & Resolve Reports</h2>
+          <p className="mr-subtitle">Review, approve, reject, and resolve citizen-submitted reports.</p>
+        </div>
+        <div className="mr-header-search">
+          <svg
+            className="mr-search-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            className="mr-search"
+            placeholder="Search Report ID or keyword..."
+            aria-label="Search reports"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* Filters */}
       <div className="mr-filters">
+        <div className="mr-filters-head">
+          <span className="mr-filters-title">Filters</span>
+          <button
+            className="mr-clear-btn"
+            onClick={() => {
+              setFilterStatus("All");
+              setFilterCategory("All");
+              setFilterSubCategory("All");
+              setFilterAssigned("All");
+              setFilterSupporting("All");
+              setSearchQuery("");
+              setDateFrom("");
+              setDateTo("");
+              setQuickRange("custom");
+              setSpecificMonth("");
+            }}
+          >
+            Clear Filters
+          </button>
+        </div>
         <div className="mr-filter-group">
           <label>Status</label>
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
@@ -1413,16 +1458,7 @@ export default function ManageReports() {
             {ACTIVE_OFFICE_LIST.map((o) => <option key={o}>{o}</option>)}
           </select>
         </div>
-        <div className="mr-filter-group">
-          <label>Search</label>
-          <input
-            type="text"
-            className="mr-search"
-            placeholder="Report ID or keyword..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+        
         <div className="mr-filters-tail">
           <div className="mr-filter-group">
             <label>Time Range</label>
@@ -1461,25 +1497,7 @@ export default function ManageReports() {
               />
             </div>
           </div>
-          <button
-            className="mr-clear-btn"
-            onClick={() => {
-              setFilterStatus("All");
-              setFilterCategory("All");
-              setFilterSubCategory("All");
-              setFilterAssigned("All");
-              setFilterSupporting("All");
-              setSearchQuery("");
-              setDateFrom("");
-              setDateTo("");
-              setQuickRange("custom");
-              setSpecificMonth("");
-            }}
-          >
-            Clear Filters
-          </button>
         </div>
-        <span className="mr-count">{filtered.length} report{filtered.length !== 1 ? "s" : ""}</span>
       </div>
 
       {loading ? (
@@ -1487,20 +1505,25 @@ export default function ManageReports() {
       ) : (
         <div className="mr-layout">
           <div className="mr-table-card">
+            <div className="mr-table-toolbar">
+              <span className="mr-table-title">
+                Reports <span className="mr-table-count">· {filtered.length} total</span>
+              </span>
+            </div>
             <table className="mr-table">
               <colgroup>
                 <col style={{ width: "7%" }} />
                 <col style={{ width: "7%" }} />
-                <col style={{ width: "7%" }} />
+                <col style={{ width: "8%" }} />
                 <col style={{ width: "9%" }} />
                 <col style={{ width: "6%" }} />
+                <col style={{ width: "8%" }} />
                 <col style={{ width: "9%" }} />
-                <col style={{ width: "11%" }} />
                 <col style={{ width: "12%" }} />
-                <col style={{ width: "7%" }} />
                 <col style={{ width: "8%" }} />
                 <col style={{ width: "8%" }} />
-                <col style={{ width: "11%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "10%" }} />
               </colgroup>
               <thead>
                 <tr>
@@ -1570,6 +1593,7 @@ export default function ManageReports() {
           </div>
 
           <div className="mr-cards">
+            <div className="mr-cards-count">Reports · {filtered.length} total</div>
             {filtered.length === 0 ? (
               <p className="mr-empty">No reports found.</p>
             ) : (
