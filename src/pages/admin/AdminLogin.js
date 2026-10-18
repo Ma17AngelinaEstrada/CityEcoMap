@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../../firebase/firebase";
 import "./AdminLogin.css";
-import embLogo from '../../emb-logo.png';
 
 export default function AdminLogin() {
   const [username, setUsername] = useState("");
@@ -80,8 +79,6 @@ export default function AdminLogin() {
         <div className="al-form-container">
           <div className="al-logo-row">
             <img src="/logowhite2.png" alt="CityEcoMap logo" className="al-logo-img" />
-            <span className="al-logo-divider" />
-            <img src={embLogo} alt="EMB logo" className="al-partner-logo" />
           </div>
           <p className="al-auth-note">Authorized Access Only</p>
 
@@ -165,7 +162,7 @@ export default function AdminLogin() {
           )}
 
           <p className="al-footer">
-            Environmental Management Bureau (EMB) and Local Government Unit of Lucena City — Official Access Only
+            Authorized personnel of participating Lucena City offices only.
           </p>
         </div>
       </div>

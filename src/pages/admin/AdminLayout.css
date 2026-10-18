@@ -305,7 +305,7 @@
 .al2-main {
   flex: 1;
   min-width: 0;
-  padding: 2rem;
+  padding: 2rem 1rem;
   overflow-y: auto;
   overflow-x: hidden;
   background-color: #f3ede3;
@@ -674,3 +674,4 @@
   padding-left: 2.1rem;
 }
 .al2-submenu-icon { flex-shrink: 0; }
+

@@ -1264,3 +1264,29 @@
   margin-bottom: 1rem;
 }
 
+/* ===== Table color/design refresh (desktop table only) ===== */
+.mr-table thead tr {
+  border-bottom: none;
+}
+
+.mr-table thead th {
+  background: #1a4a1a;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  border-bottom: 3px solid #4a9a4a;
+}
+
+.mr-table tbody tr:nth-child(even) {
+  background: #faf7f0;
+}
+
+.mr-table tbody tr:hover {
+  background: #e8f3e8;
+}
+
+.mr-table tbody td {
+  border-bottom: 1px solid #ece8dc;
+}
+

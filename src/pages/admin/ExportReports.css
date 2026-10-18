@@ -754,3 +754,45 @@ body:has(.tour-overlay) .er-header > .er-header-search {
   }
 }
 
+/* ===== Table color/design refresh (desktop table only) ===== */
+.er-table-card .er-table thead tr {
+  border-bottom: none;
+}
+
+.er-table-card .er-table thead th {
+  background: #1a4a1a;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  word-break: normal;
+  overflow-wrap: normal;
+  hyphens: none;
+  border-bottom: 3px solid #4a9a4a;
+}
+
+.er-table-card .er-table tbody tr:nth-child(even) {
+  background: #faf7f0;
+}
+
+.er-table-card .er-table tbody tr:hover {
+  background: #e8f3e8;
+}
+
+.er-table-card .er-table tbody td {
+  border-bottom: 1px solid #ece8dc;
+}
+
+/* Last column (Generate button): keep the button fully inside the card */
+.er-table-card .er-table th:last-child,
+.er-table-card .er-table td:last-child {
+  padding-left: 0.3rem;
+  padding-right: 0.9rem;
+}
+
+.er-table-card .er-table td:last-child button {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+

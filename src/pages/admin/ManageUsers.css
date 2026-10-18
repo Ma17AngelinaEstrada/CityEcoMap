@@ -336,3 +336,53 @@
   .mu-table-card { display: none; }
   .mu-cards { display: flex; flex-direction: column; gap: 10px; }
 }
+
+/* ===== Table color/design refresh ===== */
+.mu-header {
+  margin-bottom: 1rem;
+}
+
+.mu-table thead tr {
+  border-bottom: none;
+}
+
+.mu-table thead th {
+  background: #1a4a1a;
+  color: #ffffff;
+  font-weight: 600;
+  border-bottom: 3px solid #4a9a4a;
+}
+
+.mu-table tbody tr:nth-child(even) {
+  background: #faf7f0;
+}
+
+.mu-table tbody tr:hover {
+  background: #e8f3e8;
+}
+
+.mu-table tbody td {
+  border-bottom: 1px solid #ece8dc;
+}
+
+/* Role badge for office admins (was unstyled) */
+.mu-badge--office {
+  background: #e3efe3;
+  color: #1a4a1a;
+  border: 1px solid #b9d4b9;
+}
+
+/* Focal Person badge */
+.mu-focal-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: #fff4d6;
+  color: #8a6100;
+  border: 1px solid #f0d58a;
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+

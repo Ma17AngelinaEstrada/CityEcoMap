@@ -890,3 +890,43 @@
 
 /* Suggested Priority chip inside the Recent Reports table */
 .ad-table .pb { white-space: normal; max-width: 100%; text-align: left; }
+
+/* Coordination cards: center-aligned to match the stat cards above */
+.ad-coordination-stats .ad-coord-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.ad-coordination-stats .ad-coord-label,
+.ad-coordination-stats .ad-coord-number,
+.ad-coordination-stats .ad-coord-desc {
+  text-align: center;
+}
+
+/* ===== Table color/design refresh (Recent Reports table) ===== */
+.ad-table thead tr {
+  border-bottom: none;
+}
+
+.ad-table thead th {
+  background: #1a4a1a;
+  color: #ffffff;
+  font-weight: 600;
+  border-bottom: 3px solid #4a9a4a;
+}
+
+.ad-table tbody tr:nth-child(even) {
+  background: #faf7f0;
+}
+
+.ad-table tbody tr:hover {
+  background: #e8f3e8;
+}
+
+.ad-table tbody td {
+  border-bottom: 1px solid #ece8dc;
+}
+

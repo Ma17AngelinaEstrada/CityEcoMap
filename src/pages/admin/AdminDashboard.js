@@ -513,34 +513,34 @@ export default function AdminDashboard() {
               <span className="ad-stat-label">Total Reports</span>
               <span className="ad-stat-number">{total}</span>
               <span className="ad-stat-desc">
-                All reports submitted to date<br />
+                {isMaster ? "All reports from every office" : "All reports handled by your office"}<br />
                 Waste: {totalWaste} · Drainage: {totalDrainage}
               </span>
             </div>
             <div className="ad-stat-card ad-stat-card--pending">
               <span className="ad-stat-label">Pending</span>
               <span className="ad-stat-number">{pending}</span>
-              <span className="ad-stat-desc">Awaiting admin review</span>
+                <span className="ad-stat-desc">{isMaster ? "Awaiting office validation" : "Awaiting your validation"}</span>
             </div>
             <div className="ad-stat-card ad-stat-card--approved">
               <span className="ad-stat-label">Approved</span>
               <span className="ad-stat-number">{approved}</span>
-              <span className="ad-stat-desc">Reviewed and assigned</span>
+              <span className="ad-stat-desc">Validated and ready for action</span>
             </div>
             <div className="ad-stat-card ad-stat-card--ongoing">
               <span className="ad-stat-label">Ongoing</span>
               <span className="ad-stat-number">{ongoing}</span>
-              <span className="ad-stat-desc">Cleanup in progress</span>
+              <span className="ad-stat-desc">Action in progress</span>
             </div>
             <div className="ad-stat-card ad-stat-card--resolved">
               <span className="ad-stat-label">Resolved</span>
               <span className="ad-stat-number">{resolved}</span>
-              <span className="ad-stat-desc">Issue successfully resolved</span>
+              <span className="ad-stat-desc">Issues successfully resolved</span>
             </div>
             <div className="ad-stat-card ad-stat-card--rejected">
               <span className="ad-stat-label">Rejected</span>
               <span className="ad-stat-number">{rejected}</span>
-              <span className="ad-stat-desc">Not approved for action</span>
+              <span className="ad-stat-desc">Closed, no action needed</span>
             </div>
           </div>
 
@@ -550,17 +550,17 @@ export default function AdminDashboard() {
               <div className="ad-coord-card ad-coord-card--active">
                 <span className="ad-coord-label">Active Coordination</span>
                 <span className="ad-coord-number">{activeCoordination}</span>
-                <span className="ad-coord-desc">Accepted support or pending re-route in progress</span>
+                <span className="ad-coord-desc">Reports being coordinated with other offices</span>
               </div>
               <div className="ad-coord-card ad-coord-card--pending">
                 <span className="ad-coord-label">Pending Support Requests</span>
                 <span className="ad-coord-number">{pendingSupportRequests}</span>
-                <span className="ad-coord-desc">Awaiting a response from the receiving office</span>
+                <span className="ad-coord-desc">Support requests awaiting a response</span>
               </div>
               <div className="ad-coord-card ad-coord-card--escalated">
                 <span className="ad-coord-label">Escalated Reports</span>
                 <span className="ad-coord-number">{escalatedReports}</span>
-                <span className="ad-coord-desc">Awaiting Master Admin resolution</span>
+                <span className="ad-coord-desc">{isMaster ? "Awaiting your resolution" : "Awaiting Master Admin resolution"}</span>
               </div>
             </div>
           </div>
