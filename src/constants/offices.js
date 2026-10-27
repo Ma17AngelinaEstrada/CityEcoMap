@@ -16,7 +16,8 @@ export const FUTURE_OFFICES = {
   SANITATION: 'Sanitation Office',
 };
 
-export const ACTIVE_OFFICE_LIST = Object.values(OFFICES); // ['EMB', 'CENRO', 'City Engineering']
+export const ACTIVE_OFFICE_LIST = Object.values(OFFICES); // Includes EMB for legacy records and historical filters.
+export const OPERATIONAL_OFFICE_LIST = [OFFICES.CENRO, OFFICES.CITY_ENGINEERING];
 export const ALL_OFFICE_LABELS = [...ACTIVE_OFFICE_LIST, ...Object.values(RETIRED_OFFICES)];
 
 export const OFFICE_ROLES = ['Master Admin', 'EMB Admin', 'CENRO Admin', 'City Engineering Admin'];

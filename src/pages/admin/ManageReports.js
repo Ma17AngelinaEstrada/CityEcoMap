@@ -7,7 +7,7 @@ import AdminLayout from "./AdminLayout";
 import "./ManageReports.css";
 import { reverseGeocode, isCached } from '../../utils/geocode';
 import { useAdminTour } from "../../context/AdminTourContext";
-import { ACTIVE_OFFICE_LIST, isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
+import { ACTIVE_OFFICE_LIST, OPERATIONAL_OFFICE_LIST, isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
 import PriorityBadge from "../../components/PriorityBadge";
 import { suggestPriority } from "../../utils/priorityRules";
 
@@ -359,7 +359,7 @@ export default function ManageReports() {
         snapshot.docs.forEach((d) => {
           const data = d.data();
           if (data.email) {
-            const office = officeForRole(data.role);
+            const office = data.role === "Master Admin" ? "Master Admin" : officeForRole(data.role);
             const label = data.name || data.username || data.email;
             map[data.email] = office ? `${label} (${office})` : label;
           }
@@ -970,7 +970,7 @@ export default function ManageReports() {
         timestamp: serverTimestamp(),
         adminEmail: auth.currentUser?.email || "unknown",
         notes: `${currentOffice} declined jurisdiction${reason ? `: ${reason}` : ""}`
-          + (escalated ? " — all candidates declined, escalated for EMB review" : ""),
+          + (escalated ? " — all candidates declined, escalated for Master Admin review" : ""),
       });
       if (escalated) {
         await addDoc(collection(db, "reports", selectedReport.id, "statusHistory"), {
@@ -978,7 +978,7 @@ export default function ManageReports() {
           action: "ROUTING_ESCALATED",
           timestamp: serverTimestamp(),
           adminEmail: "system",
-          notes: "All jurisdiction candidates declined — routed to EMB for manual review",
+          notes: "All jurisdiction candidates declined — routed to Master Admin for manual review",
         });
       }
       setSelectedReport((prev) => ({
@@ -1227,12 +1227,12 @@ export default function ManageReports() {
     }
 
     if (!r.primaryOffice && r.needsReview) {
-      if (!isMaster) return <p className="mr-no-action">Awaiting office assignment by EMB.</p>;
+      if (!isMaster) return <p className="mr-no-action">Awaiting office assignment by the Master Admin.</p>;
       return (
         <div className="mr-needs-review-form">
           <select value={reviewAssignOffice} onChange={(e) => setReviewAssignOffice(e.target.value)}>
             <option value="">Select office to assign...</option>
-            {ACTIVE_OFFICE_LIST.map((o) => <option key={o}>{o}</option>)}
+            {OPERATIONAL_OFFICE_LIST.map((o) => <option key={o}>{o}</option>)}
           </select>
           <button className="mr-action-btn mr-action-btn--approve" onClick={handleManualAssign} disabled={!reviewAssignOffice || busy || isSample}>
             Assign Office
@@ -1249,7 +1249,7 @@ export default function ManageReports() {
         <div className="mr-needs-review-form">
           <select value={escalateResolveOffice} onChange={(e) => setEscalateResolveOffice(e.target.value)}>
             <option value="">Reassign to office (optional)...</option>
-            {ACTIVE_OFFICE_LIST.filter((o) => o !== r.primaryOffice).map((o) => <option key={o}>{o}</option>)}
+            {OPERATIONAL_OFFICE_LIST.filter((o) => o !== r.primaryOffice).map((o) => <option key={o}>{o}</option>)}
           </select>
           <button
             className="mr-action-btn mr-action-btn--approve"
@@ -1273,7 +1273,7 @@ export default function ManageReports() {
       return <p className="mr-no-action">Only {r.primaryOffice} can act on this report.</p>;
     }
     if (isMaster && r.primaryOffice) {
-      return <p className="mr-no-action">Handled by {r.primaryOffice}. EMB does not validate routine reports.</p>;
+      return <p className="mr-no-action">Handled by {r.primaryOffice}. Master Admin does not validate routine reports.</p>;
     }
 
     if (s === "Pending") return (
@@ -2003,7 +2003,7 @@ export default function ManageReports() {
               style={{ padding: "8px", borderRadius: "8px", border: "1px solid #ccc" }}
             >
               <option value="">Select office...</option>
-              {ACTIVE_OFFICE_LIST.filter((o) => {
+              {OPERATIONAL_OFFICE_LIST.filter((o) => {
                 if (o === currentOffice) return false;
                 const active = (selectedReport?.supportingOffices || []).some(
                   (so) => so.officeId === o && ["pending", "accepted", "ongoing"].includes(so.status)
@@ -2050,7 +2050,7 @@ export default function ManageReports() {
               style={{ padding: "8px", borderRadius: "8px", border: "1px solid #ccc" }}
             >
               <option value="">Select office...</option>
-              {ACTIVE_OFFICE_LIST.filter((o) =>
+              {OPERATIONAL_OFFICE_LIST.filter((o) =>
                 o !== currentOffice && !(selectedReport?.primaryOfficeHistory || []).includes(o)
               ).map((o) => <option key={o}>{o}</option>)}
             </select>

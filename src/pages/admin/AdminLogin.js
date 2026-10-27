@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "../../firebase/firebase";
+import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
+import { doc, getDocFromServer } from "firebase/firestore";
+import { auth, db } from "../../firebase/firebase";
 import "./AdminLogin.css";
 
 export default function AdminLogin() {
@@ -17,23 +18,65 @@ export default function AdminLogin() {
   const [resetError, setResetError] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
-    if (!username || !password) {
-      setError("Please enter your username and password.");
-      return;
-    }
-    setLoading(true);
+  
+  // Show the reason when AdminLayout sent the user back here (deactivated / not authorized).
+  useEffect(() => {
     try {
-      await signInWithEmailAndPassword(auth, username, password);
-      navigate("/admin/dashboard");
-    } catch (err) {
-      setError("Invalid credentials. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+      const reason = sessionStorage.getItem("al2-access-denied");
+      if (reason) {
+        sessionStorage.removeItem("al2-access-denied");
+        setError(reason);
+      }
+    } catch {}
+  }, []);
+
+    const handleLogin = async (e) => {
+      e.preventDefault();
+      if (loading) return; // ignore duplicate submits while logging in / verifying
+      setError("");
+      if (!username || !password) {
+        setError("Please enter your username and password.");
+        return;
+      }
+      setLoading(true);
+      try {
+        const cred = await signInWithEmailAndPassword(auth, username, password);
+
+        // Verify the admin account before letting the user in. Fail closed.
+        let message = "";
+        try {
+          const snap = await getDocFromServer(doc(db, "admins", cred.user.uid));
+          if (!snap.exists()) {
+            message = "Your account is not authorized to access the admin system.";
+          } else if (snap.data().status !== "Active") {
+            message = "Your account is deactivated. Please contact the Master Admin.";
+          } else {
+            const role = snap.data().role;
+            if (!['Master Admin', 'EMB Admin', 'CENRO Admin', 'City Engineering Admin'].includes(role)) {
+              message = "Your account is not authorized to access the admin system.";
+            } else {
+              try { sessionStorage.setItem('cityecomap-admin-role', role); } catch {}
+            }
+          }
+        } catch (verifyErr) {
+          message =
+            verifyErr && verifyErr.code === "permission-denied"
+              ? "Your account is not authorized to access the admin system."
+              : "Unable to verify your account right now. Please check your connection and try again.";
+        }
+
+        if (message) {
+          await signOut(auth).catch(() => {});
+          setError(message);
+          return;
+        }
+        navigate(sessionStorage.getItem('cityecomap-admin-role') === 'EMB Admin' ? '/admin/monitoring' : '/admin/dashboard');
+      } catch (err) {
+        setError("Invalid credentials. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();

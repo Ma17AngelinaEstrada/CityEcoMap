@@ -1290,3 +1290,17 @@
   border-bottom: 1px solid #ece8dc;
 }
 
+/* renderActions() output sits inside .mr-action-controls (display: contents),
+   so the ".mr-action-row > .mr-needs-review-form" rule never matched.
+   Let the assign/resolve form use the full row and wrap inside the panel. */
+.mr-action-controls > .mr-needs-review-form {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+}
+
+.mr-action-controls > .mr-needs-review-form select {
+  flex: 1 1 240px;
+  min-width: 0;
+  max-width: 100%;
+}

@@ -3,7 +3,7 @@ import { OFFICES } from '../constants/offices';
 const WASTE_RULES = {
   'Illegal Dumping': { primary: OFFICES.CENRO },
   'Uncollected Garbage': { primary: OFFICES.CENRO },
-  'Waste Affecting Rivers, Waterways, and Natural Water Bodies': { primary: OFFICES.EMB },
+  'Waste Affecting Rivers, Waterways, and Natural Water Bodies': { primary: OFFICES.CENRO },
   'Other': { primary: OFFICES.CENRO },
 };
 

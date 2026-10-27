@@ -1,30 +1,53 @@
+
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { collection, collectionGroup, getDocs, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
+import {
+  collection,
+  collectionGroup,
+  doc,
+  query,
+  where,
+  onSnapshot,
+  orderBy,
+  limit,
+} from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import { officeForRole } from "../../constants/offices";
 import "./AdminLayout.css";
 import { BellIcon } from "../../components/Icons";
 import { useAdminTour } from "../../context/AdminTourContext";
 import OnboardingTour from "../../components/OnboardingTour";
+import { ensureFreshMonitoringStats } from "../../utils/monitoringStats";
 
-// Sections of the existing Dashboard page (ids are set in AdminDashboard.js)
 const DASHBOARD_SECTIONS = [
-  { id: "dash-overview", label: "Report Overview",
-    icon: "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z M14 3v5h5 M9 13h6 M9 17h6" },
-  { id: "dash-coordination", label: "Coordination Overview",
-    icon: "M17 3l4 4-4 4 M21 7H9a4 4 0 0 0-4 4 M7 21l-4-4 4-4 M3 17h12a4 4 0 0 0 4-4" },
-  { id: "dash-statistics", label: "Report Statistics",
-    icon: "M18 20V10 M12 20V4 M6 20v-6" },
-  { id: "dash-map", label: "Report Map",
-    icon: "M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z M12 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z" },
-  { id: "dash-recent", label: "Recent Reports",
-    icon: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 7v5l3 2" },
+  {
+    id: "dash-overview",
+    label: "Report Overview",
+    icon: "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z M14 3v5h5 M9 13h6 M9 17h6",
+  },
+  {
+    id: "dash-coordination",
+    label: "Coordination Overview",
+    icon: "M17 3l4 4-4 4 M21 7H9a4 4 0 0 0-4 4 M7 21l-4-4 4-4 M3 17h12a4 4 0 0 0 4-4",
+  },
+  {
+    id: "dash-statistics",
+    label: "Report Statistics",
+    icon: "M18 20V10 M12 20V4 M6 20v-6",
+  },
+  {
+    id: "dash-map",
+    label: "Report Map",
+    icon: "M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z M12 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z",
+  },
+  {
+    id: "dash-recent",
+    label: "Recent Reports",
+    icon: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 7v5l3 2",
+  },
 ];
 
-// Avatar color class per existing admin role (colors are defined in AdminLayout.css).
-// Unknown roles get no modifier and keep the original green avatar.
 const AVATAR_ROLE_CLASS = {
   "Master Admin": "al2-avatar--master",
   "CENRO Admin": "al2-avatar--cenro",
@@ -35,173 +58,413 @@ const AVATAR_ROLE_CLASS = {
 export default function AdminLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
+
   const [isMasterAdmin, setIsMasterAdmin] = useState(false);
   const [currentAdmin, setCurrentAdmin] = useState(null);
   const [currentOffice, setCurrentOffice] = useState(null);
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [verifyRetrying, setVerifyRetrying] = useState(false);
+  const denyingRef = useRef(false);
+
   const [collapsed, setCollapsed] = useState(() => {
-    return localStorage.getItem("al2-sidebar-collapsed") === "true";
+    try {
+      return localStorage.getItem("al2-sidebar-collapsed") === "true";
+    } catch {
+      return false;
+    }
   });
+
   const [mobileOpen, setMobileOpen] = useState(false);
-    const isDashboard = location.pathname === "/admin/dashboard";
+  const isDashboard = location.pathname === "/admin/dashboard";
+
   const [dashOpen, setDashOpen] = useState(() => {
-    try { return localStorage.getItem("al2-dash-submenu-open") !== "false"; } catch { return true; }
+    try {
+      return localStorage.getItem("al2-dash-submenu-open") !== "false";
+    } catch {
+      return true;
+    }
   });
+
+  const [activeSection, setActiveSection] = useState(
+    DASHBOARD_SECTIONS[0].id
+  );
+  const scrollLockRef = useRef(0);
+
+  const [pendingReports, setPendingReports] = useState([]);
+  const [showNotifs, setShowNotifs] = useState(false);
+  const [notifTab, setNotifTab] = useState("new");
+  const [rawActivityItems, setActivityItems] = useState([]);
+  const [openEscalationIds, setOpenEscalationIds] = useState(null);
+
+  const {
+    tourSteps,
+    tourKey,
+    showTour,
+    setShowTour,
+    setCurrentStepIndex,
+  } = useAdminTour();
+
+  const isEmbMonitoringOnly = currentAdmin?.role === "EMB Admin";
+
+  // Master only: hide "escalated" notices once the escalation is resolved.
+  const seenEscalationReports = new Set();
+  const activityItems =
+    isMasterAdmin && openEscalationIds
+      ? rawActivityItems.filter((item) => {
+          if (item.action !== "ROUTING_ESCALATED") return true;
+          if (!openEscalationIds.has(item.reportId)) return false;
+          if (seenEscalationReports.has(item.reportId)) return false;
+          seenEscalationReports.add(item.reportId);
+          return true;
+        })
+      : rawActivityItems;
+
   const toggleDash = () => {
-    setDashOpen((o) => {
-      const next = !o;
-      try { localStorage.setItem("al2-dash-submenu-open", String(next)); } catch {}
+    setDashOpen((open) => {
+      const next = !open;
+      try {
+        localStorage.setItem("al2-dash-submenu-open", String(next));
+      } catch {}
       return next;
     });
   };
-  const [activeSection, setActiveSection] = useState(DASHBOARD_SECTIONS[0].id);
-  const scrollLockRef = useRef(0);
 
-  // Highlight the section currently in view while scrolling the dashboard
+  useEffect(() => {
+    if (isMasterAdmin) setNotifTab("activity");
+  }, [isMasterAdmin]);
+
   useEffect(() => {
     if (!isDashboard) return;
+
     const main = document.querySelector(".al2-main");
     if (!main) return;
+
     const onScroll = () => {
-      // ignore scroll events right after a submenu click (smooth scroll in progress)
       if (Date.now() - scrollLockRef.current < 900) return;
-      const atBottom = main.scrollTop + main.clientHeight >= main.scrollHeight - 2;
+
+      const atBottom =
+        main.scrollTop + main.clientHeight >= main.scrollHeight - 2;
+
       if (atBottom) {
         setActiveSection(DASHBOARD_SECTIONS[DASHBOARD_SECTIONS.length - 1].id);
         return;
       }
+
       const line = main.getBoundingClientRect().top + 90;
       let current = DASHBOARD_SECTIONS[0].id;
-      for (const s of DASHBOARD_SECTIONS) {
-        const el = document.getElementById(s.id);
-        if (el && el.getBoundingClientRect().top <= line) current = s.id;
+
+      for (const section of DASHBOARD_SECTIONS) {
+        const element = document.getElementById(section.id);
+        if (element && element.getBoundingClientRect().top <= line) {
+          current = section.id;
+        }
       }
+
       setActiveSection(current);
     };
+
     main.addEventListener("scroll", onScroll, { passive: true });
     return () => main.removeEventListener("scroll", onScroll);
   }, [isDashboard]);
 
   const handleSectionClick = (id) => {
-    // From another page: go to the dashboard first, then scroll once it has loaded
     if (!isDashboard) {
-      try { sessionStorage.setItem("al2-pending-section", id); } catch {}
+      try {
+        sessionStorage.setItem("al2-pending-section", id);
+      } catch {}
       navigate("/admin/dashboard");
       setMobileOpen(false);
       return;
     }
-    const el = document.getElementById(id);
-    if (!el) return;
+
+    const element = document.getElementById(id);
+    if (!element) return;
+
     scrollLockRef.current = Date.now();
     setActiveSection(id);
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    element.scrollIntoView({ behavior: "smooth", block: "start" });
     setMobileOpen(false);
   };
 
-  // After arriving from another page, scroll to the requested section when it appears
   useEffect(() => {
     if (!isDashboard) return;
+
     let id = null;
-    try { id = sessionStorage.getItem("al2-pending-section"); } catch {}
+    try {
+      id = sessionStorage.getItem("al2-pending-section");
+    } catch {}
     if (!id) return;
+
     let tries = 0;
     let raf;
+
     const attempt = () => {
-      const el = document.getElementById(id);
-      if (el) {
-        try { sessionStorage.removeItem("al2-pending-section"); } catch {}
+      const element = document.getElementById(id);
+
+      if (element) {
+        try {
+          sessionStorage.removeItem("al2-pending-section");
+        } catch {}
         scrollLockRef.current = Date.now();
         setActiveSection(id);
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
       }
+
       if (tries++ < 600) raf = requestAnimationFrame(attempt);
     };
+
     attempt();
     return () => cancelAnimationFrame(raf);
   }, [isDashboard]);
 
-  const [pendingReports, setPendingReports] = useState([]);
-  const [showNotifs, setShowNotifs] = useState(false);
-  const [notifTab, setNotifTab] = useState('new');
-
+  // Verify the signed-in account against its active admin document.
   useEffect(() => {
-    if (isMasterAdmin) setNotifTab('activity');
-  }, [isMasterAdmin]);
-  const [activityItems, setActivityItems] = useState([]);
-  const { tourSteps, tourKey, showTour, setShowTour, setCurrentStepIndex } = useAdminTour();
+    let unsubDoc = () => {};
+    let retryTimer = null;
+    let cancelled = false;
+    let activeUid = null;
 
-  useEffect(() => {
-    let unsubSnapshot = () => {};
+    const resetAccess = () => {
+      setAccessChecked(false);
+      setVerifyRetrying(false);
+      setIsMasterAdmin(false);
+      setCurrentAdmin(null);
+      setCurrentOffice(null);
+      setPendingReports([]);
+      setActivityItems([]);
+    };
 
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      unsubSnapshot();
-      if (!user) {
-        setPendingReports([]);
-        return;
-      }
-      const q = query(
-        collection(db, "reports"),
-        where("status", "==", "Pending"),
-        orderBy("createdAt", "desc")
-      );
-      unsubSnapshot = onSnapshot(
-        q,
+    const deny = (message) => {
+      if (denyingRef.current) return;
+
+      denyingRef.current = true;
+      clearTimeout(retryTimer);
+      unsubDoc();
+      resetAccess();
+
+      try {
+        sessionStorage.setItem("al2-access-denied", message);
+      } catch {}
+
+      signOut(auth)
+        .catch(() => {})
+        .finally(() => navigate("/admin"));
+    };
+
+    const watchAdminDoc = (uid) => {
+      if (cancelled || denyingRef.current || uid !== activeUid) return;
+
+      unsubDoc();
+
+      unsubDoc = onSnapshot(
+        doc(db, "admins", uid),
+        { includeMetadataChanges: true },
         (snapshot) => {
-          const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-          setPendingReports(data);
+          if (cancelled || denyingRef.current || uid !== activeUid) return;
+
+          if (snapshot.metadata.fromCache) {
+            setVerifyRetrying(true);
+            return;
+          }
+
+          setVerifyRetrying(false);
+
+          const data = snapshot.exists() ? snapshot.data() : null;
+
+          if (!data) {
+            deny("Your account is not authorized to access the admin system.");
+            return;
+          }
+
+          if (data.status !== "Active") {
+            deny("Your account is deactivated. Please contact the Master Admin.");
+            return;
+          }
+
+          setIsMasterAdmin(data.role === "Master Admin");
+          setCurrentAdmin(data);
+          setCurrentOffice(officeForRole(data.role));
+          setAccessChecked(true);
         },
-        (err) => {
-          console.error("Notification listener error:", err);
+        (error) => {
+          if (cancelled || denyingRef.current || uid !== activeUid) return;
+
+          if (
+            error.code === "permission-denied" ||
+            error.code === "unauthenticated"
+          ) {
+            deny("Your account is not authorized to access the admin system.");
+            return;
+          }
+
+          console.error("Error verifying admin account:", error);
+          setVerifyRetrying(true);
+          clearTimeout(retryTimer);
+          retryTimer = setTimeout(() => watchAdminDoc(uid), 5000);
         }
       );
+    };
+
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      clearTimeout(retryTimer);
+      unsubDoc();
+      denyingRef.current = false;
+      activeUid = user ? user.uid : null;
+
+      resetAccess();
+
+      if (!user) {
+        navigate("/admin");
+        return;
+      }
+
+      watchAdminDoc(user.uid);
     });
 
     return () => {
+      cancelled = true;
+      clearTimeout(retryTimer);
+      unsubDoc();
       unsubAuth();
-      unsubSnapshot();
     };
-  }, []);
+  }, [navigate]);
+
+  // EMB Admin must not subscribe to individual report or activity records.
+  useEffect(() => {
+    if (!accessChecked || !currentAdmin || isEmbMonitoringOnly) {
+      setPendingReports([]);
+      return undefined;
+    }
+
+    const reportsQuery = query(
+      collection(db, "reports"),
+      where("status", "==", "Pending"),
+      orderBy("createdAt", "desc")
+    );
+
+    return onSnapshot(
+      reportsQuery,
+      (snapshot) => {
+        setPendingReports(
+          snapshot.docs.map((item) => ({ id: item.id, ...item.data() }))
+        );
+      },
+      (error) => console.error("Notification listener error:", error)
+    );
+  }, [accessChecked, currentAdmin, isEmbMonitoringOnly]);
 
   useEffect(() => {
-    if (currentAdmin === null) return; // hindi pa resolved ang role
-    const notifyTarget = isMasterAdmin ? 'MASTER' : currentOffice;
-    if (!notifyTarget) return;
+    if (!accessChecked || !currentAdmin || isEmbMonitoringOnly) {
+      setActivityItems([]);
+      return undefined;
+    }
 
-    const q = query(
+    const notifyTarget = isMasterAdmin ? "MASTER" : currentOffice;
+    if (!notifyTarget) return undefined;
+
+    const activityQuery = query(
       collectionGroup(db, "statusHistory"),
       where("notifyOffice", "==", notifyTarget),
       orderBy("timestamp", "desc"),
       limit(15)
     );
 
-    const unsub = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map((d) => ({
-        id: d.id,
-        reportId: d.ref.parent.parent.id,
-        ...d.data(),
-      }));
-      setActivityItems(items);
-    }, (err) => {
-      console.error("Activity listener error:", err);
-    });
+    return onSnapshot(
+      activityQuery,
+      (snapshot) => {
+        setActivityItems(
+          snapshot.docs.map((item) => ({
+            id: item.id,
+            reportId: item.ref.parent.parent?.id,
+            ...item.data(),
+          }))
+        );
+      },
+      (error) => console.error("Activity listener error:", error)
+    );
+  }, [
+    accessChecked,
+    currentAdmin,
+    isMasterAdmin,
+    currentOffice,
+    isEmbMonitoringOnly,
+  ]);
 
-    return () => unsub();
-  }, [currentAdmin, isMasterAdmin, currentOffice]);
+  // Master only: which reports still have an open escalation.
+  useEffect(() => {
+    if (!accessChecked || !isMasterAdmin) {
+      setOpenEscalationIds(null);
+      return undefined;
+    }
+
+    const escalationQuery = query(
+      collection(db, "reports"),
+      where("escalation.status", "==", "open")
+    );
+
+    return onSnapshot(
+      escalationQuery,
+      (snapshot) => {
+        setOpenEscalationIds(new Set(snapshot.docs.map((item) => item.id)));
+      },
+      (error) => console.error("Escalation listener error:", error)
+    );
+  }, [accessChecked, isMasterAdmin]);
+
+  // Keep EMB monitoring statistics fresh (Master Admin only; counts only).
+  useEffect(() => {
+    if (!accessChecked || !isMasterAdmin) return undefined;
+
+    ensureFreshMonitoringStats(db);
+    const timerId = setInterval(
+      () => ensureFreshMonitoringStats(db),
+      15 * 60 * 1000
+    );
+    return () => clearInterval(timerId);
+  }, [accessChecked, isMasterAdmin]);
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest(".al2-notif-wrapper")) {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest(".al2-notif-wrapper")) {
         setShowNotifs(false);
       }
     };
+
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  const formatNotifDate = (ts) => {
-    const date = ts?.toDate?.();
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate("/admin");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  const formatNotifDate = (timestamp) => {
+    const date = timestamp?.toDate?.();
     if (!date) return "";
-    return date.toLocaleDateString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+    return date.toLocaleDateString("en-PH", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getInitials = (name) => {
+    if (!name) return "?";
+
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+
+    return (
+      parts[0][0] + parts[parts.length - 1][0]
+    ).toUpperCase();
   };
 
   const icons = {
@@ -243,57 +506,133 @@ export default function AdminLayout({ children }) {
     ),
   };
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        navigate("/admin");
-        return;
-      }
-      try {
-        const snapshot = await getDocs(collection(db, "admins"));
-        const current = snapshot.docs.find((d) => d.id === user.uid);
-        const data = current?.data();
-        setIsMasterAdmin(data?.role === "Master Admin");
-        setCurrentAdmin(data || null);
-        setCurrentOffice(officeForRole(data?.role));
-      } catch (err) {
-        console.error("Error checking admin role:", err);
-      }
-    });
-    return () => unsub();
-  }, [navigate]);
+  const visiblePendingReports = isMasterAdmin
+    ? pendingReports.filter((report) => report.needsReview === true)
+    : pendingReports.filter(
+        (report) =>
+          report.primaryOffice === currentOffice ||
+          (report.jurisdictionCandidates || []).includes(currentOffice)
+      );
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    navigate("/admin");
-  };
+    // Neutral shell until the admin account is verified (no sidebar, no bell).
+  if (!accessChecked) {
+    return (
+      <div className="al2-wrapper al2-emb-only">
+        <header className="al2-topbar al2-emb-topbar">
+          <div className="al2-logo-group">
+            <img src="/logowhite2.png" alt="CityEcoMap" className="al2-logo" />
+          </div>
+        </header>
+
+        <main className="al2-main al2-emb-main">
+          <p role="status" style={{ color: "#555", fontFamily: "sans-serif" }}>
+            Verifying access{verifyRetrying ? " — waiting for connection…" : "…"}
+          </p>
+        </main>
+      </div>
+    );
+  }
+
+  // EMB Admin layout: top navbar only, with no sidebar or report bell.
+  if (isEmbMonitoringOnly) {
+    return (
+      <div className="al2-wrapper al2-emb-only">
+        <header className="al2-topbar al2-emb-topbar">
+          <div className="al2-logo-group">
+            <img
+              src="/logowhite2.png"
+              alt="CityEcoMap"
+              className="al2-logo"
+            />
+          </div>
+
+          <div className="al2-topbar-right al2-emb-topbar-right">
+            {tourSteps.length > 0 && (
+              <button
+                className="al2-help-btn"
+                onClick={() => setShowTour(true)}
+                title="Show guide for this page"
+                aria-label="Show guide"
+              >
+                ?
+              </button>
+            )}
+
+            {currentAdmin && (
+              <div className="al2-emb-profile">
+                <div
+                  className={`al2-avatar ${
+                    AVATAR_ROLE_CLASS[currentAdmin.role] || ""
+                  }`}
+                >
+                  {getInitials(currentAdmin.name)}
+                </div>
+
+                <div className="al2-emb-profile-info">
+                  <span className="al2-profile-name">
+                    {currentAdmin.name}
+                  </span>
+                  <span className="al2-profile-role">
+                    EMB Admin (Monitoring Only)
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <button
+              className="al2-emb-logout"
+              onClick={handleLogout}
+              type="button"
+              aria-label="Logout"
+              title="Logout"
+            >
+              <span className="al2-emb-logout-icon">{icons.logout}</span>
+              <span className="al2-emb-logout-text">Logout</span>
+            </button>
+          </div>
+        </header>
+
+        <main className="al2-main al2-emb-main">
+          {!accessChecked ? (
+            <p role="status" style={{ color: "#555" }}>
+              Verifying access{verifyRetrying ? " — waiting for connection…" : "…"}
+            </p>
+          ) : (
+            children
+          )}
+        </main>
+
+        {showTour && tourSteps.length > 0 && (
+          <OnboardingTour
+            steps={tourSteps}
+            onFinish={() => {
+              setShowTour(false);
+              setCurrentStepIndex(0);
+            }}
+            storageKey={tourKey}
+            onStepChange={setCurrentStepIndex}
+          />
+        )}
+      </div>
+    );
+  }
 
   const navItems = [
     { label: "Dashboard", path: "/admin/dashboard", icon: icons.dashboard },
     { label: "Manage & Resolve Reports", path: "/admin/reports", icon: icons.reports },
     { label: "Generate & Export Reports", path: "/admin/export", icon: icons.export },
     { label: "Manage Users", path: "/admin/users", icon: icons.users, masterOnly: true },
+    { label: "Environmental Monitoring", path: "/admin/monitoring", icon: icons.dashboard, allowedRoles: ["Master Admin"] },
   ];
 
-  const visibleNavItems = navItems.filter((item) => !item.masterOnly || isMasterAdmin);
-
-  const visiblePendingReports = isMasterAdmin
-    ? pendingReports.filter((r) => r.needsReview === true)
-    : pendingReports.filter((r) =>
-        r.primaryOffice === currentOffice ||
-        (r.jurisdictionCandidates || []).includes(currentOffice)
-      );
-
-  const getInitials = (name) => {
-    if (!name) return "?";
-    const parts = name.trim().split(" ");
-    if (parts.length === 1) return parts[0][0].toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  };
+  const visibleNavItems = navItems.filter(
+    (item) =>
+      (!item.masterOnly || isMasterAdmin) &&
+      (!item.allowedRoles || item.allowedRoles.includes(currentAdmin?.role))
+  );
 
   return (
     <div className="al2-wrapper">
-      {/* Top navbar */}
       <header className="al2-topbar">
         <button
           className="al2-hamburger"
@@ -304,9 +643,9 @@ export default function AdminLayout({ children }) {
             <path d="M3 6h18M3 12h18M3 18h18" />
           </svg>
         </button>
+
         <div className="al2-logo-group">
           <img src="/logowhite2.png" alt="CityEcoMap" className="al2-logo" />
-    
         </div>
 
         <div className="al2-topbar-right">
@@ -321,10 +660,19 @@ export default function AdminLayout({ children }) {
           )}
 
           <div className="al2-notif-wrapper">
-            <button className="al2-notif-btn" onClick={(e) => { e.stopPropagation(); setShowNotifs(!showNotifs); }}>
+            <button
+              className="al2-notif-btn"
+              onClick={(event) => {
+                event.stopPropagation();
+                setShowNotifs((shown) => !shown);
+              }}
+              aria-label="Notifications"
+            >
               <BellIcon />
-              {(visiblePendingReports.length + activityItems.length) > 0 && (
-                <span className="al2-notif-count">{visiblePendingReports.length + activityItems.length}</span>
+              {visiblePendingReports.length + activityItems.length > 0 && (
+                <span className="al2-notif-count">
+                  {visiblePendingReports.length + activityItems.length}
+                </span>
               )}
             </button>
 
@@ -333,39 +681,53 @@ export default function AdminLayout({ children }) {
                 <div className="al2-notif-tabs">
                   {!isMasterAdmin && (
                     <button
-                      className={`al2-notif-tab ${notifTab === 'new' ? 'al2-notif-tab--active' : ''}`}
-                      onClick={() => setNotifTab('new')}
+                      className={`al2-notif-tab ${
+                        notifTab === "new" ? "al2-notif-tab--active" : ""
+                      }`}
+                      onClick={() => setNotifTab("new")}
                     >
-                      New Reports{visiblePendingReports.length > 0 ? ` (${visiblePendingReports.length})` : ''}
+                      New Reports
+                      {visiblePendingReports.length > 0
+                        ? ` (${visiblePendingReports.length})`
+                        : ""}
                     </button>
                   )}
+
                   <button
-                    className={`al2-notif-tab ${notifTab === 'activity' ? 'al2-notif-tab--active' : ''}`}
-                    onClick={() => setNotifTab('activity')}
+                    className={`al2-notif-tab ${
+                      notifTab === "activity" ? "al2-notif-tab--active" : ""
+                    }`}
+                    onClick={() => setNotifTab("activity")}
                   >
-                    Coordination{activityItems.length > 0 ? ` (${activityItems.length})` : ''}
+                    Coordination
+                    {activityItems.length > 0 ? ` (${activityItems.length})` : ""}
                   </button>
                 </div>
 
-                {notifTab === 'new' ? (
+                {notifTab === "new" ? (
                   visiblePendingReports.length === 0 ? (
                     <p className="al2-notif-empty">No new reports.</p>
                   ) : (
                     <>
-                      {visiblePendingReports.slice(0, 10).map((r) => (
+                      {visiblePendingReports.slice(0, 10).map((report) => (
                         <button
-                          key={r.id}
+                          key={report.id}
                           className="al2-notif-item"
                           onClick={() => {
                             setShowNotifs(false);
-                            navigate(`/admin/reports?report=${r.id}`);
+                            navigate(`/admin/reports?report=${report.id}`);
                           }}
                         >
-                          <span className="al2-notif-id">#{r.reportId || r.id.slice(0, 6).toUpperCase()}</span>
-                          <span className="al2-notif-desc">{r.category}</span>
-                          <span className="al2-notif-time">{formatNotifDate(r.createdAt)}</span>
+                          <span className="al2-notif-id">
+                            #{report.reportId || report.id.slice(0, 6).toUpperCase()}
+                          </span>
+                          <span className="al2-notif-desc">{report.category}</span>
+                          <span className="al2-notif-time">
+                            {formatNotifDate(report.createdAt)}
+                          </span>
                         </button>
                       ))}
+
                       {visiblePendingReports.length > 10 && (
                         <button
                           className="al2-notif-viewall"
@@ -379,24 +741,26 @@ export default function AdminLayout({ children }) {
                       )}
                     </>
                   )
+                ) : activityItems.length === 0 ? (
+                  <p className="al2-notif-empty">No coordination activity.</p>
                 ) : (
-                  activityItems.length === 0 ? (
-                    <p className="al2-notif-empty">No coordination activity.</p>
-                  ) : (
-                    activityItems.map((item) => (
-                      <button
-                        key={item.id}
-                        className="al2-notif-item"
-                        onClick={() => {
-                          setShowNotifs(false);
-                          navigate(`/admin/reports?report=${item.reportId}`);
-                        }}
-                      >
-                        <span className="al2-notif-desc">{item.notes || item.action}</span>
-                        <span className="al2-notif-time">{formatNotifDate(item.timestamp)}</span>
-                      </button>
-                    ))
-                  )
+                  activityItems.map((item) => (
+                    <button
+                      key={item.id}
+                      className="al2-notif-item"
+                      onClick={() => {
+                        setShowNotifs(false);
+                        navigate(`/admin/reports?report=${item.reportId}`);
+                      }}
+                    >
+                      <span className="al2-notif-desc">
+                        {item.notes || item.action}
+                      </span>
+                      <span className="al2-notif-time">
+                        {formatNotifDate(item.timestamp)}
+                      </span>
+                    </button>
+                  ))
                 )}
               </div>
             )}
@@ -406,23 +770,43 @@ export default function AdminLayout({ children }) {
 
       <div className="al2-body">
         {mobileOpen && (
-          <div className="al2-backdrop" onClick={() => setMobileOpen(false)} />
+          <div
+            className="al2-backdrop"
+            onClick={() => setMobileOpen(false)}
+          />
         )}
-        {/* Sidebar */}
-        <div className={`al2-sidebar-outer ${collapsed ? "al2-sidebar-outer--collapsed" : ""} ${mobileOpen ? "al2-sidebar-outer--mobile-open" : ""}`}>
+
+        <div
+          className={`al2-sidebar-outer ${
+            collapsed ? "al2-sidebar-outer--collapsed" : ""
+          } ${mobileOpen ? "al2-sidebar-outer--mobile-open" : ""}`}
+        >
           <aside
-            className={`al2-sidebar ${collapsed ? "al2-sidebar--collapsed" : ""}`}
+            className={`al2-sidebar ${
+              collapsed ? "al2-sidebar--collapsed" : ""
+            }`}
             style={{
               backgroundImage: `linear-gradient(rgba(26,74,26,0.9), rgba(26,74,26,0.9)), url(${process.env.PUBLIC_URL}/sidebar-bg.jpg)`,
             }}
           >
             {currentAdmin && (
               <div className="al2-profile">
-                <div className={`al2-avatar ${AVATAR_ROLE_CLASS[currentAdmin.role] || ""}`}>{getInitials(currentAdmin.name)}</div>
+                <div
+                  className={`al2-avatar ${
+                    AVATAR_ROLE_CLASS[currentAdmin.role] || ""
+                  }`}
+                >
+                  {getInitials(currentAdmin.name)}
+                </div>
+
                 {(!collapsed || mobileOpen) && (
                   <div className="al2-profile-info">
-                    <span className="al2-profile-name">{currentAdmin.name}</span>
-                    <span className="al2-profile-role">{currentAdmin.role}</span>
+                    <span className="al2-profile-name">
+                      {currentAdmin.name}
+                    </span>
+                    <span className="al2-profile-role">
+                      {currentAdmin.role} (Test Account)
+                    </span>
                   </div>
                 )}
               </div>
@@ -432,34 +816,53 @@ export default function AdminLayout({ children }) {
               {visibleNavItems.map((item) => {
                 const isDashItem = item.path === "/admin/dashboard";
                 const showLabels = !collapsed || mobileOpen;
+
                 const itemButton = (
                   <button
-                    className={`al2-nav-item ${location.pathname === item.path ? "al2-nav-item--active" : ""}`}
-                    onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                    className={`al2-nav-item ${
+                      location.pathname === item.path
+                        ? "al2-nav-item--active"
+                        : ""
+                    }`}
+                    onClick={() => {
+                      navigate(item.path);
+                      setMobileOpen(false);
+                    }}
                     title={collapsed ? item.label : undefined}
                   >
                     <span className="al2-nav-icon">{item.icon}</span>
                     {showLabels && <span>{item.label}</span>}
-                    {item.path === "/admin/reports" && visiblePendingReports.length > 0 && (
-                      <span className="al2-nav-badge">{visiblePendingReports.length}</span>
-                    )}
+
+                    {item.path === "/admin/reports" &&
+                      visiblePendingReports.length > 0 && (
+                        <span className="al2-nav-badge">
+                          {visiblePendingReports.length}
+                        </span>
+                      )}
                   </button>
                 );
 
-                if (!isDashItem) return <Fragment key={item.path}>{itemButton}</Fragment>;
+                if (!isDashItem) {
+                  return <Fragment key={item.path}>{itemButton}</Fragment>;
+                }
 
-                // Icon-only (collapsed) sidebar always shows the compact submenu
                 const showSubmenu = !showLabels || dashOpen;
+
                 return (
                   <Fragment key={item.path}>
                     <div className="al2-nav-row">
                       {itemButton}
+
                       {showLabels && (
                         <button
                           className="al2-nav-chevron-btn"
                           onClick={toggleDash}
                           aria-expanded={dashOpen}
-                          aria-label={dashOpen ? "Collapse dashboard sections" : "Expand dashboard sections"}
+                          aria-label={
+                            dashOpen
+                              ? "Collapse dashboard sections"
+                              : "Expand dashboard sections"
+                          }
                           title={dashOpen ? "Collapse sections" : "Expand sections"}
                         >
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -468,20 +871,36 @@ export default function AdminLayout({ children }) {
                         </button>
                       )}
                     </div>
+
                     {showSubmenu && (
-                      <div className={`al2-submenu ${showLabels ? "" : "al2-submenu--compact"}`}>
-                        {DASHBOARD_SECTIONS.map((s) => (
+                      <div
+                        className={`al2-submenu ${
+                          showLabels ? "" : "al2-submenu--compact"
+                        }`}
+                      >
+                        {DASHBOARD_SECTIONS.map((section) => (
                           <button
-                            key={s.id}
-                            className={`al2-submenu-item ${isDashboard && activeSection === s.id ? "al2-submenu-item--active" : ""}`}
-                            onClick={() => handleSectionClick(s.id)}
-                            title={s.label}
+                            key={section.id}
+                            className={`al2-submenu-item ${
+                              isDashboard && activeSection === section.id
+                                ? "al2-submenu-item--active"
+                                : ""
+                            }`}
+                            onClick={() => handleSectionClick(section.id)}
+                            title={section.label}
                           >
-                            <svg className="al2-submenu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                 strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d={s.icon} />
+                            <svg
+                              className="al2-submenu-icon"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d={section.icon} />
                             </svg>
-                            {showLabels && <span>{s.label}</span>}
+                            {showLabels && <span>{section.label}</span>}
                           </button>
                         ))}
                       </div>
@@ -490,7 +909,12 @@ export default function AdminLayout({ children }) {
                 );
               })}
             </nav>
-            <button className="al2-logout" onClick={handleLogout} title={collapsed ? "Logout" : undefined}>
+
+            <button
+              className="al2-logout"
+              onClick={handleLogout}
+              title={collapsed ? "Logout" : undefined}
+            >
               <span className="al2-nav-icon">{icons.logout}</span>
               {(!collapsed || mobileOpen) && <span>Logout</span>}
             </button>
@@ -501,26 +925,58 @@ export default function AdminLayout({ children }) {
             onClick={() => {
               const next = !collapsed;
               setCollapsed(next);
-              localStorage.setItem("al2-sidebar-collapsed", next);
+              try {
+                localStorage.setItem("al2-sidebar-collapsed", String(next));
+              } catch {}
             }}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              {collapsed ? <path d="M9 6l6 6-6 6" /> : <path d="M15 6l-6 6 6 6" />}
+              {collapsed ? (
+                <path d="M9 6l6 6-6 6" />
+              ) : (
+                <path d="M15 6l-6 6 6 6" />
+              )}
             </svg>
           </button>
         </div>
 
-        {/* Page content */}
         <main className="al2-main">
-          {children}
+          {accessChecked && verifyRetrying && (
+            <div
+              role="status"
+              style={{
+                background: "#fff4d6",
+                border: "1px solid #f0d58a",
+                color: "#8a6100",
+                borderRadius: 8,
+                padding: "8px 12px",
+                marginBottom: 12,
+                fontSize: "0.85rem",
+                fontFamily: "sans-serif",
+              }}
+            >
+              Reconnecting — verifying your account…
+            </div>
+          )}
+
+          {accessChecked ? (
+            children
+          ) : (
+            <p role="status" style={{ color: "#555", fontFamily: "sans-serif" }}>
+              Verifying access{verifyRetrying ? " — waiting for connection…" : "…"}
+            </p>
+          )}
         </main>
       </div>
 
       {showTour && tourSteps.length > 0 && (
         <OnboardingTour
           steps={tourSteps}
-          onFinish={() => { setShowTour(false); setCurrentStepIndex(0); }}
+          onFinish={() => {
+            setShowTour(false);
+            setCurrentStepIndex(0);
+          }}
           storageKey={tourKey}
           onStepChange={setCurrentStepIndex}
         />
