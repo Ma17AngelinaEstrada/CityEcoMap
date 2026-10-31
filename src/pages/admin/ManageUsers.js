@@ -59,7 +59,7 @@ export default function ManageUsers() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState(null);
-  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "", isFocalPerson: false });
+  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "" });
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { registerTour, showTour, currentStepIndex } = useAdminTour();
@@ -84,7 +84,7 @@ export default function ManageUsers() {
     if (!isMasterAdmin) return;
     if (showTour && currentStepIndex === SAMPLE_MODAL_STEP_INDEX) {
       setEditingAdmin(null);
-      setFormData({ name: "Juan Dela Cruz", email: "juan.delacruz@example.com", password: "", role: "CENRO Admin", isFocalPerson: false });
+      setFormData({ name: "Juan Dela Cruz", email: "juan.delacruz@example.com", password: "", role: "CENRO Admin"});
       setFormError("");
       setShowModal(true);
     } else if (showModal) {
@@ -124,14 +124,14 @@ export default function ManageUsers() {
 
   const openCreateModal = () => {
     setEditingAdmin(null);
-    setFormData({ name: "", email: "", password: "", role: "", isFocalPerson: false });
+    setFormData({ name: "", email: "", password: "", role: "" });
     setFormError("");
     setShowModal(true);
   };
 
   const openEditModal = (admin) => {
     setEditingAdmin(admin);
-    setFormData({ name: admin.name, email: admin.email, password: "", role: admin.role, isFocalPerson: !!admin.isFocalPerson });
+    setFormData({ name: admin.name, email: admin.email, password: "", role: admin.role});
     setFormError("");
     setShowModal(true);
   };
@@ -157,26 +157,17 @@ export default function ManageUsers() {
 
     setSubmitting(true);
     try {
-      if (formData.isFocalPerson) {
-        const currentFocal = admins.find(
-          (a) => a.role === formData.role && a.isFocalPerson && a.id !== editingAdmin?.id
-        );
-        if (currentFocal) {
-          await updateDoc(doc(db, "admins", currentFocal.id), { isFocalPerson: false });
-        }
-      }
       if (editingAdmin) {
         // Edit existing admin
         await updateDoc(doc(db, "admins", editingAdmin.id), {
           name: formData.name,
           role: formData.role,
-          isFocalPerson: formData.isFocalPerson,
         });
         setAdmins((prev) =>
           prev.map((a) =>
             a.id === editingAdmin.id
-              ? { ...a, name: formData.name, role: formData.role, isFocalPerson: formData.isFocalPerson }
-              : (formData.isFocalPerson && a.role === formData.role ? { ...a, isFocalPerson: false } : a)
+              ? { ...a, name: formData.name, role: formData.role}
+              : a
           )
         );
       } else {
@@ -191,21 +182,17 @@ export default function ManageUsers() {
           name: formData.name,
           email: formData.email.toLowerCase(),
           role: formData.role,
-          isFocalPerson: formData.isFocalPerson,
           status: "Active",
           createdAt: serverTimestamp(),
           createdBy: auth.currentUser?.email || "unknown",
         });
         setAdmins((prev) => [
-           ...prev.map((a) =>
-             formData.isFocalPerson && a.role === formData.role ? { ...a, isFocalPerson: false } : a
-           ),
+           ...prev,
            {
              id: userCred.user.uid,
              name: formData.name,
              email: formData.email.toLowerCase(),
              role: formData.role,
-             isFocalPerson: formData.isFocalPerson,
              status: "Active",
              createdBy: auth.currentUser?.email || "unknown",
            },
@@ -292,7 +279,7 @@ export default function ManageUsers() {
                   <tr key={admin.id}>
                     <td>
                       {admin.name}
-                      {admin.isFocalPerson && <span className="mu-focal-badge" title="Focal Person">★ Focal</span>}
+                      {admin.status === "Active" && <span className="mu-focal-badge" title="Focal Person">★ Focal</span>}
                       {admin.id === auth.currentUser?.uid && (
                         <span className="mu-you"> (you)</span>
                       )}
@@ -336,7 +323,7 @@ export default function ManageUsers() {
             <div className="mu-card-top">
               <span className="mu-card-name">
                 {admin.name}
-                {admin.isFocalPerson && <span className="mu-focal-badge" title="Focal Person">★ Focal</span>}
+                {admin.status === "Active" && <span className="mu-focal-badge" title="Focal Person">★ Focal</span>}
                 {admin.id === auth.currentUser?.uid && <span className="mu-you"> (you)</span>}
               </span>
               <span className={getRoleClass(admin.role)}>{admin.role}</span>
@@ -420,19 +407,13 @@ export default function ManageUsers() {
                   {OFFICE_ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
                 </select>
               </div>
-
                 <div className="mu-field">
-                <label className="mu-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={formData.isFocalPerson}
-                    onChange={(e) => setFormData({ ...formData, isFocalPerson: e.target.checked })}
-                  />
-                  Focal Person for this office
-                </label>
-                <span className="mu-note">Only one focal person per office — checking this unsets any existing one.</span>
+                  <span className="mu-note">
+                    Every Active administrator is automatically a focal person (eligible office contact).
+                    This does not grant any extra access to reports or admin functions.
+                  </span>
+                </div>
               </div>
-            </div>
 
             <div className="mu-modal-footer">
               <button className="mu-cancel-btn" onClick={() => setShowModal(false)}>Cancel</button>
