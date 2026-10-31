@@ -11,13 +11,23 @@ import { ACTIVE_OFFICE_LIST, OPERATIONAL_OFFICE_LIST, isMasterRole, officeForRol
 import PriorityBadge from "../../components/PriorityBadge";
 import { suggestPriority } from "../../utils/priorityRules";
 
-const sendEmailNotification = async (to, subject, body) => {
-  if (!to) return;
+const EMAIL_SERVER_URL = process.env.REACT_APP_EMAIL_SERVER_URL || 'https://cityecomap-email.onrender.com';
+
+// Asks the email server to notify the citizen. The server verifies this admin's
+// access to the report and chooses the recipient and the message itself.
+const sendEmailNotification = async (reportDocId, kind) => {
+  if (!reportDocId || reportDocId === 'SAMPLE_REPORT') return;
   try {
-    await fetch('https://cityecomap-email.onrender.com/send-email', {
+    const user = auth.currentUser;
+    if (!user) return;
+    const idToken = await user.getIdToken();
+    await fetch(`${EMAIL_SERVER_URL}/notify`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, subject, body }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({ reportDocId, kind }),
     });
   } catch (err) {
     console.error('Email notification failed:', err);
@@ -407,17 +417,7 @@ export default function ManageReports() {
 
   const handleApprove = async () => {
     await updateStatus(selectedReport.id, "Approved");
-    await sendEmailNotification(
-      selectedReport.email,
-      "Your CityEcoMap Report Has Been Approved",
-      `<p>Dear Citizen,</p>
-       <p>Your report <strong>#${selectedReport.reportId}</strong> has been reviewed and approved.</p>
-       <p>It is being handled by <strong>${selectedReport.primaryOffice}</strong>.</p>
-       <p>Thank you for helping keep Lucena City clean!</p>
-       <p>You can also check your report's progress anytime using your Report ID <strong>#${selectedReport.reportId}</strong> on our Track Report page.</p>
-       <br/>
-       <p>— CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>`
-    );
+    await sendEmailNotification(selectedReport.id, "approved");
   };
 
   const handleManualAssign = async () => {
@@ -1012,17 +1012,7 @@ export default function ManageReports() {
     setRejectModal(false);
     setRejectConfirming(false);
     await updateStatus(selectedReport.id, "Rejected", { rejectionReason: rejectReason });
-    await sendEmailNotification(
-      selectedReport.email,
-      "Update on Your CityEcoMap Report",
-      `<p>Dear Citizen,</p>
-       <p>Your report <strong>#${selectedReport.reportId}</strong> has been reviewed but could not be approved.</p>
-       <p><strong>Reason:</strong> ${rejectReason}</p>
-       <p>If you believe this is an error, please submit a new report with clearer details.</p>
-       <p>You can also check your report's status anytime using your Report ID <strong>#${selectedReport.reportId}</strong> on our Track Report page.</p>
-       <br/>
-       <p>— CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>`
-    );
+    await sendEmailNotification(selectedReport.id, "rejected");
   };
 
   const handleRejectClick = () => {
@@ -1038,30 +1028,12 @@ export default function ManageReports() {
 
   const handleSetOngoing = async () => {
     await updateStatus(selectedReport.id, "Ongoing");
-    await sendEmailNotification(
-      selectedReport.email,
-      "Cleanup in Progress — CityEcoMap Report Update",
-      `<p>Dear Citizen,</p>
-       <p>Good news! Cleanup is now in progress for your report <strong>#${selectedReport.reportId}</strong>.</p>
-       <p>Our team is actively working on resolving the issue. Thank you for your patience.</p>
-       <p>You can also check your report's progress anytime using your Report ID <strong>#${selectedReport.reportId}</strong> on our Track Report page.</p>
-       <br/>
-       <p>— CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>`
-    );
+    await sendEmailNotification(selectedReport.id, "ongoing");
   };
 
   const handleSetResolved = async () => {
     await updateStatus(selectedReport.id, "Resolved");
-    await sendEmailNotification(
-      selectedReport.email,
-      "Your Report Has Been Resolved — CityEcoMap",
-      `<p>Dear Citizen,</p>
-       <p>Your report <strong>#${selectedReport.reportId}</strong> has been successfully resolved.</p>
-       <p>Thank you for helping us build a cleaner, greener Lucena City!</p>
-       <p>You can view the full details of your resolved report anytime using your Report ID <strong>#${selectedReport.reportId}</strong> on our Track Report page.</p>
-       <br/>
-       <p>— CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>`
-    );
+    await sendEmailNotification(selectedReport.id, "resolved");
   };
 
   const fetchStatusHistory = async (reportId) => {
