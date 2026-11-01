@@ -9,7 +9,7 @@ app.set('trust proxy', 1); // Render runs behind one reverse proxy
 // ---------- Configuration ----------
 const BREVO_API_KEY = process.env.BREVO_API_KEY; // secret: environment variable only
 const SENDER_EMAIL = 'cityecomap.lucena@gmail.com';
-const SENDER_NAME = 'CityEcoMap - EMB Lucena City';
+const SENDER_NAME = 'CityEcoMap';
 
 // Public identifiers (not secrets)
 const FIREBASE_PROJECT_ID = 'cityecomap';
@@ -191,8 +191,7 @@ async function verifyReportAccess(admin, report, docId, idToken) {
   return 'unavailable';
 }
 
-const SIGNATURE =
-  '<br/><p>&mdash; CityEcoMap Team<br/>Environmental Management Bureau, Lucena City</p>';
+const SIGNATURE = '<br/><p>&mdash; CityEcoMap Team</p>';
 
 function buildEmail(kind, report) {
   const id = escapeHtml(report.reportId);
