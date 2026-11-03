@@ -30,7 +30,7 @@ export default function RequireAdminRole({ allowedRoles, children }) {
   }, []);
 
   if (state.loading) return <div style={{ padding: 32, textAlign: 'center' }}>Verifying admin access…</div>;
-  if (!state.role) return <Navigate to="/admin" replace state={{ from: location.pathname }} />;
+  if (!state.role) return <Navigate to="/admin" replace state={{ from: location.pathname + location.search }} />;
   if (!allowedRoles.includes(state.role)) {
     return <Navigate to={state.role === 'EMB Admin' ? '/admin/monitoring' : '/admin/dashboard'} replace />;
   }

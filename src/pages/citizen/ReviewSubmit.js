@@ -11,6 +11,21 @@ import { TrashIcon, CameraIcon, ClipboardIcon, PinIcon, MailIcon, XIcon, ArrowLe
 
 function ReviewSubmit() {
   const navigate = useNavigate();
+
+  // Best-effort: asks the email server to notify the responsible office admins.
+  // Only the report ID is sent; a failure never affects the submitted report.
+  const notifyAdminsOfNewReport = (reportDocId) => {
+    try {
+      fetch(`${process.env.REACT_APP_EMAIL_SERVER_URL || 'https://cityecomap-email.onrender.com'}/notify-admins`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportDocId }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch (err) {
+      // ignore: notification is optional
+    }
+  };
   const location = useLocation();
   const { form } = location.state || {};
   const [submitting, setSubmitting] = useState(false);
@@ -91,6 +106,8 @@ function ReviewSubmit() {
 
       savedReports.unshift({ reportId, submittedAt: new Date().toISOString() });
       localStorage.setItem('cityecomap_my_reports', JSON.stringify(savedReports.slice(0, 50)));
+
+      notifyAdminsOfNewReport(reportRef.id);
 
       navigate('/confirmation', {
         replace: true,

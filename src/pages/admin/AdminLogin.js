@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { doc, getDocFromServer } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import "./AdminLogin.css";
+
+// Only same-site admin paths are accepted as a post-login destination.
+const safeAdminReturnPath = (value) =>
+  typeof value === "string" && /^\/admin\/[A-Za-z0-9_\-./?=&%]+$/.test(value) && !value.includes("..")
+    ? value
+    : null;
 
 export default function AdminLogin() {
   const [username, setUsername] = useState("");
@@ -11,6 +17,7 @@ export default function AdminLogin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const routerLocation = useLocation();
 
   const [showForgot, setShowForgot] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
@@ -70,7 +77,8 @@ export default function AdminLogin() {
           setError(message);
           return;
         }
-        navigate(sessionStorage.getItem('cityecomap-admin-role') === 'EMB Admin' ? '/admin/monitoring' : '/admin/dashboard');
+        const returnTo = safeAdminReturnPath(routerLocation.state && routerLocation.state.from);
+        navigate(sessionStorage.getItem('cityecomap-admin-role') === 'EMB Admin' ? '/admin/monitoring' : (returnTo || '/admin/dashboard'));
       } catch (err) {
         setError("Invalid credentials. Please try again.");
       } finally {

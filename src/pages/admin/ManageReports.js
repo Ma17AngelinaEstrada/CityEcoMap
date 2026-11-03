@@ -307,14 +307,15 @@ export default function ManageReports() {
 
   useEffect(() => {
     const targetId = location.state?.openReportId;
-    if (targetId && reports.length > 0) {
-      const target = reports.find((r) => r.id === targetId);
+    const roleReady = isMaster || !!currentOffice;
+    if (targetId && reports.length > 0 && roleReady) {
+      const target = visibleReports.find((r) => r.id === targetId);
       if (target) {
         setSelectedReport(target);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state, reports]);
+  }, [location.state, reports, isMaster, currentOffice]);
 
   useEffect(() => {
     const targetId = searchParams.get("report");
@@ -324,18 +325,20 @@ export default function ManageReports() {
       setFilterStatus(statusParam);
     }
 
-    if (targetId && reports.length > 0) {
-      const target = reports.find((r) => r.id === targetId);
+    const roleReady = isMaster || !!currentOffice;
+
+    if (targetId && reports.length > 0 && roleReady) {
+      const target = visibleReports.find((r) => r.id === targetId);
       if (target) {
         setSelectedReport(target);
       }
     }
 
-    if (targetId || statusParam) {
+    if ((targetId || statusParam) && (!targetId || (reports.length > 0 && roleReady))) {
       setSearchParams({}, { replace: true });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, reports]);
+  }, [searchParams, reports, isMaster, currentOffice]);
 
   useEffect(() => {
     const resolveAddresses = async () => {
