@@ -467,3 +467,15 @@
   object-fit: cover;
   border-radius: 8px;
 }
+
+/* Wrap long unbroken text in the report details */
+.detail-box {
+  min-width: 0;
+}
+
+.detail-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+

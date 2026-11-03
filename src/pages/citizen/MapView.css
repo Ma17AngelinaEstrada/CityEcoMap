@@ -659,3 +659,16 @@
 
 .popup-sub { margin: 0 0 4px; font-size: 12px; color: #777; font-style: italic; }
 .report-mini-flood { margin: 0; font-size: 12px; color: #777; font-style: italic; }
+
+/* Wrap long unbroken text in popups and report cards */
+.popup-desc,
+.popup-location,
+.popup-type,
+.report-mini-desc,
+.report-mini-category,
+.report-mini-id {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
