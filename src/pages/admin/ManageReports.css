@@ -1304,3 +1304,10 @@
   min-width: 0;
   max-width: 100%;
 }
+
+/* Wrap long unbroken text (descriptions) inside the report detail modal */
+.mr-detail-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
