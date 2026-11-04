@@ -276,7 +276,7 @@ export default function ExportReports() {
   const generatingOfficeLabel = isMaster ? "Master Admin — System-wide" : (currentOffice || "—");
  
   const supportingOfficesLabel = (r) => {
-    const offices = [...new Set((r.supportingOffices || []).map((so) => so.officeId))];
+    const offices = [...new Set((r.supportingOffices || []).filter((so) => so.status !== "declined").map((so) => so.officeId))];
     return offices.length ? offices.join(", ") : "None";
   };
 
@@ -299,7 +299,7 @@ export default function ExportReports() {
 
     const matchAssigned = !isMaster || filterAssigned === "All" || r.primaryOffice === filterAssigned;
     const matchSupporting = filterSupporting === "All" ||
-      (r.supportingOffices || []).some((so) => so.officeId === filterSupporting);
+      (r.supportingOffices || []).some((so) => so.officeId === filterSupporting && so.status !== "declined");
 
     const cleanedSearch = searchQuery.replace(/#/g, "").trim().toLowerCase();
       const matchSearch = cleanedSearch === "" ||
