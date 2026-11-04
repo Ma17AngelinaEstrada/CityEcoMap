@@ -796,3 +796,10 @@ body:has(.tour-overlay) .er-header > .er-header-search {
   white-space: nowrap;
 }
 
+/* Wrap long unbroken text in report cards */
+.er-card-row,
+.er-card-desc {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}

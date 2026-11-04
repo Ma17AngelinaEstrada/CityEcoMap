@@ -118,7 +118,7 @@ const generateSupportId = () =>
 const MAX_REROUTES = 3;
 
 const supportingOfficesLabel = (r) => {
-  const offices = [...new Set((r.supportingOffices || []).map((so) => so.officeId))];
+  const offices = [...new Set((r.supportingOffices || []).filter((so) => so.status !== "declined").map((so) => so.officeId))];
   return offices.length ? offices.join(", ") : "—";
 };
 
@@ -1085,7 +1085,7 @@ export default function ManageReports() {
   }, [selectedReport?.id]);
 
   const hasSupportInvolvement = (r) =>
-    (r.supportingOffices || []).some((so) => so.officeId === currentOffice);
+    (r.supportingOffices || []).some((so) => so.officeId === currentOffice && so.status !== "declined");
 
   const hasRerouteInvolvement = (r) => r.rerouteRequest?.targetOffice === currentOffice;
   const actingOffice = isMaster ? null : currentOffice;
@@ -1111,7 +1111,7 @@ export default function ManageReports() {
     })();
     const matchAssigned = !isMaster || filterAssigned === "All" || r.primaryOffice === filterAssigned;
     const matchSupporting = filterSupporting === "All" ||
-      (r.supportingOffices || []).some((so) => so.officeId === filterSupporting);
+      (r.supportingOffices || []).some((so) => so.officeId === filterSupporting && so.status !== "declined");
     const cleanedSearch = searchQuery.replace(/#/g, "").trim().toLowerCase();
     const matchSearch = cleanedSearch === "" ||
         (r.reportId && r.reportId.toLowerCase().includes(cleanedSearch)) ||
@@ -1422,7 +1422,7 @@ export default function ManageReports() {
             <label>Primary Office</label>
             <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
               <option>All</option>
-              {ACTIVE_OFFICE_LIST.map((o) => <option key={o}>{o}</option>)}
+              {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o}>{o}</option>)}
             </select>
           </div>
         )}
@@ -1430,7 +1430,7 @@ export default function ManageReports() {
           <label>Supporting Office</label>
           <select value={filterSupporting} onChange={(e) => setFilterSupporting(e.target.value)}>
             <option>All</option>
-            {ACTIVE_OFFICE_LIST.map((o) => <option key={o}>{o}</option>)}
+            {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o}>{o}</option>)}
           </select>
         </div>
         

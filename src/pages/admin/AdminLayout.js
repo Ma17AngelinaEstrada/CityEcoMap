@@ -94,6 +94,19 @@ export default function AdminLayout({ children }) {
   const [showNotifs, setShowNotifs] = useState(false);
   const [notifTab, setNotifTab] = useState("new");
   const [rawActivityItems, setActivityItems] = useState([]);
+  const [readActivityIds, setReadActivityIds] = useState([]);
+
+  useEffect(() => {
+    if (!currentAdmin || !auth.currentUser) return;
+    try {
+      const raw = localStorage.getItem(`cityecomap-read-activity-${auth.currentUser.uid}`);
+      const parsed = raw ? JSON.parse(raw) : [];
+      setReadActivityIds(Array.isArray(parsed) ? parsed : []);
+    } catch (err) {
+      setReadActivityIds([]);
+    }
+  }, [currentAdmin]);
+
   const [openEscalationIds, setOpenEscalationIds] = useState(null);
 
   const {
@@ -117,7 +130,26 @@ export default function AdminLayout({ children }) {
           seenEscalationReports.add(item.reportId);
           return true;
         })
-      : rawActivityItems;
+        : rawActivityItems;
+
+        const activityKey = (item) => `${item.reportId}/${item.id}`;
+        const unreadActivityCount = activityItems.filter(
+          (item) => !readActivityIds.includes(activityKey(item))
+        ).length;
+
+        const markActivityRead = (item) => {
+          const key = activityKey(item);
+          if (readActivityIds.includes(key)) return;
+          const next = [...readActivityIds, key].slice(-200);
+          setReadActivityIds(next);
+          try {
+            if (auth.currentUser) {
+              localStorage.setItem(`cityecomap-read-activity-${auth.currentUser.uid}`, JSON.stringify(next));
+            }
+          } catch (err) {
+            // localStorage unavailable: the count simply won't persist
+          }
+        };
 
   const toggleDash = () => {
     setDashOpen((open) => {
@@ -669,9 +701,9 @@ export default function AdminLayout({ children }) {
               aria-label="Notifications"
             >
               <BellIcon />
-              {visiblePendingReports.length + activityItems.length > 0 && (
+              {visiblePendingReports.length + unreadActivityCount > 0 && (
                 <span className="al2-notif-count">
-                  {visiblePendingReports.length + activityItems.length}
+                  {visiblePendingReports.length + unreadActivityCount}
                 </span>
               )}
             </button>
@@ -700,7 +732,7 @@ export default function AdminLayout({ children }) {
                     onClick={() => setNotifTab("activity")}
                   >
                     Coordination
-                    {activityItems.length > 0 ? ` (${activityItems.length})` : ""}
+                    {unreadActivityCount > 0 ? ` (${unreadActivityCount})` : ""}
                   </button>
                 </div>
 
@@ -747,9 +779,11 @@ export default function AdminLayout({ children }) {
                   activityItems.map((item) => (
                     <button
                       key={item.id}
+                      data-read={readActivityIds.includes(activityKey(item)) ? "true" : "false"}
                       className="al2-notif-item"
                       onClick={() => {
                         setShowNotifs(false);
+                        markActivityRead(item);
                         navigate(`/admin/reports?report=${item.reportId}`);
                       }}
                     >

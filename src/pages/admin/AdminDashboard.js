@@ -30,7 +30,7 @@ const LUCENA_CENTER = { lat: 13.9394, lng: 121.6169 };
 const adminMapContainerStyle = { width: '100%', height: '100%' };
 
 const supportingOfficesLabel = (r) => {
-  const offices = [...new Set((r.supportingOffices || []).map((so) => so.officeId))];
+  const offices = [...new Set((r.supportingOffices || []).filter((so) => so.status !== "declined").map((so) => so.officeId))];
   return offices.length ? offices.join(", ") : "—";
 };
 
@@ -883,12 +883,12 @@ export default function AdminDashboard() {
                                     <PriorityBadge level={suggestPriority(report).level} compact />
                                   </div>
                                   {report.description && (
-                                    <p style={{ fontSize: '0.78rem', color: '#555', marginTop: 4, borderTop: '1px solid #eee', paddingTop: 4 }}>
+                                    <p style={{ fontSize: '0.78rem', color: '#555', marginTop: 4, borderTop: '1px solid #eee', paddingTop: 4, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                                       {report.description}
                                     </p>
                                   )}
                                   {(report.locationDescription || report.addressInput || addresses[report.id]) && (
-                                    <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <p style={{ fontSize: '0.78rem', color: '#666', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                                       <PinIcon /> {report.locationDescription || report.addressInput || addresses[report.id]}
                                     </p>
                                   )}

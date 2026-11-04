@@ -930,3 +930,11 @@
   border-bottom: 1px solid #ece8dc;
 }
 
+/* Wrap long unbroken text in report cards */
+.ad-card-row,
+.ad-card-desc {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+

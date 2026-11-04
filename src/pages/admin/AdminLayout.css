@@ -872,3 +872,20 @@
     height: 28px;
   }
 }
+
+/* Wrap long text in notification items */
+.al2-notif-item,
+.al2-notif-desc {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.al2-notif-dropdown {
+  overflow-x: hidden;
+}
+
+.al2-notif-item[data-read="true"] {
+  opacity: 0.6;
+}
+

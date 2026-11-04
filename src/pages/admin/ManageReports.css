@@ -1311,3 +1311,32 @@
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+
+/* Wrap long unbroken text in report cards */
+.mr-card-row,
+.mr-card-desc {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Wrap long reasons, remarks and notes in the detail panel */
+.mr-support-remarks,
+.mr-support-decline-reason,
+.mr-support-reason,
+.mr-reroute-target,
+.mr-history-notes {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Wrap long text in the escalation banner and the decline confirmation */
+.mr-escalation-banner,
+.mr-escalation-banner span,
+.mr-modal-suggestion {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+

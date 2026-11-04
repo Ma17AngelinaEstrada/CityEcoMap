@@ -1246,7 +1246,7 @@ export default function ExportReports() {
             <label>Primary Office</label>
               <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
                 <option>All</option>
-                {ACTIVE_OFFICE_LIST.map((o) => <option key={o}>{o}</option>)}
+                {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o}>{o}</option>)}
               </select>
           </div>
         )}
@@ -1254,7 +1254,7 @@ export default function ExportReports() {
           <label>Supporting Office</label>
           <select value={filterSupporting} onChange={(e) => setFilterSupporting(e.target.value)}>
             <option>All</option>
-            {ACTIVE_OFFICE_LIST.map((o) => <option key={o}>{o}</option>)}
+            {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o}>{o}</option>)}
           </select>
         </div>
         <div className="mr-filters-tail">
