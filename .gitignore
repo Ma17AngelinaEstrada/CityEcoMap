@@ -26,3 +26,6 @@ yarn-debug.log*
 yarn-error.log*
 
 .env
+
+# Local Firebase emulator test dependencies
+emulator/tests/node_modules/

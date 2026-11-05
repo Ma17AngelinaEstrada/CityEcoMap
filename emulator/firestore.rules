@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myRole() {
+  let a = get(/databases/$(database)/documents/admins/$(request.auth.uid)).data;
+  return a.get('status', '') == 'Active' ? a.get('role', null) : null;
+}
+
+    function myOffice() {
+      let role = myRole();
+      return role == 'Master Admin' ? 'EMB'
+        : role == 'CENRO Admin' ? 'CENRO'
+        : role == 'City Engineering Admin' ? 'City Engineering'
+        : null;
+    }
+
+    function isMasterAdmin() {
+      return isSignedIn() && myRole() == 'Master Admin';
+    }
+
+    function isReportOffice(data) {
+      let office = myOffice();
+      return office != null && (
+        data.primaryOffice == office ||
+        office in data.get('supportingOfficeIds', []) ||
+        office in data.get('jurisdictionCandidates', []) ||
+        data.get('rerouteRequest', {}).get('targetOffice', null) == office
+      );
+    }
+
+    // NEW: who may upload/delete response photos on a report
+    function canManageResponsePhotos(reportId) {
+      let r = get(/databases/$(database)/documents/reports/$(reportId)).data;
+      return isMasterAdmin() ||
+        (myOffice() != null && r.primaryOffice == myOffice());
+    }
+
+    match /{path=**}/statusHistory/{historyId} {
+      allow read: if true;
+    }
+
+    match /reports/{reportId} {
+      allow create: if request.resource.data.status == 'Pending'
+                    && request.resource.data.keys().hasAll(['category', 'subCategory', 'description', 'status'])
+                    && !request.resource.data.keys().hasAny(['rejectionReason', 'assignedTo', 'supportingOfficeIds'])
+                    && request.resource.data.get('supportingOffices', []) == []
+                    && (
+                      (request.resource.data.get('primaryOffice', null) in ['EMB','CENRO','City Engineering'])
+                      ||
+                      (request.resource.data.get('primaryOffice', null) == null
+                       && request.resource.data.get('jurisdictionCandidates', []).size() > 0)
+                      ||
+                      (request.resource.data.get('primaryOffice', null) == null
+                       && request.resource.data.get('needsReview', false) == true)
+                    );
+
+      allow read: if true;
+      allow update: if isSignedIn() && (isMasterAdmin() || isReportOffice(resource.data));
+      allow delete: if isMasterAdmin();
+
+      match /statusHistory/{historyId} {
+          allow create: if (isSignedIn() && myOffice() != null)
+          || (
+            request.resource.data.action == 'AUTO_ROUTED'
+            && request.resource.data.status == 'Pending'
+            && request.resource.data.adminEmail == 'system'
+          );
+        allow read: if true;
+      }
+
+      // NEW: response photos (fixed slots 1-5, create-only, public read)
+      match /responsePhotos/{slot} {
+        allow read: if true;
+
+        allow create: if slot in ['1','2','3','4','5']
+          && isSignedIn()
+          && canManageResponsePhotos(reportId)
+          && get(/databases/$(database)/documents/reports/$(reportId)).data.status in ['Approved','Ongoing','Resolved']
+          && request.resource.data.keys().hasOnly(['data','uploadedByUid','uploadedByOffice','uploadedAt'])
+          && request.resource.data.data is string
+          && request.resource.data.data.size() <= 450000
+          && request.resource.data.data.matches('data:image/jpeg;base64,.*')
+          && request.resource.data.uploadedByUid == request.auth.uid
+          && request.resource.data.uploadedByOffice == myOffice()
+          && request.resource.data.uploadedAt == request.time;
+
+        allow update: if false;
+        allow delete: if isSignedIn() && canManageResponsePhotos(reportId);
+      }
+
+      match /private/{doc} {
+        allow create: if doc == 'contact'
+          && request.resource.data.keys().hasOnly(['contactNumber'])
+          && request.time < get(/databases/$(database)/documents/reports/$(reportId)).data.createdAt + duration.value(5, 'm');
+        allow update, delete: if false;
+        allow read: if isSignedIn() && (
+          isMasterAdmin() ||
+          isReportOffice(get(/databases/$(database)/documents/reports/$(reportId)).data)
+        );
+      }
+    }
+
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && (request.auth.uid == adminId || myOffice() != null);
+      allow list: if isSignedIn() && myOffice() != null;
+      allow write: if isMasterAdmin();
+    }
+
+    match /mail/{mailId} {
+      allow read, write: if false;
+    }
+
+    match /exportedReports/{exportId} {
+      allow create, read: if isSignedIn() && myOffice() != null;
+    }
+
+    match /users/{userId} {
+      allow read, write: if false;
+    }
+
+      match /monitoringStats/{docId} {
+      allow read: if isMasterAdmin() || myRole() == 'EMB Admin';
+      allow write: if isMasterAdmin()
+        && request.resource.data.keys().hasOnly(
+             ['schemaVersion', 'totalReports', 'statusCounts',
+              'categoryCounts', 'dailyTrend', 'updatedAt']);
+    }
+  }
+}

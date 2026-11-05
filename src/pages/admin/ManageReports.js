@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, onSnapshot, runTransaction, arrayUnion } from "firebase/firestore";
+import { collection, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, onSnapshot, runTransaction, arrayUnion, setDoc, deleteDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import AdminLayout from "./AdminLayout";
 import "./ManageReports.css";
@@ -12,6 +12,55 @@ import PriorityBadge from "../../components/PriorityBadge";
 import { suggestPriority } from "../../utils/priorityRules";
 
 const EMAIL_SERVER_URL = process.env.REACT_APP_EMAIL_SERVER_URL || 'https://cityecomap-email.onrender.com';
+
+const RESPONSE_PHOTO_SLOTS = ["1", "2", "3", "4", "5"];
+const RESPONSE_PHOTO_MAX_CHARS = 330000;
+
+const fetchResponsePhotos = async (reportId) => {
+  const snap = await getDocs(collection(db, "reports", reportId, "responsePhotos"));
+  return snap.docs
+    .map((d) => ({ slot: d.id, ...d.data() }))
+    .sort((a, b) => Number(a.slot) - Number(b.slot));
+};
+
+// Re-encodes the image through a canvas, which drops EXIF/GPS metadata.
+const compressToJpeg = (file) =>
+  new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        let quality = 0.8;
+        let dataUrl = canvas.toDataURL("image/jpeg", quality);
+        while (dataUrl.length > RESPONSE_PHOTO_MAX_CHARS && quality > 0.3) {
+          quality -= 0.1;
+          dataUrl = canvas.toDataURL("image/jpeg", quality);
+        }
+        if (dataUrl.length > RESPONSE_PHOTO_MAX_CHARS) {
+          reject(new Error("Photo is too large. Please choose a smaller photo."));
+        } else {
+          resolve(dataUrl);
+        }
+      } catch (err) {
+        reject(err);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read that image."));
+    };
+    img.src = url;
+  });
 
 // Asks the email server to notify the citizen. The server verifies this admin's
 // access to the report and chooses the recipient and the message itself.
@@ -162,6 +211,9 @@ export default function ManageReports() {
   const [escalateBusy, setEscalateBusy] = useState(false);
   const [escalateResolveOffice, setEscalateResolveOffice] = useState("");
   const [lightbox, setLightbox] = useState(null);
+  const [responsePhotos, setResponsePhotos] = useState([]);
+  const [responsePhotoBusy, setResponsePhotoBusy] = useState(false);
+  const [responsePhotoError, setResponsePhotoError] = useState("");
   const [addresses, setAddresses] = useState({});
   const [statusHistory, setStatusHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -1084,6 +1136,95 @@ export default function ManageReports() {
       .finally(() => setLoadingContact(false));
   }, [selectedReport?.id]);
 
+  useEffect(() => {
+    setResponsePhotoError("");
+    if (!selectedReport?.id || selectedReport.id === 'SAMPLE_REPORT') {
+      setResponsePhotos([]);
+      return;
+    }
+    let cancelled = false;
+    fetchResponsePhotos(selectedReport.id)
+      .then((list) => { if (!cancelled) setResponsePhotos(list); })
+      .catch((err) => {
+        console.error("Error fetching response photos:", err);
+        if (!cancelled) setResponsePhotos([]);
+      });
+    return () => { cancelled = true; };
+  }, [selectedReport?.id]);
+
+  const canManageResponsePhotos = (r) =>
+    !!r && r.id !== 'SAMPLE_REPORT' &&
+    (isMaster || (!!currentOffice && r.primaryOffice === currentOffice));
+
+  const canUploadResponsePhotos = (r) =>
+    canManageResponsePhotos(r) && ['Approved', 'Ongoing', 'Resolved'].includes(r.status);
+
+  const handleResponsePhotoUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length || !selectedReport || !auth.currentUser) return;
+    const reportId = selectedReport.id;
+    const used = new Set(responsePhotos.map((p) => p.slot));
+    const free = RESPONSE_PHOTO_SLOTS.filter((s) => !used.has(s));
+    if (free.length === 0) {
+      setResponsePhotoError("Maximum of 5 response photos reached.");
+      return;
+    }
+    setResponsePhotoBusy(true);
+    setResponsePhotoError("");
+    try {
+      for (const file of files.slice(0, free.length)) {
+        if (!file.type.startsWith("image/")) throw new Error("Only image files are allowed.");
+        const dataUrl = await compressToJpeg(file);
+        let saved = false;
+        while (!saved && free.length > 0) {
+          const slot = free.shift();
+          try {
+            await setDoc(doc(db, "reports", reportId, "responsePhotos", slot), {
+              data: dataUrl,
+              uploadedByUid: auth.currentUser.uid,
+              uploadedByOffice: isMaster ? "EMB" : currentOffice,
+              uploadedAt: serverTimestamp(),
+            });
+            saved = true;
+          } catch (err) {
+            if (err.code !== "permission-denied") throw err;
+            // That slot may already be taken; try the next free one.
+          }
+        }
+        if (!saved) {
+          throw new Error("Could not upload. The 5-photo limit may be reached, or you may not have permission.");
+        }
+      }
+    } catch (err) {
+      console.error("Response photo upload failed:", err);
+      setResponsePhotoError(err.message || "Upload failed. Please try again.");
+    } finally {
+      try {
+        setResponsePhotos(await fetchResponsePhotos(reportId));
+      } catch (err) {
+        console.error("Error refreshing response photos:", err);
+      }
+      setResponsePhotoBusy(false);
+    }
+  };
+
+  const handleResponsePhotoDelete = async (slot) => {
+    if (!selectedReport) return;
+    if (!window.confirm("Delete this response photo? It will no longer be visible in Track Report.")) return;
+    setResponsePhotoBusy(true);
+    setResponsePhotoError("");
+    try {
+      await deleteDoc(doc(db, "reports", selectedReport.id, "responsePhotos", slot));
+      setResponsePhotos((prev) => prev.filter((p) => p.slot !== slot));
+    } catch (err) {
+      console.error("Response photo delete failed:", err);
+      setResponsePhotoError("Could not delete the photo. You may not have permission.");
+    } finally {
+      setResponsePhotoBusy(false);
+    }
+  };
+
   const hasSupportInvolvement = (r) =>
     (r.supportingOffices || []).some((so) => so.officeId === currentOffice && so.status !== "declined");
 
@@ -1700,6 +1841,47 @@ export default function ManageReports() {
                     ))}
                   </div>
                   <span className="mr-photo-hint">Click a photo to enlarge</span>
+                </div>
+              )}
+                            {selectedReport && selectedReport.id !== 'SAMPLE_REPORT' &&
+                (responsePhotos.length > 0 || canUploadResponsePhotos(selectedReport)) && (
+                <div className="mr-detail-photo mr-response-photos">
+                  <span className="mr-detail-label">Response Photos (Public)</span>
+                  <div className="mr-response-warning">
+                    Photos uploaded here are <strong>publicly visible</strong> in Track Report.
+                    Do not upload photos showing faces, vehicle plate numbers, or private information.
+                  </div>
+                  {responsePhotos.length > 0 && (
+                    <div className="mr-photo-gallery">
+                      {responsePhotos.map((p, i) => (
+                        <div key={p.slot} className="mr-response-photo-item">
+                          <img
+                            src={p.data}
+                            alt={`Response ${i + 1}`}
+                            className="mr-photo mr-photo--gallery"
+                            onClick={() => setLightbox({ photos: responsePhotos.map((x) => x.data), index: i })}
+                          />
+                          {canManageResponsePhotos(selectedReport) && (
+                            <button
+                              type="button"
+                              className="mr-response-photo-delete"
+                              onClick={() => handleResponsePhotoDelete(p.slot)}
+                              disabled={responsePhotoBusy}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {canUploadResponsePhotos(selectedReport) && responsePhotos.length < 5 && (
+                    <label className="mr-response-upload">
+                      <span>{responsePhotoBusy ? "Uploading..." : `Add response photos (${responsePhotos.length}/5)`}</span>
+                      <input type="file" accept="image/*" multiple onChange={handleResponsePhotoUpload} disabled={responsePhotoBusy} />
+                    </label>
+                  )}
+                  {responsePhotoError && <p className="mr-response-error">{responsePhotoError}</p>}
                 </div>
               )}
               <div className="mr-detail-row">

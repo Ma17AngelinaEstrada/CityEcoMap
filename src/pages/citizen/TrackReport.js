@@ -76,7 +76,19 @@ function TrackReport() {
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
-      const data = querySnapshot.docs[0].data();
+      const reportDoc = querySnapshot.docs[0];
+      const data = reportDoc.data();
+      let responsePhotos = [];
+      try {
+        const photoSnap = await getDocs(collection(db, 'reports', reportDoc.id, 'responsePhotos'));
+        responsePhotos = photoSnap.docs
+          .map((d) => ({ slot: d.id, data: d.data().data }))
+          .filter((p) => typeof p.data === 'string' && p.data.startsWith('data:image/jpeg;base64,'))
+          .sort((a, b) => Number(a.slot) - Number(b.slot))
+          .map((p) => p.data);
+      } catch (photoErr) {
+        console.error('Error fetching response photos:', photoErr);
+      }
       setReport({
         id: data.reportId,
         category: data.category,
@@ -89,6 +101,7 @@ function TrackReport() {
         photos: data.photos?.length ? data.photos : (data.photo ? [data.photo] : []),
         primaryOffice: data.primaryOffice || null,
         rejectionReason: data.rejectionReason || null,
+        responsePhotos,
       });
     } else {
       setReport(null);
@@ -167,6 +180,17 @@ function TrackReport() {
                 {data.photos.map((src, i) => (
                   <img key={i} src={src} alt={`Report ${i + 1}`} className="track-photo" />
                 ))}
+              </div>
+            )}
+
+                        {data.responsePhotos?.length > 0 && (
+              <div className="track-response-photos">
+                <span className="detail-label"><BuildingIcon /> Photos from the handling office</span>
+                <div className="track-photo-grid">
+                  {data.responsePhotos.map((src, i) => (
+                    <img key={i} src={src} alt={`Office response ${i + 1}`} className="track-photo" />
+                  ))}
+                </div>
               </div>
             )}
 

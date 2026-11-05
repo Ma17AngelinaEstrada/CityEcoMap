@@ -479,3 +479,15 @@
   word-break: break-word;
 }
 
+.track-response-photos {
+  margin-top: 14px;
+  min-width: 0;
+}
+
+.track-response-photos .detail-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
