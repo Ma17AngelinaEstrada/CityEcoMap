@@ -52,6 +52,14 @@ function TrackReport() {
   const [report, setReport] = useState(null);
   const [showTour, setShowTour] = useState(false);
   const [showSample, setShowSample] = useState(false);
+  const [lightbox, setLightbox] = useState(null);
+
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e) => { if (e.key === 'Escape') setLightbox(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightbox]);
 
   // Auto-show the sample report preview once the tour opens,
   // so the "Report Details" step has something real to point at
@@ -176,23 +184,33 @@ function TrackReport() {
             </div>
 
             {data.photos?.length > 0 && (
-              <div className="track-photo-grid">
-                {data.photos.map((src, i) => (
-                  <img key={i} src={src} alt={`Report ${i + 1}`} className="track-photo" />
-                ))}
-              </div>
-            )}
-
-                        {data.responsePhotos?.length > 0 && (
-              <div className="track-response-photos">
-                <span className="detail-label"><BuildingIcon /> Photos from the handling office</span>
+              <div className="detail-box">
+                <span className="detail-label"><ClipboardIcon /> Photos of the Issue</span>
                 <div className="track-photo-grid">
-                  {data.responsePhotos.map((src, i) => (
-                    <img key={i} src={src} alt={`Office response ${i + 1}`} className="track-photo" />
+                  {data.photos.map((src, i) => (
+                    <img key={i} src={src} alt={`Report ${i + 1}`} className="track-photo" onClick={() => setLightbox({ src, alt: `Report ${i + 1}` })} />
                   ))}
                 </div>
               </div>
             )}
+
+                        {data.responsePhotos?.length > 0 && (
+              <div className="detail-box track-response-photos">
+                <span className="detail-label"><BuildingIcon /> Photos from the handling office</span>
+                <div className="track-photo-grid">
+                  {data.responsePhotos.map((src, i) => (
+                    <img key={i} src={src} alt={`Office response ${i + 1}`} className="track-photo" onClick={() => setLightbox({ src, alt: `Office response ${i + 1}` })} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+      {lightbox && (
+        <div className="track-lightbox" onClick={() => setLightbox(null)} role="dialog" aria-label="Enlarged photo">
+          <button type="button" className="track-lightbox-close" onClick={() => setLightbox(null)} aria-label="Close">×</button>
+          <img src={lightbox.src} alt={lightbox.alt} className="track-lightbox-img" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
 
       {data.status === 'Approved' || data.status === 'Ongoing' || data.status === 'Resolved' ? (
         data.primaryOffice && (
