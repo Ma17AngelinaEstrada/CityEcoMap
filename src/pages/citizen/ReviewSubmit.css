@@ -230,3 +230,56 @@
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+
+
+/* Pre-submit privacy notice */
+.privacy-notice {
+  background: #fff8e6;
+  border: 1px solid #f0d58c;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 16px 0 14px;
+  text-align: left;
+}
+
+.privacy-notice-title {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #5c4400;
+}
+
+.privacy-notice p {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #5c4400;
+}
+
+.privacy-notice-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0d58c;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #3d2e00;
+  cursor: pointer;
+}
+
+.privacy-notice-check input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: #1a4a1a;
+  cursor: pointer;
+}
+
+.privacy-notice ~ .submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

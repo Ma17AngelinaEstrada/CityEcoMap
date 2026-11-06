@@ -14,7 +14,7 @@ import { reverseGeocode, isCached } from '../../utils/geocode';
 import { SearchIcon, CalendarIcon, PinIcon, BuildingIcon } from '../../components/Icons';
 import { useGoogleMapsLoaded } from "../../context/GoogleMapsLoaderContext";
 import { useAdminTour } from "../../context/AdminTourContext";
-import { isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
+import { isMasterRole, officeForRole, officeLabel, officeName } from "../../constants/offices";
 import PriorityBadge from "../../components/PriorityBadge";
 import { suggestPriority } from "../../utils/priorityRules";
 
@@ -30,7 +30,7 @@ const LUCENA_CENTER = { lat: 13.9394, lng: 121.6169 };
 const adminMapContainerStyle = { width: '100%', height: '100%' };
 
 const supportingOfficesLabel = (r) => {
-  const offices = [...new Set((r.supportingOffices || []).filter((so) => so.status !== "declined").map((so) => so.officeId))];
+  const offices = [...new Set((r.supportingOffices || []).filter((so) => so.status !== "declined").map((so) => officeName(so.officeId)))];
   return offices.length ? offices.join(", ") : "—";
 };
 

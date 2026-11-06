@@ -209,4 +209,4 @@ export function suggestPriority(report) {
 }
 
 export const PRIORITY_DISCLAIMER =
-  'Suggested by the system from the citizen\u2019s description only. Proposed levels \u2014 not an official EMB, CENRO or City Engineering classification. Photos, location and submission time are not used. The office decides which reports to address first.';
+  'Suggested by the system from the citizen\u2019s description only. Proposed levels \u2014 not an official EMB, City ENRO or City Engineering classification. Photos, location and submission time are not used. The office decides which reports to address first.';

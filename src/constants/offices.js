@@ -33,8 +33,24 @@ export const isMasterRole = (role) => role === 'Master Admin';
 export const officeForRole = (role) => ROLE_TO_OFFICE[role] || null;
 
 export const officeLabel = (report) => {
-  if (report.primaryOffice) return report.primaryOffice;
+  if (report.primaryOffice) return officeName(report.primaryOffice);
   if (report.jurisdictionCandidates?.length) return 'Jurisdiction Verification';
   if (report.needsReview) return 'Needs Review';
   return '—';
 };
+
+
+// Display label only. The stored role value stays "CENRO Admin"
+// because Firestore rules and access checks depend on it.
+export const roleLabel = (role) => (role === 'CENRO Admin' ? 'City ENRO Admin' : role);
+
+
+
+// Display names only. Stored office values (e.g. "CENRO") never change,
+// because Firestore rules and routing depend on them.
+export const officeName = (office) => (office === 'CENRO' ? 'City ENRO' : office);
+
+// For saved free text (e.g. history notes) that may mention the stored value.
+export const displayOfficeText = (text) =>
+  (typeof text === 'string' ? text.replace(/\bCENRO\b/g, 'City ENRO') : text);
+

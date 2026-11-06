@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../logowhite2.png';
-import embLogo from '../../emb-logo.png';
+
 import './About.css';
 import '../../styles/CitizenHeader.css';
 import { LeafIcon, GearIcon, FolderIcon, BankIcon, TrashIcon, WaveIcon, PinIcon, BellIcon, ClipboardIcon, CheckCircleIcon, HomeIcon, TrackIcon, AboutIcon } from '../../components/Icons';
@@ -15,8 +15,6 @@ function About() {
       <div className="citizen-header">
         <div className="header-logo">
           <img src={logo} alt="CityEcoMap Logo" className="logo-img" />
-          <span className="logo-divider" />
-          <img src={embLogo} alt="EMB Logo" className="partner-logo-img" />
         </div>
         <div className="header-right">
           <nav className="header-nav">
@@ -41,7 +39,7 @@ function About() {
           <div className="section-icon"><LeafIcon /></div>
           <div className="section-content">
             <h3>What is CityEcoMap?</h3>
-            <p>CityEcoMap is a mobile and web-based environmental monitoring and reporting system developed for Lucena City. It enables residents to report waste and drainage issues using geo-tagged data, photos, and descriptions, while the Environmental Management Bureau (EMB) of the DENR and the Local Government of Lucena City monitor, verify, and respond to these reports.</p>
+            <p>CityEcoMap enables residents to report waste and drainage concerns in Lucena City. Submitted reports are directed to the appropriate city offices for validation, monitoring, and resolution. The Environmental Management Bureau (EMB) has read-only monitoring access to the system.</p>
           </div>
         </div>
 
@@ -75,7 +73,7 @@ function About() {
                 <span className="step-number">4</span>
                 <span className="step-icon"><CheckCircleIcon /></span>
                 <strong>Resolve</strong>
-                <p>EMB or LGU resolves the issue based on its type, keeping the community informed.</p>
+                <p>The concerned city office (City ENRO or City Engineering Office) reviews and resolves the reported issue based on its type.</p>
               </div>
             </div>
           </div>
@@ -109,12 +107,10 @@ function About() {
         <div className="about-section">
           <div className="section-icon"><BankIcon /></div>
           <div className="section-content">
-            <h3>Who We Work With</h3>
-            <p>CityEcoMap is developed for the <strong>Environmental Management Bureau (EMB) of the DENR</strong>, the agency responsible for monitoring and responding to environmental concerns, in coordination with the <strong>Local Government Unit of Lucena City</strong>, which oversees local drainage and waste management operations within the city.</p>
-            <div className="partner-showcase">
-              <img src={embLogo} alt="EMB Logo" className="partner-showcase-logo" />
-              <span className="partner-showcase-label">Environmental Management Bureau — Lucena City</span>
-            </div>
+            <h3>Who the System Supports</h3>
+            <p><strong>City ENRO</strong><br />Handles waste-related reports, including illegal dumping and uncollected garbage.</p>
+            <p><strong>City Engineering Office</strong><br />Handles drainage-related reports, including clogged drainage, damaged drainage, and flooding.</p>
+            <p><strong>Environmental Management Bureau (EMB)</strong><br />Serves as a monitoring stakeholder with read-only access to environmental reports and statistics.</p>
           </div>
         </div>
 

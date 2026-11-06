@@ -13,7 +13,7 @@ import {
   limit,
 } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
-import { officeForRole } from "../../constants/offices";
+import { officeForRole, roleLabel } from "../../constants/offices";
 import "./AdminLayout.css";
 import { BellIcon } from "../../components/Icons";
 import { useAdminTour } from "../../context/AdminTourContext";
@@ -75,6 +75,7 @@ export default function AdminLayout({ children }) {
   });
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const isDashboard = location.pathname === "/admin/dashboard";
 
   const [dashOpen, setDashOpen] = useState(() => {
@@ -467,7 +468,10 @@ export default function AdminLayout({ children }) {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = () => setShowLogoutConfirm(true);
+
+  const confirmLogout = async () => {
+    setShowLogoutConfirm(false);
     try {
       await signOut(auth);
       navigate("/admin");
@@ -566,9 +570,37 @@ export default function AdminLayout({ children }) {
   }
 
   // EMB Admin layout: top navbar only, with no sidebar or report bell.
+  const logoutModal = showLogoutConfirm && (
+    <div className="al2-modal-overlay" onClick={() => setShowLogoutConfirm(false)}>
+      <div
+        className="al2-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="al2-logout-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 id="al2-logout-title">Log out?</h3>
+        <p>Are you sure you want to log out of your account?</p>
+        <div className="al2-modal-btns">
+          <button
+            type="button"
+            className="al2-modal-cancel"
+            onClick={() => setShowLogoutConfirm(false)}
+          >
+            Cancel
+          </button>
+          <button type="button" className="al2-modal-btn" onClick={confirmLogout}>
+            Log out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (isEmbMonitoringOnly) {
     return (
       <div className="al2-wrapper al2-emb-only">
+        {logoutModal}
         <header className="al2-topbar al2-emb-topbar">
           <div className="al2-logo-group">
             <img
@@ -839,7 +871,7 @@ export default function AdminLayout({ children }) {
                       {currentAdmin.name}
                     </span>
                     <span className="al2-profile-role">
-                      {currentAdmin.role} (Test Account)
+                      {roleLabel(currentAdmin.role)}
                     </span>
                   </div>
                 )}
@@ -975,6 +1007,7 @@ export default function AdminLayout({ children }) {
           </button>
         </div>
 
+        {logoutModal}
         <main className="al2-main">
           {accessChecked && verifyRetrying && (
             <div

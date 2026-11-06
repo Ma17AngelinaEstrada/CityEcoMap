@@ -119,7 +119,7 @@ export default function AdminLogin() {
           </div>
           <h1>CityEcoMap Administrative Access</h1>
           <p>
-            Manage environmental reports and monitor city-wide drainage issues
+            Manage waste and drainage reports for Lucena City
             from your dashboard.
           </p>
         </div>

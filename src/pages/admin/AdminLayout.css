@@ -889,3 +889,76 @@
   opacity: 0.6;
 }
 
+
+/* Logout confirmation modal */
+.al2-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 2000;
+}
+
+.al2-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.75rem 2rem;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.al2-modal h3 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a4a1a;
+}
+
+.al2-modal p {
+  margin: 0 0 20px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #666;
+}
+
+.al2-modal-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.al2-modal-btn,
+.al2-modal-cancel {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.al2-modal-btn {
+  background: #1a4a1a;
+  color: #fff;
+  border: none;
+}
+
+.al2-modal-btn:hover {
+  background: #2d6a2d;
+}
+
+.al2-modal-cancel {
+  background: none;
+  color: #444;
+  border: 1px solid #ccc;
+}
+
+.al2-modal-cancel:hover {
+  background: #f5f5f5;
+}
+

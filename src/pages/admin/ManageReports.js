@@ -7,7 +7,7 @@ import AdminLayout from "./AdminLayout";
 import "./ManageReports.css";
 import { reverseGeocode, isCached } from '../../utils/geocode';
 import { useAdminTour } from "../../context/AdminTourContext";
-import { ACTIVE_OFFICE_LIST, OPERATIONAL_OFFICE_LIST, isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
+import { ACTIVE_OFFICE_LIST, OPERATIONAL_OFFICE_LIST, isMasterRole, officeForRole, officeLabel, officeName, displayOfficeText } from "../../constants/offices";
 import PriorityBadge from "../../components/PriorityBadge";
 import { suggestPriority } from "../../utils/priorityRules";
 
@@ -167,7 +167,7 @@ const generateSupportId = () =>
 const MAX_REROUTES = 3;
 
 const supportingOfficesLabel = (r) => {
-  const offices = [...new Set((r.supportingOffices || []).filter((so) => so.status !== "declined").map((so) => so.officeId))];
+  const offices = [...new Set((r.supportingOffices || []).filter((so) => so.status !== "declined").map((so) => officeName(so.officeId)))];
   return offices.length ? offices.join(", ") : "—";
 };
 
@@ -226,6 +226,7 @@ export default function ManageReports() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filterSubCategory, setFilterSubCategory] = useState("All");
+  const [statusConfirm, setStatusConfirm] = useState(null);
   const [quickRange, setQuickRange] = useState("custom");
   const [specificMonth, setSpecificMonth] = useState("");
   const { registerTour, showTour, currentStepIndex } = useAdminTour();
@@ -1091,6 +1092,14 @@ export default function ManageReports() {
     await sendEmailNotification(selectedReport.id, "resolved");
   };
 
+  // Ask for confirmation before Approve / Ongoing / Resolved.
+  const askStatusConfirm = (title, message, run) => setStatusConfirm({ title, message, run });
+  const runStatusConfirm = async () => {
+    const run = statusConfirm?.run;
+    setStatusConfirm(null);
+    if (run) await run();
+  };
+
   const fetchStatusHistory = async (reportId) => {
     setLoadingHistory(true);
     try {
@@ -1348,7 +1357,7 @@ export default function ManageReports() {
         <div className="mr-needs-review-form">
           <select value={reviewAssignOffice} onChange={(e) => setReviewAssignOffice(e.target.value)}>
             <option value="">Select office to assign...</option>
-            {OPERATIONAL_OFFICE_LIST.map((o) => <option key={o}>{o}</option>)}
+            {OPERATIONAL_OFFICE_LIST.map((o) => <option key={o} value={o}>{officeName(o)}</option>)}
           </select>
           <button className="mr-action-btn mr-action-btn--approve" onClick={handleManualAssign} disabled={!reviewAssignOffice || busy || isSample}>
             Assign Office
@@ -1365,7 +1374,7 @@ export default function ManageReports() {
         <div className="mr-needs-review-form">
           <select value={escalateResolveOffice} onChange={(e) => setEscalateResolveOffice(e.target.value)}>
             <option value="">Reassign to office (optional)...</option>
-            {OPERATIONAL_OFFICE_LIST.filter((o) => o !== r.primaryOffice).map((o) => <option key={o}>{o}</option>)}
+            {OPERATIONAL_OFFICE_LIST.filter((o) => o !== r.primaryOffice).map((o) => <option key={o} value={o}>{officeName(o)}</option>)}
           </select>
           <button
             className="mr-action-btn mr-action-btn--approve"
@@ -1379,23 +1388,23 @@ export default function ManageReports() {
             onClick={() => handleResolveEscalation(null)}
             disabled={escalateBusy || isSample}
           >
-            Keep with {r.primaryOffice}
+            Keep with {officeName(r.primaryOffice)}
           </button>
         </div>
       );
     }
 
     if (!isMaster && currentOffice !== r.primaryOffice) {
-      return <p className="mr-no-action">Only {r.primaryOffice} can act on this report.</p>;
+      return <p className="mr-no-action">Only {officeName(r.primaryOffice)} can act on this report.</p>;
     }
     if (isMaster && r.primaryOffice) {
-      return <p className="mr-no-action">Handled by {r.primaryOffice}. Master Admin does not validate routine reports.</p>;
+      return <p className="mr-no-action">Handled by {officeName(r.primaryOffice)}. Master Admin does not validate routine reports.</p>;
     }
 
     if (s === "Pending") return (
       <>
         <div className="mr-status-btns">
-          <button className="mr-action-btn mr-action-btn--approve" onClick={handleApprove} disabled={busy || isSample}>
+          <button className="mr-action-btn mr-action-btn--approve" onClick={() => askStatusConfirm("Approve this report?", "The status will change to Approved. The citizen will be notified if they provided an email.", handleApprove)} disabled={busy || isSample}>
             ✔ Approve
           </button>
           <button className="mr-action-btn mr-action-btn--reject" onClick={handleRejectClick} disabled={busy || isSample}>
@@ -1411,7 +1420,7 @@ export default function ManageReports() {
 
     if (s === "Approved") return (
       <div className="mr-status-btns">
-        <button className="mr-action-btn mr-action-btn--ongoing" onClick={handleSetOngoing} disabled={busy || isSample}>
+        <button className="mr-action-btn mr-action-btn--ongoing" onClick={() => askStatusConfirm("Mark as Ongoing?", "The status will change to Ongoing. The citizen will be notified if they provided an email.", handleSetOngoing)} disabled={busy || isSample}>
           ▶ Mark as Ongoing
         </button>
       </div>
@@ -1419,7 +1428,7 @@ export default function ManageReports() {
 
     if (s === "Ongoing" || s === "In Progress") return (
       <div className="mr-status-btns">
-        <button className="mr-action-btn mr-action-btn--resolved" onClick={handleSetResolved} disabled={busy || isSample}>
+        <button className="mr-action-btn mr-action-btn--resolved" onClick={() => askStatusConfirm("Mark as Resolved?", "The status will change to Resolved. The citizen will be notified if they provided an email.", handleSetResolved)} disabled={busy || isSample}>
           ✔ Mark as Resolved
         </button>
       </div>
@@ -1563,7 +1572,7 @@ export default function ManageReports() {
             <label>Primary Office</label>
             <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
               <option>All</option>
-              {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o}>{o}</option>)}
+              {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o} value={o}>{officeName(o)}</option>)}
             </select>
           </div>
         )}
@@ -1571,7 +1580,7 @@ export default function ManageReports() {
           <label>Supporting Office</label>
           <select value={filterSupporting} onChange={(e) => setFilterSupporting(e.target.value)}>
             <option>All</option>
-            {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o}>{o}</option>)}
+            {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o} value={o}>{officeName(o)}</option>)}
           </select>
         </div>
         
@@ -1965,7 +1974,7 @@ export default function ManageReports() {
                   <div className="mr-support-list">
                     {selectedReport.supportingOffices.map((so) => (
                       <div key={so.id} className="mr-support-item">
-                        <span className="mr-support-office">{so.officeId}</span>
+                        <span className="mr-support-office">{officeName(so.officeId)}</span>
                         <span className={`mr-support-status mr-support-status--${so.status}`}>{so.status}</span>
                         <span className="mr-support-reason">{so.reason}</span>
                         {so.remarks && (
@@ -2093,10 +2102,10 @@ export default function ManageReports() {
                       <div key={h.id} className="mr-history-item">
                         <span className={getStatusClass(h.status)}>{h.status}</span>
                         <span className="mr-history-admin">
-                          <span className="mr-history-admin-label">Updated by:</span> {adminNameMap[h.adminEmail] || h.adminEmail}
+                          <span className="mr-history-admin-label">Updated by:</span> {displayOfficeText(adminNameMap[h.adminEmail] || h.adminEmail)}
                         </span>
                         <span className="mr-history-date">{formatDate(h.timestamp)}</span>
-                        {h.notes && <p className="mr-history-notes">{h.notes}</p>}
+                        {h.notes && <p className="mr-history-notes">{displayOfficeText(h.notes)}</p>}
                       </div>
                     ))}
                   </div>
@@ -2109,6 +2118,23 @@ export default function ManageReports() {
     )}
 
       {/* Reject Reason Modal */}
+      {statusConfirm && (
+        <div className="mr-modal-overlay" onClick={() => setStatusConfirm(null)}>
+          <div className="mr-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>{statusConfirm.title}</h3>
+            <p>{statusConfirm.message}</p>
+            <div className="mr-modal-btns">
+              <button className="mr-modal-cancel" onClick={() => setStatusConfirm(null)}>
+                Cancel
+              </button>
+              <button className="mr-modal-btn mr-modal-btn--emb" onClick={runStatusConfirm}>
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {rejectModal && (
         <div className="mr-modal-overlay">
           <div className="mr-modal">
@@ -2166,7 +2192,7 @@ export default function ManageReports() {
                   (so) => so.officeId === o && ["pending", "accepted", "ongoing"].includes(so.status)
                 );
                 return !active;
-              }).map((o) => <option key={o}>{o}</option>)}
+              }).map((o) => <option key={o} value={o}>{officeName(o)}</option>)}
             </select>
             <textarea
               className="mr-reject-textarea"
@@ -2209,7 +2235,7 @@ export default function ManageReports() {
               <option value="">Select office...</option>
               {OPERATIONAL_OFFICE_LIST.filter((o) =>
                 o !== currentOffice && !(selectedReport?.primaryOfficeHistory || []).includes(o)
-              ).map((o) => <option key={o}>{o}</option>)}
+              ).map((o) => <option key={o} value={o}>{officeName(o)}</option>)}
             </select>
             <textarea
               className="mr-reject-textarea"

@@ -571,7 +571,7 @@ function SubmitReport() {
                 </>
               )}
 
-              <div className="section-label">ADD PHOTO</div>
+              <div className="section-label">ADD PHOTO <span className="required">(Required)</span></div>
               {photos.length < MAX_PHOTOS && (
                 <>
                 <p className="notify-note">Take or upload 3 photos from different angles — e.g. the issue itself, the surrounding area, and anything else nearby that might be relevant.</p>
@@ -616,7 +616,7 @@ function SubmitReport() {
           )}
           <div className="char-count">{photos.length} / {MAX_PHOTOS} photos added</div>
 
-          <div className="section-label">DESCRIPTION</div>
+          <div className="section-label">DESCRIPTION <span className="required">(Required)</span></div>
           <textarea
             id="field-description"
             className="description-input"

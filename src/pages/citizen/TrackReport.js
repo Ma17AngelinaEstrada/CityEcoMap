@@ -8,6 +8,7 @@ import { db } from '../../firebase/firebase';
 import '../../styles/CitizenHeader.css';
 import { SearchIcon, HourglassIcon, ThumbsUpIcon, RefreshIcon, CheckCircleIcon, XCircleIcon, IdIcon, TrashIcon, ClipboardIcon, BuildingIcon, HomeIcon, TrackIcon, AboutIcon } from '../../components/Icons';
 import OnboardingTour from '../../components/OnboardingTour';
+import { officeName } from "../../constants/offices";
 
 const TOUR_STEPS = [
   {
@@ -217,7 +218,7 @@ function TrackReport() {
           <div className="details-grid">
             <div className="detail-box full-width">
               <span className="detail-label"><BuildingIcon /> Handling Office</span>
-              <span className="detail-value">{data.primaryOffice}</span>
+              <span className="detail-value">{officeName(data.primaryOffice)}</span>
             </div>
           </div>
         )

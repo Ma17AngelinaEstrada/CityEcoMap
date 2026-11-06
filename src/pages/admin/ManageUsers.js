@@ -7,7 +7,7 @@ import { auth, db } from "../../firebase/firebase";
 import AdminLayout from "./AdminLayout";
 import "./ManageUsers.css";
 import { useAdminTour } from "../../context/AdminTourContext";
-import { OFFICE_ROLES } from "../../constants/offices";
+import { OFFICE_ROLES, roleLabel } from "../../constants/offices";
 
 // Secondary Firebase app to create users without signing out current admin
 const secondaryApp = initializeApp({
@@ -285,7 +285,7 @@ export default function ManageUsers() {
                       )}
                     </td>
                     <td>{admin.email}</td>
-                    <td><span className={getRoleClass(admin.role)}>{admin.role}</span></td>
+                    <td><span className={getRoleClass(admin.role)}>{roleLabel(admin.role)}</span></td>
                     <td><span className={getStatusClass(admin.status)}>{admin.status}</span></td>
                     <td className="mu-created-by">{admin.createdBy || "—"}</td>
                     {isMasterAdmin && (
@@ -326,7 +326,7 @@ export default function ManageUsers() {
                 {admin.status === "Active" && <span className="mu-focal-badge" title="Focal Person">★ Focal</span>}
                 {admin.id === auth.currentUser?.uid && <span className="mu-you"> (you)</span>}
               </span>
-              <span className={getRoleClass(admin.role)}>{admin.role}</span>
+              <span className={getRoleClass(admin.role)}>{roleLabel(admin.role)}</span>
             </div>
             <div className="mu-card-row mu-card-sub">{admin.email}</div>
             <div className="mu-card-row">
@@ -378,7 +378,7 @@ export default function ManageUsers() {
                 <label>Email {editingAdmin && <span className="mu-note">(cannot be changed)</span>}</label>
                 <input
                   type="email"
-                  placeholder="admin@emb.gov.ph"
+                  placeholder="name@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   disabled={!!editingAdmin}
@@ -404,7 +404,7 @@ export default function ManageUsers() {
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 >
                   <option value="" disabled>Select a role...</option>
-                  {OFFICE_ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
+                  {OFFICE_ROLES.map((role) => <option key={role} value={role}>{roleLabel(role)}</option>)}
                 </select>
               </div>
                 <div className="mu-field">

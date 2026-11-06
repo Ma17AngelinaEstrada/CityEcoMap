@@ -29,6 +29,7 @@ function ReviewSubmit() {
   const location = useLocation();
   const { form } = location.state || {};
   const [submitting, setSubmitting] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     if (!form) {
@@ -48,6 +49,7 @@ function ReviewSubmit() {
   }, [form, navigate]);
 
   const handleSubmit = async () => {
+    if (!agreed) return;
     setSubmitting(true);
     try {
       const reportId = 'WI' + Math.random().toString(36).substring(2, 7).toUpperCase();
@@ -262,7 +264,21 @@ function ReviewSubmit() {
 
           <p className="review-note">Your report helps build a cleaner, greener city. Thank you!</p>
 
-          <button className="submit-btn" onClick={handleSubmit} disabled={submitting}>
+          <div className="privacy-notice">
+            <h4 className="privacy-notice-title">Paalala sa Pagpapasa ng Report</h4>
+            <p>Ang mga impormasyon at larawang isusumite ninyo ay maaaring makita ng publiko sa CityEcoMap upang makatulong sa pag-monitor ng mga naiulat na isyu.</p>
+            <p>Mangyaring huwag mag-upload ng mga larawang nagpapakita ng mukha, plaka ng sasakyan, personal na dokumento, o iba pang sensitibong impormasyon.</p>
+            <p>Siguraduhing ang mga larawang isusumite ay nagpapakita lamang ng naiulat na isyu.</p>
+            <label className="privacy-notice-check">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+              />
+              <span>Nabasa at naunawaan ko ang paalala sa pagpapasa ng report.</span>
+            </label>
+          </div>
+          <button className="submit-btn" onClick={handleSubmit} disabled={submitting || !agreed}>
             {submitting ? 'Submitting...' : 'Submit Report'}
           </button>
         </div>

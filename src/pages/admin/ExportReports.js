@@ -4,7 +4,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs, getDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import jsPDF from "jspdf";
-import { ACTIVE_OFFICE_LIST, isMasterRole, officeForRole, officeLabel } from "../../constants/offices";
+import { ACTIVE_OFFICE_LIST, isMasterRole, officeForRole, officeLabel, officeName } from "../../constants/offices";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx-js-style";
 import AdminLayout from "./AdminLayout";
@@ -273,10 +273,10 @@ export default function ExportReports() {
       );
 
   const generatedByName = adminNames[auth.currentUser?.email?.toLowerCase()] || auth.currentUser?.email || "Unknown";
-  const generatingOfficeLabel = isMaster ? "Master Admin — System-wide" : (currentOffice || "—");
+  const generatingOfficeLabel = isMaster ? "Master Admin — System-wide" : (officeName(currentOffice) || "—");
  
   const supportingOfficesLabel = (r) => {
-    const offices = [...new Set((r.supportingOffices || []).filter((so) => so.status !== "declined").map((so) => so.officeId))];
+    const offices = [...new Set((r.supportingOffices || []).filter((so) => so.status !== "declined").map((so) => officeName(so.officeId)))];
     return offices.length ? offices.join(", ") : "None";
   };
 
@@ -648,7 +648,7 @@ export default function ExportReports() {
       docPdf.setFontSize(7.5);
       docPdf.setTextColor(110);
       docPdf.text(
-        "Suggested Priority is a system-generated suggestion based only on the citizen's description. It is not an official EMB, CENRO or City Engineering classification.",
+        "Suggested Priority is a system-generated suggestion based only on the citizen's description. It is not an official EMB, City ENRO or City Engineering classification.",
         14, noteY
       );
     }
@@ -1246,7 +1246,7 @@ export default function ExportReports() {
             <label>Primary Office</label>
               <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}>
                 <option>All</option>
-                {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o}>{o}</option>)}
+                {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o} value={o}>{officeName(o)}</option>)}
               </select>
           </div>
         )}
@@ -1254,7 +1254,7 @@ export default function ExportReports() {
           <label>Supporting Office</label>
           <select value={filterSupporting} onChange={(e) => setFilterSupporting(e.target.value)}>
             <option>All</option>
-            {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o}>{o}</option>)}
+            {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o} value={o}>{officeName(o)}</option>)}
           </select>
         </div>
         <div className="mr-filters-tail">
