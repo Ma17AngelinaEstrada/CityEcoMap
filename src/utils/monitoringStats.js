@@ -26,6 +26,23 @@ const STATUS_ALIASES = {
 
 const CATEGORIES = ["Waste Issue", "Drainage Issue"];
 
+const SCHEMA_VERSION = 2;
+const BREAKDOWN_DAYS = 400;
+const MAX_BREAKDOWN_ROWS = 8000;
+const KNOWN_SUBCATEGORIES = {
+  "Waste Issue": [
+    "Illegal Dumping",
+    "Uncollected Garbage",
+    "Waste Affecting Rivers, Waterways, and Natural Water Bodies",
+  ],
+  "Drainage Issue": [
+    "Clogged Drainage",
+    "Blocked Drainage",
+    "Damaged Drainage",
+    "Flooding",
+  ],
+};
+
 function normalizeStatus(value) {
   return STATUS_ALIASES[String(value || "").trim().toLowerCase()] || null;
 }
@@ -51,6 +68,26 @@ function formatDay(ms) {
   return new Date(ms).toISOString().slice(0, 10); // YYYY-MM-DD
 }
 
+// Manila calendar day (YYYY-MM-DD) of a Date.
+function manilaDayString(date) {
+  const shifted = date.getTime() + MANILA_OFFSET_MS;
+  return formatDay(Math.floor(shifted / DAY_MS) * DAY_MS);
+}
+
+// Unknown / free-text subcategories are stored as "Other" (no free text).
+function normalizeSubCategory(category, value) {
+  return (KNOWN_SUBCATEGORIES[category] || []).includes(value) ? value : "Other";
+}
+
+function buildBreakdownRows(map) {
+  const rows = Array.from(map.entries()).map(([key, n]) => {
+    const [d, c, s, st] = key.split("|");
+    return { d, c, s, st, n };
+  });
+  rows.sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0));
+  return rows.slice(0, MAX_BREAKDOWN_ROWS);
+}
+
 export async function computeMonitoringStats(db) {
   // Server read so we never count from a stale local cache.
   const snapshot = await getDocsFromServer(collection(db, "reports"));
@@ -63,6 +100,8 @@ export async function computeMonitoringStats(db) {
     Rejected: 0,
   };
   const categoryCounts = { "Waste Issue": 0, "Drainage Issue": 0 };
+  const breakdownMap = new Map();
+  const breakdownCutoffMs = Date.now() - BREAKDOWN_DAYS * DAY_MS;
 
   const thisWeek = weekStartMs(new Date());
   const buckets = new Map();
@@ -84,11 +123,21 @@ export async function computeMonitoringStats(db) {
     if (created) {
       const key = weekStartMs(created);
       if (buckets.has(key)) buckets.set(key, buckets.get(key) + 1);
+
+      if (
+        created.getTime() >= breakdownCutoffMs &&
+        status &&
+        CATEGORIES.includes(data.category)
+      ) {
+        const sub = normalizeSubCategory(data.category, data.subCategory);
+        const bKey = [manilaDayString(created), data.category, sub, status].join("|");
+        breakdownMap.set(bKey, (breakdownMap.get(bKey) || 0) + 1);
+      }
     }
   });
 
   return {
-    schemaVersion: 1,
+    schemaVersion: SCHEMA_VERSION,
     totalReports: snapshot.size,
     statusCounts,
     categoryCounts,
@@ -96,6 +145,7 @@ export async function computeMonitoringStats(db) {
       date: formatDay(ms),
       total,
     })),
+    breakdown: buildBreakdownRows(breakdownMap),
   };
 }
 
@@ -121,7 +171,8 @@ export function ensureFreshMonitoringStats(db, maxAgeMs = STALE_AFTER_MS) {
     try {
       const snap = await getDocFromServer(doc(db, "monitoringStats", "current"));
       const updated = snap.exists() ? toDate(snap.data().updatedAt) : null;
-      if (updated && Date.now() - updated.getTime() < maxAgeMs) return null;
+      const schemaOk = snap.exists() && snap.data().schemaVersion >= SCHEMA_VERSION;
+      if (schemaOk && updated && Date.now() - updated.getTime() < maxAgeMs) return null;
       return await recomputeMonitoringStats(db);
     } catch (err) {
       console.warn("Monitoring stats refresh skipped:", err && err.code ? err.code : "error");

@@ -1252,7 +1252,7 @@ export default function ManageReports() {
       );
 
   const filtered = visibleReports.filter((r) => {
-    const matchStatus = filterStatus === "All" || r.status === filterStatus;
+    const matchStatus = filterStatus === "All" || r.status === filterStatus || (filterStatus === "Ongoing" && r.status === "In Progress");
     const matchCategory = filterCategory === "All" || r.category === filterCategory;
     const matchSubCategory = (() => {
       if (filterSubCategory === "All") return true;

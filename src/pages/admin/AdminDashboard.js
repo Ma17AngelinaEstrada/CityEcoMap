@@ -74,6 +74,22 @@ const DASHBOARD_TOUR_STEPS = [
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+
+  const goToReportsByStatus = (status) => {
+    navigate(status === "All" ? "/admin/reports" : `/admin/reports?status=${status}`);
+  };
+  const statCardProps = (status) => ({
+    role: "button",
+    tabIndex: 0,
+    title: status === "All" ? "View all reports" : `View ${status} reports`,
+    onClick: () => goToReportsByStatus(status),
+    onKeyDown: (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        goToReportsByStatus(status);
+      }
+    },
+  });
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [addresses, setAddresses] = useState({});
@@ -545,7 +561,7 @@ export default function AdminDashboard() {
       ) : (
         <>
           <div className="ad-stats" id="dash-overview">
-            <div className="ad-stat-card ad-stat-card--total">
+            <div className="ad-stat-card ad-stat-card--total ad-stat-card--link" {...statCardProps("All")}>
               <span className="ad-stat-label">Total Reports</span>
               <span className="ad-stat-number">{total}</span>
               <span className="ad-stat-desc">
@@ -553,27 +569,27 @@ export default function AdminDashboard() {
                 Waste: {totalWaste} · Drainage: {totalDrainage}
               </span>
             </div>
-            <div className="ad-stat-card ad-stat-card--pending">
+            <div className="ad-stat-card ad-stat-card--pending ad-stat-card--link" {...statCardProps("Pending")}>
               <span className="ad-stat-label">Pending</span>
               <span className="ad-stat-number">{pending}</span>
                 <span className="ad-stat-desc">{isMaster ? "Awaiting office validation" : "Awaiting your validation"}</span>
             </div>
-            <div className="ad-stat-card ad-stat-card--approved">
+            <div className="ad-stat-card ad-stat-card--approved ad-stat-card--link" {...statCardProps("Approved")}>
               <span className="ad-stat-label">Approved</span>
               <span className="ad-stat-number">{approved}</span>
               <span className="ad-stat-desc">Validated and ready for action</span>
             </div>
-            <div className="ad-stat-card ad-stat-card--ongoing">
+            <div className="ad-stat-card ad-stat-card--ongoing ad-stat-card--link" {...statCardProps("Ongoing")}>
               <span className="ad-stat-label">Ongoing</span>
               <span className="ad-stat-number">{ongoing}</span>
               <span className="ad-stat-desc">Action in progress</span>
             </div>
-            <div className="ad-stat-card ad-stat-card--resolved">
+            <div className="ad-stat-card ad-stat-card--resolved ad-stat-card--link" {...statCardProps("Resolved")}>
               <span className="ad-stat-label">Resolved</span>
               <span className="ad-stat-number">{resolved}</span>
               <span className="ad-stat-desc">Issues successfully resolved</span>
             </div>
-            <div className="ad-stat-card ad-stat-card--rejected">
+            <div className="ad-stat-card ad-stat-card--rejected ad-stat-card--link" {...statCardProps("Rejected")}>
               <span className="ad-stat-label">Rejected</span>
               <span className="ad-stat-number">{rejected}</span>
               <span className="ad-stat-desc">Closed, no action needed</span>

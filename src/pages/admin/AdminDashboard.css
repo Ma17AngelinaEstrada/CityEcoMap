@@ -951,3 +951,17 @@
   max-width: 200px;
   text-overflow: ellipsis;
 }
+
+/* Clickable stat cards (Dashboard -> Manage Reports by status) */
+.ad-stat-card--link {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.ad-stat-card--link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.ad-stat-card--link:focus-visible {
+  outline: 2px solid #1a4a1a;
+  outline-offset: 2px;
+}

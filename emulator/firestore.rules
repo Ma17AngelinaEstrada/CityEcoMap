@@ -128,7 +128,7 @@ service cloud.firestore {
       allow write: if isMasterAdmin()
         && request.resource.data.keys().hasOnly(
              ['schemaVersion', 'totalReports', 'statusCounts',
-              'categoryCounts', 'dailyTrend', 'updatedAt']);
+              'categoryCounts', 'dailyTrend', 'breakdown', 'updatedAt']);
     }
   }
 }
