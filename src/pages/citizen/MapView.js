@@ -27,6 +27,18 @@ function MapView() {
   const [reports, setReports] = useState([]);
   const [filterCategory, setFilterCategory] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [filterSubCategory, setFilterSubCategory] = useState('All');
+  const WASTE_SUBCATEGORIES = ['Illegal Dumping', 'Uncollected Garbage', 'Waste Affecting Rivers, Waterways, and Natural Water Bodies', 'Other'];
+  const DRAINAGE_SUBCATEGORIES = ['Clogged Drainage', 'Blocked Drainage', 'Damaged Drainage', 'Flooding', 'Other'];
+  const KNOWN_SUBCATEGORIES = new Set([
+    ...WASTE_SUBCATEGORIES.filter((s) => s !== 'Other'),
+    ...DRAINAGE_SUBCATEGORIES.filter((s) => s !== 'Other'),
+  ]);
+  const isOtherSubCategory = (s) => Boolean(s) && !KNOWN_SUBCATEGORIES.has(s);
+  const subCategoryOptions =
+    filterCategory === 'Waste Issue' ? WASTE_SUBCATEGORIES
+    : filterCategory === 'Drainage Issue' ? DRAINAGE_SUBCATEGORIES
+    : [];
   const [searchQuery, setSearchQuery] = useState('');
   const [activeInfoWindow, setActiveInfoWindow] = useState(null);
   const mapRef = useRef(null);
@@ -118,7 +130,13 @@ function MapView() {
     const hasLocation = r.location?.lat && r.location?.lng;
     const matchCategory = filterCategory === 'All' || r.category === filterCategory;
     const matchStatus = filterStatus === 'All' || r.status === filterStatus;
-    return hasLocation && matchCategory && matchStatus;
+    const notRejected = r.status !== 'Rejected';
+    const matchSubCategory =
+      filterSubCategory === 'All' ||
+      (filterSubCategory === 'Other'
+        ? isOtherSubCategory(r.subCategory)
+        : r.subCategory === filterSubCategory);
+    return hasLocation && matchCategory && matchStatus && matchSubCategory && notRejected;
   });
 
   const formatDate = (ts) => {
@@ -266,11 +284,16 @@ function MapView() {
     .filter((r) => myReportIds.includes(r.reportId))
     .sort((a, b) => (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0));
 
-  const recentReports = [...reports]
+  const recentReports = reports
+    .filter((r) => r.status !== 'Rejected')
     .sort((a, b) => (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0))
     .slice(0, 6);
 
   const handleReportCardClick = (report) => {
+    if (report.status === 'Rejected') {
+      navigate('/track-report', { state: { reportId: report.reportId } });
+      return;
+    }
     if (!report.location?.lat || !report.location?.lng) return;
     mapRef.current?.panTo({ lat: report.location.lat, lng: report.location.lng });
     mapRef.current?.setZoom(17);
@@ -415,12 +438,24 @@ function MapView() {
           <select
             className="filter-select"
             value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
+            onChange={(e) => { setFilterCategory(e.target.value); setFilterSubCategory('All'); }}
           >
             <option value="All">All Categories</option>
             <option value="Waste Issue">Waste Issue</option>
             <option value="Drainage Issue">Drainage Issue</option>
           </select>
+          {filterCategory !== 'All' && (
+            <select
+              className="filter-select filter-select--sub"
+              value={filterSubCategory}
+              onChange={(e) => setFilterSubCategory(e.target.value)}
+            >
+              <option value="All">All Types</option>
+              {subCategoryOptions.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          )}
           <select
             className="filter-select"
             value={filterStatus}
@@ -497,6 +532,16 @@ function MapView() {
                       {r.status || 'Pending'}
                     </span>
                     <p className="report-mini-id">#{r.reportId}</p>
+                    <button
+                      type="button"
+                      className="report-mini-track-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/track-report', { state: { reportId: r.reportId } });
+                      }}
+                    >
+                      Track Report
+                    </button>
                     <p className="report-mini-category">{r.category}{r.subCategory ? ` — ${r.subCategory}` : ''}</p>
                       {r.floodingCause && <p className="report-mini-flood">{r.floodingCause}</p>}
                     <p className="report-mini-date">{formatDate(r.createdAt)}</p>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
@@ -80,6 +80,7 @@ export default function AdminDashboard() {
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [mapFilterStatus, setMapFilterStatus] = useState('All');
   const [mapFilterCategory, setMapFilterCategory] = useState('All');
+  const [mapFilterSubCategory, setMapFilterSubCategory] = useState('All');
   const [activeInfoWindow, setActiveInfoWindow] = useState(null);
   const adminMapRef = useRef(null);
   const [chartView, setChartView] = useState("category");
@@ -414,11 +415,21 @@ export default function AdminDashboard() {
     .sort((a, b) => (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0))
     .slice(0, 7);
 
+  const mapSubCategoryOptions =
+    mapFilterCategory === 'Waste Issue' ? WASTE_SUBCATEGORIES
+    : mapFilterCategory === 'Drainage Issue' ? DRAINAGE_SUBCATEGORIES
+    : [];
+
   const mapMarkers = visibleReports.filter((r) => {
     const hasLocation = r.location?.lat && r.location?.lng;
     const matchStatus = mapFilterStatus === 'All' || r.status === mapFilterStatus;
     const matchCategory = mapFilterCategory === 'All' || r.category === mapFilterCategory;
-    return hasLocation && matchStatus && matchCategory && inMapTimeRange(r);
+    const matchSubCategory =
+      mapFilterSubCategory === 'All' ||
+      (mapFilterSubCategory === 'Other'
+        ? isOtherSubCategory(r.subCategory)
+        : r.subCategory === mapFilterSubCategory);
+    return hasLocation && matchStatus && matchCategory && matchSubCategory && inMapTimeRange(r);
   });
 
   const getStatusClass = (status) => {
@@ -458,6 +469,31 @@ export default function AdminDashboard() {
     strokeWeight: 2,
     scale: 10,
   });
+
+  // "View on Map" from Manage Reports: scroll to the map, pan to the report, open its info window.
+  const routerLocation = useLocation();
+  const focusedReportRef = useRef(null);
+  useEffect(() => {
+    const id = routerLocation.state?.focusReportId;
+    if (!id || !isLoaded || focusedReportRef.current === id) return;
+    const target = visibleReports.find((r) => r.id === id);
+    if (!target?.location?.lat || !target?.location?.lng) return;
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries += 1;
+      if (adminMapRef.current) {
+        clearInterval(timer);
+        focusedReportRef.current = id;
+        document.getElementById("dash-map")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        adminMapRef.current.panTo({ lat: target.location.lat, lng: target.location.lng });
+        adminMapRef.current.setZoom(17);
+        setTimeout(() => setActiveInfoWindow(target.id), 800);
+      } else if (tries > 30) {
+        clearInterval(timer);
+      }
+    }, 200);
+    return () => clearInterval(timer);
+  }, [routerLocation.state, isLoaded, visibleReports]);
 
   const handleMapSearch = async (e) => {
     if (e.key !== 'Enter') return;
@@ -789,12 +825,24 @@ export default function AdminDashboard() {
                     <select
                       className="ad-map-filter-select"
                       value={mapFilterCategory}
-                      onChange={(e) => setMapFilterCategory(e.target.value)}
+                      onChange={(e) => { setMapFilterCategory(e.target.value); setMapFilterSubCategory('All'); }}
                     >
                       <option value="All">All Categories</option>
                       <option value="Waste Issue">Waste Issue</option>
                       <option value="Drainage Issue">Drainage Issue</option>
                     </select>
+                    {mapFilterCategory !== 'All' && (
+                      <select
+                        className="ad-map-filter-select ad-map-filter-select--sub"
+                        value={mapFilterSubCategory}
+                        onChange={(e) => setMapFilterSubCategory(e.target.value)}
+                      >
+                        <option value="All">All Types</option>
+                        {mapSubCategoryOptions.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    )}
                     <select
                       className="ad-map-filter-select"
                       value={mapTimeRange}

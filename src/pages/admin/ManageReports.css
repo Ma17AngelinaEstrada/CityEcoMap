@@ -1434,3 +1434,114 @@
   cursor: not-allowed;
 }
 
+
+/* View on Map button in report details */
+.mr-view-map-btn {
+  margin-left: 10px;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #1a4a1a;
+  background: #fff;
+  border: 1px solid #1a4a1a;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mr-view-map-btn:hover {
+  background: #1a4a1a;
+  color: #fff;
+}
+
+
+/* Put the View on Map button on the right, like the action cards */
+.mr-detail-value:has(> .mr-view-map-btn) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mr-detail-value:has(> .mr-view-map-btn) .mr-view-map-btn {
+  margin-left: 0;
+}
+
+
+/* Response photos: label on the left, Choose Files on the right */
+.mr-response-upload {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+
+/* Keep label + Choose Files on one row: show only the button, clip the filename text */
+.mr-response-upload {
+  flex-wrap: nowrap;
+}
+
+.mr-response-upload > span {
+  min-width: 0;
+}
+
+.mr-response-upload input[type="file"] {
+  flex: 0 0 auto;
+  width: 140px;
+  overflow: hidden;
+  color: transparent;
+}
+
+
+/* Make the file input exactly as wide as its button so it sits flush right */
+.mr-response-upload input[type="file"] {
+  width: auto;
+  font-size: 0;
+  color: transparent;
+  overflow: visible;
+  flex: 0 0 auto;
+}
+
+.mr-response-upload input[type="file"]::file-selector-button {
+  margin-right: 0;
+  font-size: 0.85rem;
+}
+
+
+/* Desktop: filters in an even grid so every filter lines up (Master Admin has 9) */
+@media (min-width: 901px) {
+  .mr-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.75rem 0.6rem;
+    align-items: end;
+  }
+  .mr-filters-head {
+    grid-column: 1 / -1;
+  }
+  .mr-filters-tail,
+  .mr-filters .mr-daterange-group {
+    display: contents;
+  }
+  .mr-filters .mr-filter-group {
+    width: 100%;
+    min-width: 0;
+  }
+  .mr-filters .mr-filter-group select,
+  .mr-filters .mr-filter-group input.mr-search {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box;
+  }
+}
+
+
+/* Wide desktops: exactly 9 columns so all of Master Admin's filters fit one row */
+@media (min-width: 1500px) {
+  .mr-filters {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+}

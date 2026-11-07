@@ -179,6 +179,7 @@ export default function ManageReports() {
   const [dateTo, setDateTo] = useState("");
   const [filterAssigned, setFilterAssigned] = useState("All");
   const [filterSupporting, setFilterSupporting] = useState("All");
+  const [filterPriority, setFilterPriority] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterCategory, setFilterCategory] = useState("All");
@@ -1262,6 +1263,7 @@ export default function ManageReports() {
     const matchAssigned = !isMaster || filterAssigned === "All" || r.primaryOffice === filterAssigned;
     const matchSupporting = filterSupporting === "All" ||
       (r.supportingOffices || []).some((so) => so.officeId === filterSupporting && so.status !== "declined");
+    const matchPriority = filterPriority === "All" || suggestPriority(r).level === filterPriority;
     const cleanedSearch = searchQuery.replace(/#/g, "").trim().toLowerCase();
     const matchSearch = cleanedSearch === "" ||
         (r.reportId && r.reportId.toLowerCase().includes(cleanedSearch)) ||
@@ -1280,7 +1282,7 @@ export default function ManageReports() {
       }
     }
 
-    return matchStatus && matchCategory && matchSubCategory && matchAssigned && matchSupporting && matchSearch && matchDate;
+    return matchStatus && matchCategory && matchSubCategory && matchAssigned && matchSupporting && matchPriority && matchSearch && matchDate;
   });
 
   const getStatusClass = (status) => {
@@ -1506,6 +1508,7 @@ export default function ManageReports() {
               setFilterSubCategory("All");
               setFilterAssigned("All");
               setFilterSupporting("All");
+              setFilterPriority("All");
               setSearchQuery("");
               setDateFrom("");
               setDateTo("");
@@ -1581,6 +1584,17 @@ export default function ManageReports() {
           <select value={filterSupporting} onChange={(e) => setFilterSupporting(e.target.value)}>
             <option>All</option>
             {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o} value={o}>{officeName(o)}</option>)}
+          </select>
+        </div>
+        <div className="mr-filter-group">
+          <label>Suggested Priority</label>
+          <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
+            <option value="All">All</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+            <option value="Needs Assessment">Needs Assessment</option>
           </select>
         </div>
         
@@ -1823,6 +1837,23 @@ export default function ManageReports() {
                 <span className="mr-detail-label">Location Description</span>
                 <span className="mr-detail-value">
                   {selectedReport.locationDescription || 'Not provided by citizen'}
+                </span>
+              </div>
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Coordinates (lat, lng)</span>
+                <span className="mr-detail-value">
+                  {selectedReport.location?.lat != null && selectedReport.location?.lng != null
+                    ? `${Number(selectedReport.location.lat).toFixed(6)}, ${Number(selectedReport.location.lng).toFixed(6)}`
+                    : '—'}
+                  {selectedReport.location?.lat != null && selectedReport.location?.lng != null && (
+                    <button
+                      type="button"
+                      className="mr-view-map-btn"
+                      onClick={() => navigate("/admin/dashboard", { state: { focusReportId: selectedReport.id } })}
+                    >
+                      View on Map
+                    </button>
+                  )}
                 </span>
               </div>
               <div className="mr-detail-row">

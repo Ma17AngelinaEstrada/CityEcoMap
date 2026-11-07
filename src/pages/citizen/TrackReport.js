@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../logowhite2.png';
 
 import './TrackReport.css';
@@ -48,6 +48,7 @@ const SAMPLE_REPORT = {
 function TrackReport() {
 // eslint-disable-next-line no-unused-vars
   const navigate = useNavigate();
+  const routerLocation = useLocation();
   const [reportId, setReportId] = useState('');
   const [searched, setSearched] = useState(false);
   const [report, setReport] = useState(null);
@@ -69,8 +70,9 @@ function TrackReport() {
       setShowSample(true);
     }
   }, [showTour]);
-  const handleSearch = async () => {
-  if (!reportId.trim()) {
+  const handleSearch = async (idOverride) => {
+  const rawId = typeof idOverride === 'string' ? idOverride : reportId;
+  if (!rawId.trim()) {
     alert('Please enter a Report ID.');
     return;
   }
@@ -80,7 +82,7 @@ function TrackReport() {
   try {
     const q = query(
       collection(db, 'reports'),
-      where('reportId', '==', reportId.trim().replace('#', ''))
+      where('reportId', '==', rawId.trim().replace('#', ''))
     );
     const querySnapshot = await getDocs(q);
 
@@ -120,6 +122,15 @@ function TrackReport() {
     alert('Error fetching report. Please try again.');
   }
 };
+
+  // Opened from the map's "My Reports" (e.g. a rejected report): search that ID automatically
+  const incomingId = routerLocation.state?.reportId;
+  useEffect(() => {
+    if (!incomingId) return;
+    setReportId(incomingId);
+    handleSearch(incomingId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomingId]);
 
   const getStatusColor = (status) => {
     if (status === 'Pending') return '#e53935';

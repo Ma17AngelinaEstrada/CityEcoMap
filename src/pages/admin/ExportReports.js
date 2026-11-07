@@ -78,6 +78,7 @@ export default function ExportReports() {
   const [filterCategory, setFilterCategory] = useState("All");
   const [filterAssigned, setFilterAssigned] = useState("All");
   const [filterSupporting, setFilterSupporting] = useState("All");
+  const [filterPriority, setFilterPriority] = useState("All");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [exportHistory, setExportHistory] = useState([]);
@@ -300,6 +301,7 @@ export default function ExportReports() {
     const matchAssigned = !isMaster || filterAssigned === "All" || r.primaryOffice === filterAssigned;
     const matchSupporting = filterSupporting === "All" ||
       (r.supportingOffices || []).some((so) => so.officeId === filterSupporting && so.status !== "declined");
+    const matchPriority = filterPriority === "All" || suggestPriority(r).level === filterPriority;
 
     const cleanedSearch = searchQuery.replace(/#/g, "").trim().toLowerCase();
       const matchSearch = cleanedSearch === "" ||
@@ -318,7 +320,7 @@ export default function ExportReports() {
           }
         }
       }
-        return matchStatus && matchCategory && matchSubCategory && matchAssigned && matchSupporting && matchSearch && matchDate;
+        return matchStatus && matchCategory && matchSubCategory && matchAssigned && matchSupporting && matchPriority && matchSearch && matchDate;
     });
 
   const formatDate = (ts) => {
@@ -1180,6 +1182,7 @@ export default function ExportReports() {
               setFilterSubCategory("All");
               setFilterAssigned("All");
               setFilterSupporting("All");
+              setFilterPriority("All");
               setSearchQuery("");
               setDateFrom("");
               setDateTo("");
@@ -1255,6 +1258,17 @@ export default function ExportReports() {
           <select value={filterSupporting} onChange={(e) => setFilterSupporting(e.target.value)}>
             <option>All</option>
             {ACTIVE_OFFICE_LIST.filter((o) => o !== "EMB").map((o) => <option key={o} value={o}>{officeName(o)}</option>)}
+          </select>
+        </div>
+        <div className="er-filter-group">
+          <label>Suggested Priority</label>
+          <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
+            <option value="All">All</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+            <option value="Needs Assessment">Needs Assessment</option>
           </select>
         </div>
         <div className="mr-filters-tail">

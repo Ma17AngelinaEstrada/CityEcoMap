@@ -233,6 +233,15 @@
     padding: 8px 10px;
   }
 
+  .filter-select--sub {
+    order: 3;
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    max-width: none !important;
+  }
+
   /* Legend closer to bottom nav */
   .map-legend {
     bottom: 10px;
@@ -672,3 +681,51 @@
   word-break: break-word;
 }
 
+
+/* My Reports: Track Report button, top-right of the card (same look as the admin "View on Map") */
+.report-mini-card {
+  position: relative;
+}
+
+.report-mini-track-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #1a4a1a;
+  background: #fff;
+  border: 1px solid #1a4a1a;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.report-mini-track-btn:hover {
+  background: #1a4a1a;
+  color: #fff;
+}
+
+
+/* Citizen map: allow the Subcategory dropdown to wrap onto its own row */
+.floating-filters {
+  flex-wrap: wrap;
+}
+
+.filter-select--sub {
+  max-width: 240px;
+}
+
+/* Custom dropdown arrow with breathing room from the edge; long selected text gets "..." before the arrow */
+.filter-select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 34px;
+  text-overflow: ellipsis;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23333' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px 8px;
+}

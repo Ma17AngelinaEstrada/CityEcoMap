@@ -763,7 +763,14 @@
     max-height: 300px;
   }
   .ad-map-search { width: 90%; }
-  .ad-map-filters { flex-wrap: wrap; justify-content: center; width: 90%; }
+  .ad-map-filters { flex-wrap: wrap; justify-content: center; width: 90%; gap: 6px; }
+  .ad-map-filters .ad-map-filter-select {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+    max-width: none;
+    padding: 5px 8px;
+    font-size: 0.72rem;
+  }
   .ad-table-card { overflow-x: auto; }
   .ad-table { min-width: 900px; }
 }
@@ -938,3 +945,9 @@
   word-break: break-word;
 }
 
+
+/* Admin map: Subcategory dropdown — cap the width so long names don't stretch the filter row */
+.ad-map-filter-select--sub {
+  max-width: 200px;
+  text-overflow: ellipsis;
+}

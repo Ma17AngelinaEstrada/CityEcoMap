@@ -803,3 +803,37 @@ body:has(.tour-overlay) .er-header > .er-header-search {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+
+
+/* Desktop: filters in an even grid so Master Admin's 9 filters line up */
+@media (min-width: 901px) {
+  .er-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.75rem 0.6rem;
+    align-items: end;
+  }
+  .er-filters-head {
+    grid-column: 1 / -1;
+  }
+  .er-filters .mr-filters-tail,
+  .er-filters .er-daterange-group {
+    display: contents;
+  }
+  .er-filters .er-filter-group {
+    width: 100%;
+    min-width: 0;
+  }
+  .er-filters .er-filter-group select,
+  .er-filters .er-filter-group input {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box;
+  }
+}
+
+@media (min-width: 1500px) {
+  .er-filters {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+}
