@@ -81,13 +81,34 @@ service cloud.firestore {
           && isSignedIn()
           && canManageResponsePhotos(reportId)
           && get(/databases/$(database)/documents/reports/$(reportId)).data.status in ['Approved','Ongoing','Resolved']
-          && request.resource.data.keys().hasOnly(['data','uploadedByUid','uploadedByOffice','uploadedAt'])
+          && request.resource.data.keys().hasOnly(['data','uploadedByUid','uploadedByOffice','uploadedAt','updateId'])
+          && (!('updateId' in request.resource.data)
+              || (request.resource.data.updateId is string
+                  && request.resource.data.updateId.size() > 0
+                  && request.resource.data.updateId.size() <= 40))
           && request.resource.data.data is string
           && request.resource.data.data.size() <= 450000
           && request.resource.data.data.matches('data:image/jpeg;base64,.*')
           && request.resource.data.uploadedByUid == request.auth.uid
           && request.resource.data.uploadedByOffice == myOffice()
           && request.resource.data.uploadedAt == request.time;
+
+        allow update: if false;
+        allow delete: if isSignedIn() && canManageResponsePhotos(reportId);
+      }
+
+      match /responseUpdates/{updateId} {
+        allow read: if true;
+
+        allow create: if isSignedIn()
+          && canManageResponsePhotos(reportId)
+          && get(/databases/$(database)/documents/reports/$(reportId)).data.status in ['Approved','Ongoing','Resolved']
+          && request.resource.data.keys().hasOnly(['message','uploadedByUid','uploadedByOffice','createdAt'])
+          && request.resource.data.message is string
+          && request.resource.data.message.size() <= 1000
+          && request.resource.data.uploadedByUid == request.auth.uid
+          && request.resource.data.uploadedByOffice == myOffice()
+          && request.resource.data.createdAt == request.time;
 
         allow update: if false;
         allow delete: if isSignedIn() && canManageResponsePhotos(reportId);

@@ -10,6 +10,7 @@ import { useAdminTour } from "../../context/AdminTourContext";
 import { ACTIVE_OFFICE_LIST, OPERATIONAL_OFFICE_LIST, isMasterRole, officeForRole, officeLabel, officeName, displayOfficeText } from "../../constants/offices";
 import PriorityBadge from "../../components/PriorityBadge";
 import { suggestPriority } from "../../utils/priorityRules";
+import { buildResponseGroups, responseOfficeLabel } from "../../utils/responseGroups";
 
 const EMAIL_SERVER_URL = process.env.REACT_APP_EMAIL_SERVER_URL || 'https://cityecomap-email.onrender.com';
 
@@ -22,6 +23,12 @@ const fetchResponsePhotos = async (reportId) => {
     .map((d) => ({ slot: d.id, ...d.data() }))
     .sort((a, b) => Number(a.slot) - Number(b.slot));
 };
+
+const fetchResponseUpdates = async (reportId) => {
+  const snap = await getDocs(collection(db, "reports", reportId, "responseUpdates"));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+};
+const RESPONSE_MESSAGE_MAX = 1000;
 
 // Re-encodes the image through a canvas, which drops EXIF/GPS metadata.
 const compressToJpeg = (file) =>
@@ -208,6 +215,12 @@ export default function ManageReports() {
   const [rerouteDeclineReason, setRerouteDeclineReason] = useState("");
   const [rerouteDecisionConfirming, setRerouteDecisionConfirming] = useState(false);
   const [escalateModal, setEscalateModal] = useState(false);
+  const [responseUpdates, setResponseUpdates] = useState([]);
+  const [responseMessage, setResponseMessage] = useState("");
+  const [responseFiles, setResponseFiles] = useState([]);
+  const [responsePreviews, setResponsePreviews] = useState([]);
+  const [responseDeleteConfirm, setResponseDeleteConfirm] = useState(null);
+  const [coordError, setCoordError] = useState("");
   const [escalateReason, setEscalateReason] = useState("");
   const [escalateBusy, setEscalateBusy] = useState(false);
   const [escalateResolveOffice, setEscalateResolveOffice] = useState("");
@@ -684,9 +697,10 @@ export default function ManageReports() {
 
   const handleDeclineReasonNext = () => {
     if (!supportDeclineReason.trim()) {
-      alert("Please provide a reason for declining.");
+      setCoordError("Please provide a reason for declining.");
       return;
     }
+    setCoordError("");
     setSupportDecisionConfirming(true);
   };
 
@@ -860,9 +874,10 @@ export default function ManageReports() {
 
   const handleRerouteDeclineReasonNext = () => {
     if (!rerouteDeclineReason.trim()) {
-      alert("Please provide a reason for declining.");
+      setCoordError("Please provide a reason for declining.");
       return;
     }
+    setCoordError("");
     setRerouteDecisionConfirming(true);
   };
 
@@ -1059,9 +1074,10 @@ export default function ManageReports() {
 
   const handleRejectReasonNext = () => {
     if (!rejectReason.trim()) {
-      alert("Please enter a reason for rejection.");
+      setCoordError("Please enter a reason for rejection.");
       return;
     }
+    setCoordError("");
     setRejectConfirming(true);
   };
 
@@ -1099,6 +1115,38 @@ export default function ManageReports() {
     const run = statusConfirm?.run;
     setStatusConfirm(null);
     if (run) await run();
+  };
+
+  const confirmSupportRequest = () => {
+    if (!supportTargetOffice) { setCoordError("Please select an office."); return; }
+    if (!supportReason.trim()) { setCoordError("Please provide a reason for requesting support."); return; }
+    setCoordError("");
+    askStatusConfirm(
+      "Send Support Request?",
+      `A support request will be sent to ${officeName(supportTargetOffice)}. Your office remains the Primary Office.`,
+      handleSubmitSupportRequest
+    );
+  };
+
+  const confirmRerouteRequest = () => {
+    if (!rerouteTargetOffice) { setCoordError("Please select a destination office."); return; }
+    if (!rerouteReason.trim()) { setCoordError("Please provide a reason for the re-route request."); return; }
+    setCoordError("");
+    askStatusConfirm(
+      "Send Re-route Request?",
+      `A request to transfer this report to ${officeName(rerouteTargetOffice)} will be sent. The report stays with your office until they accept.`,
+      handleSubmitRerouteRequest
+    );
+  };
+
+  const confirmEscalation = () => {
+    if (!escalateReason.trim()) { setCoordError("Please provide a reason for escalating this report."); return; }
+    setCoordError("");
+    askStatusConfirm(
+      "Escalate to Master Admin?",
+      "This report will be escalated to the Master Admin for review of its routing.",
+      handleSubmitEscalation
+    );
   };
 
   const fetchStatusHistory = async (reportId) => {
@@ -1146,21 +1194,40 @@ export default function ManageReports() {
       .finally(() => setLoadingContact(false));
   }, [selectedReport?.id]);
 
-  useEffect(() => {
-    setResponsePhotoError("");
-    if (!selectedReport?.id || selectedReport.id === 'SAMPLE_REPORT') {
-      setResponsePhotos([]);
-      return;
-    }
-    let cancelled = false;
-    fetchResponsePhotos(selectedReport.id)
-      .then((list) => { if (!cancelled) setResponsePhotos(list); })
-      .catch((err) => {
-        console.error("Error fetching response photos:", err);
-        if (!cancelled) setResponsePhotos([]);
-      });
-    return () => { cancelled = true; };
-  }, [selectedReport?.id]);
+    useEffect(() => {
+      setResponsePhotoError("");
+      setResponseMessage("");
+      setResponseFiles([]);
+      if (!selectedReport?.id || selectedReport.id === 'SAMPLE_REPORT') {
+        setResponsePhotos([]);
+        setResponseUpdates([]);
+        return;
+      }
+      let cancelled = false;
+      fetchResponsePhotos(selectedReport.id)
+        .then((list) => { if (!cancelled) setResponsePhotos(list); })
+        .catch((err) => {
+          console.error("Error fetching response photos:", err);
+          if (!cancelled) setResponsePhotos([]);
+        });
+      fetchResponseUpdates(selectedReport.id)
+        .then((list) => { if (!cancelled) setResponseUpdates(list); })
+        .catch((err) => {
+          console.error("Error fetching response updates:", err);
+          if (!cancelled) setResponseUpdates([]);
+        });
+      return () => { cancelled = true; };
+    }, [selectedReport?.id]);
+
+      // Preview URLs for photos chosen but not yet saved.
+      useEffect(() => {
+        const urls = responseFiles.map((f) => URL.createObjectURL(f));
+        setResponsePreviews(urls);
+        return () => urls.forEach((u) => URL.revokeObjectURL(u));
+      }, [responseFiles]);
+
+      const removeResponseFile = (index) =>
+        setResponseFiles((prev) => prev.filter((_, i) => i !== index));
 
   const canManageResponsePhotos = (r) =>
     !!r && r.id !== 'SAMPLE_REPORT' &&
@@ -1169,59 +1236,126 @@ export default function ManageReports() {
   const canUploadResponsePhotos = (r) =>
     canManageResponsePhotos(r) && ['Approved', 'Ongoing', 'Resolved'].includes(r.status);
 
-  const handleResponsePhotoUpload = async (e) => {
-    const files = Array.from(e.target.files || []);
-    e.target.value = "";
-    if (!files.length || !selectedReport || !auth.currentUser) return;
-    const reportId = selectedReport.id;
-    const used = new Set(responsePhotos.map((p) => p.slot));
-    const free = RESPONSE_PHOTO_SLOTS.filter((s) => !used.has(s));
-    if (free.length === 0) {
-      setResponsePhotoError("Maximum of 5 response photos reached.");
-      return;
-    }
-    setResponsePhotoBusy(true);
-    setResponsePhotoError("");
-    try {
-      for (const file of files.slice(0, free.length)) {
-        if (!file.type.startsWith("image/")) throw new Error("Only image files are allowed.");
-        const dataUrl = await compressToJpeg(file);
-        let saved = false;
-        while (!saved && free.length > 0) {
-          const slot = free.shift();
-          try {
-            await setDoc(doc(db, "reports", reportId, "responsePhotos", slot), {
-              data: dataUrl,
-              uploadedByUid: auth.currentUser.uid,
-              uploadedByOffice: isMaster ? "EMB" : currentOffice,
-              uploadedAt: serverTimestamp(),
-            });
-            saved = true;
-          } catch (err) {
-            if (err.code !== "permission-denied") throw err;
-            // That slot may already be taken; try the next free one.
+    const refreshResponseData = async (reportId) => {
+      try {
+        const [photos, updates] = await Promise.all([
+          fetchResponsePhotos(reportId),
+          fetchResponseUpdates(reportId),
+        ]);
+        setResponsePhotos(photos);
+        setResponseUpdates(updates);
+      } catch (err) {
+        console.error("Error refreshing response documentation:", err);
+      }
+    };
+
+    // Photos are only staged here; nothing is saved until "Save Response Update".
+    const handleResponseFilesPicked = (e) => {
+      const picked = Array.from(e.target.files || []);
+      e.target.value = "";
+      if (!picked.length) return;
+      if (picked.some((f) => !f.type.startsWith("image/"))) {
+        setResponsePhotoError("Only image files are allowed.");
+        return;
+      }
+      const room = Math.max(RESPONSE_PHOTO_SLOTS.length - responsePhotos.length, 0);
+      const combined = [...responseFiles, ...picked];
+      setResponseFiles(combined.slice(0, room));
+      setResponsePhotoError(
+        combined.length > room ? `Only ${room} more photo(s) can be added (5 maximum per report).` : ""
+      );
+    };
+
+    const handleResponseSubmit = async () => {
+      if (!selectedReport || !auth.currentUser) return;
+      const message = responseMessage.trim();
+      if (!message && responseFiles.length === 0) {
+        setResponsePhotoError("Add a message, at least one photo, or both.");
+        return;
+      }
+      const reportId = selectedReport.id;
+      const office = isMaster ? "EMB" : currentOffice;
+      setResponsePhotoBusy(true);
+      setResponsePhotoError("");
+      try {
+        // Compress first (drops EXIF/GPS) so a bad photo fails before anything is saved.
+        const dataUrls = [];
+        for (const file of responseFiles) dataUrls.push(await compressToJpeg(file));
+
+        const updateRef = doc(collection(db, "reports", reportId, "responseUpdates"));
+        await setDoc(updateRef, {
+          message,
+          uploadedByUid: auth.currentUser.uid,
+          uploadedByOffice: office,
+          createdAt: serverTimestamp(),
+        });
+
+        const used = new Set(responsePhotos.map((p) => p.slot));
+        const free = RESPONSE_PHOTO_SLOTS.filter((s) => !used.has(s));
+        for (const dataUrl of dataUrls) {
+          let saved = false;
+          while (!saved && free.length > 0) {
+            const slot = free.shift();
+            try {
+              await setDoc(doc(db, "reports", reportId, "responsePhotos", slot), {
+                data: dataUrl,
+                uploadedByUid: auth.currentUser.uid,
+                uploadedByOffice: office,
+                uploadedAt: serverTimestamp(),
+                updateId: updateRef.id,
+              });
+              saved = true;
+            } catch (err) {
+              if (err.code !== "permission-denied") throw err;
+              // That slot may already be taken; try the next free one.
+            }
+          }
+          if (!saved) {
+            throw new Error("Could not upload all photos. The 5-photo limit may be reached, or you may not have permission.");
           }
         }
-        if (!saved) {
-          throw new Error("Could not upload. The 5-photo limit may be reached, or you may not have permission.");
-        }
-      }
-    } catch (err) {
-      console.error("Response photo upload failed:", err);
-      setResponsePhotoError(err.message || "Upload failed. Please try again.");
-    } finally {
-      try {
-        setResponsePhotos(await fetchResponsePhotos(reportId));
+        setResponseMessage("");
+        setResponseFiles([]);
       } catch (err) {
-        console.error("Error refreshing response photos:", err);
+        console.error("Response update failed:", err);
+        setResponsePhotoError(err.message || "Could not save the response update. Please try again.");
+      } finally {
+        await refreshResponseData(reportId);
+        setResponsePhotoBusy(false);
       }
-      setResponsePhotoBusy(false);
-    }
-  };
+    };
+
+    const handleResponseUpdateDelete = async (group) => {
+      if (!selectedReport || !group.updateId) return;
+  
+      const reportId = selectedReport.id;
+      setResponsePhotoBusy(true);
+      setResponsePhotoError("");
+      try {
+        for (const p of group.photos) {
+          await deleteDoc(doc(db, "reports", reportId, "responsePhotos", p.slot));
+        }
+        await deleteDoc(doc(db, "reports", reportId, "responseUpdates", group.updateId));
+      } catch (err) {
+        console.error("Response update delete failed:", err);
+        setResponsePhotoError("Could not delete the update. You may not have permission.");
+      } finally {
+        await refreshResponseData(reportId);
+        setResponsePhotoBusy(false);
+      }
+    };
+
+      const runResponseDelete = async () => {
+        const c = responseDeleteConfirm;
+        setResponseDeleteConfirm(null);
+        if (!c) return;
+        if (c.type === "update") await handleResponseUpdateDelete(c.group);
+        else await handleResponsePhotoDelete(c.slot);
+      };
 
   const handleResponsePhotoDelete = async (slot) => {
     if (!selectedReport) return;
-    if (!window.confirm("Delete this response photo? It will no longer be visible in Track Report.")) return;
+
     setResponsePhotoBusy(true);
     setResponsePhotoError("");
     try {
@@ -1326,9 +1460,14 @@ export default function ManageReports() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lightbox]);
 
+  useEffect(() => {
+    setCoordError("");
+  }, [supportModal, rerouteModal, escalateModal, rejectModal, supportDecisionModal, rerouteDecisionModal]);
+
   const selectedPhotos = selectedReport?.photos?.length
     ? selectedReport.photos
     : (selectedReport?.photo ? [selectedReport.photo] : []);
+  const responseGroups = buildResponseGroups(responseUpdates, responsePhotos);
 
   const renderActions = () => {
     const r = selectedReport;
@@ -1361,7 +1500,7 @@ export default function ManageReports() {
             <option value="">Select office to assign...</option>
             {OPERATIONAL_OFFICE_LIST.map((o) => <option key={o} value={o}>{officeName(o)}</option>)}
           </select>
-          <button className="mr-action-btn mr-action-btn--approve" onClick={handleManualAssign} disabled={!reviewAssignOffice || busy || isSample}>
+          <button className="mr-action-btn mr-action-btn--approve" onClick={() => askStatusConfirm("Assign this report?", `${officeName(reviewAssignOffice)} will become the Primary Office.`, handleManualAssign)} disabled={!reviewAssignOffice || busy || isSample}>
             Assign Office
           </button>
         </div>
@@ -1380,14 +1519,14 @@ export default function ManageReports() {
           </select>
           <button
             className="mr-action-btn mr-action-btn--approve"
-            onClick={() => handleResolveEscalation(escalateResolveOffice)}
+            onClick={() => askStatusConfirm("Reassign this report?", `The Primary Office will change to ${officeName(escalateResolveOffice)}, and the report will reset to Pending for re-validation.`, () => handleResolveEscalation(escalateResolveOffice))}
             disabled={!escalateResolveOffice || escalateBusy || isSample}
           >
             Reassign & Resolve
           </button>
           <button
             className="mr-action-btn mr-action-btn--ongoing"
-            onClick={() => handleResolveEscalation(null)}
+            onClick={() => askStatusConfirm("Keep with current office?", `The escalation will be closed and the report stays with ${officeName(r.primaryOffice)}.`, () => handleResolveEscalation(null))}
             disabled={escalateBusy || isSample}
           >
             Keep with {officeName(r.primaryOffice)}
@@ -1883,43 +2022,130 @@ export default function ManageReports() {
                   <span className="mr-photo-hint">Click a photo to enlarge</span>
                 </div>
               )}
-                            {selectedReport && selectedReport.id !== 'SAMPLE_REPORT' &&
-                (responsePhotos.length > 0 || canUploadResponsePhotos(selectedReport)) && (
+              {selectedReport && selectedReport.id !== 'SAMPLE_REPORT' &&
+                (responseGroups.length > 0 || canUploadResponsePhotos(selectedReport)) && (
                 <div className="mr-detail-photo mr-response-photos">
-                  <span className="mr-detail-label">Response Photos (Public)</span>
+                  <span className="mr-detail-label">Response Documentation (Public)</span>
                   <div className="mr-response-warning">
-                    Photos uploaded here are <strong>publicly visible</strong> in Track Report.
-                    Do not upload photos showing faces, vehicle plate numbers, or private information.
+                    Messages and photos added here are <strong>publicly visible</strong> in Track Report.
+                    Do not include faces, vehicle plate numbers, names, or other private information.
                   </div>
-                  {responsePhotos.length > 0 && (
-                    <div className="mr-photo-gallery">
-                      {responsePhotos.map((p, i) => (
-                        <div key={p.slot} className="mr-response-photo-item">
-                          <img
-                            src={p.data}
-                            alt={`Response ${i + 1}`}
-                            className="mr-photo mr-photo--gallery"
-                            onClick={() => setLightbox({ photos: responsePhotos.map((x) => x.data), index: i })}
-                          />
-                          {canManageResponsePhotos(selectedReport) && (
-                            <button
-                              type="button"
-                              className="mr-response-photo-delete"
-                              onClick={() => handleResponsePhotoDelete(p.slot)}
-                              disabled={responsePhotoBusy}
-                            >
-                              Delete
-                            </button>
-                          )}
+
+                  {responseGroups.map((g) => (
+                    <div key={g.key} className="mr-response-update">
+                      <div className="mr-response-update-head">
+                        <span className="mr-response-update-office">
+                          {responseOfficeLabel(g.office, selectedReport, officeName)}
+                        </span>
+                        <span className="mr-response-update-time">{formatDate(g.at)}</span>
+                      </div>
+                      {g.message && <p className="mr-response-update-message">{g.message}</p>}
+                      {g.photos.length > 0 && (
+                        <div className="mr-photo-gallery">
+                          {g.photos.map((p, i) => (
+                            <div key={p.slot} className="mr-response-photo-item">
+                              <img
+                                src={p.data}
+                                alt={`Response ${i + 1}`}
+                                className="mr-photo mr-photo--gallery"
+                                onClick={() => setLightbox({ photos: g.photos.map((x) => x.data), index: i })}
+                              />
+                              {canManageResponsePhotos(selectedReport) && (
+                                <button
+                                  type="button"
+                                  className="mr-response-photo-delete"
+                                  onClick={() => setResponseDeleteConfirm({ type: "photo", slot: p.slot })}
+                                  disabled={responsePhotoBusy}
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
+                      {canManageResponsePhotos(selectedReport) && g.updateId && (
+                        <button
+                          type="button"
+                          className="mr-response-photo-delete mr-response-update-delete"
+                          onClick={() => setResponseDeleteConfirm({ type: "update", group: g })}
+                          disabled={responsePhotoBusy}
+                        >
+                          Delete update
+                        </button>
+                      )}
                     </div>
-                  )}
-                  {canUploadResponsePhotos(selectedReport) && responsePhotos.length < 5 && (
-                    <label className="mr-response-upload">
-                      <span>{responsePhotoBusy ? "Uploading..." : `Add response photos (${responsePhotos.length}/5)`}</span>
-                      <input type="file" accept="image/*" multiple onChange={handleResponsePhotoUpload} disabled={responsePhotoBusy} />
-                    </label>
+                  ))}
+
+                  {canUploadResponsePhotos(selectedReport) && (
+                    <div className="mr-response-form">
+                      <label className="mr-response-form-label" htmlFor="mr-response-message">
+                        Response Message (optional)
+                      </label>
+                      <textarea
+                        id="mr-response-message"
+                        className="mr-response-textarea"
+                        rows={3}
+                        maxLength={RESPONSE_MESSAGE_MAX}
+                        placeholder="Explain the action taken, an observation, or an update..."
+                        value={responseMessage}
+                        onChange={(e) => setResponseMessage(e.target.value)}
+                        disabled={responsePhotoBusy}
+                      />
+                      <span className="mr-photo-hint">{responseMessage.length}/{RESPONSE_MESSAGE_MAX}</span>
+
+                      {responsePhotos.length < RESPONSE_PHOTO_SLOTS.length && (
+                        <label className="mr-response-upload">
+                          <span>{`Choose photos (${responsePhotos.length + responseFiles.length}/5)`}</span>
+                          <input type="file" accept="image/*" multiple onChange={handleResponseFilesPicked} disabled={responsePhotoBusy} />
+                        </label>
+                      )}
+                      {responseFiles.length > 0 && (
+                        <>
+                          <div className="mr-response-previews">
+                            {responsePreviews.map((src, i) => (
+                              <div key={src} className="mr-response-preview">
+                                <img
+                                  src={src}
+                                  alt={`Preview ${i + 1}`}
+                                  onClick={() => setLightbox({ photos: responsePreviews, index: i })}
+                                />
+                                <button
+                                  type="button"
+                                  className="mr-response-preview-remove"
+                                  onClick={() => removeResponseFile(i)}
+                                  disabled={responsePhotoBusy}
+                                  aria-label={`Remove photo ${i + 1}`}
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="mr-photo-hint">
+                            {responseFiles.length} photo(s) selected, not saved yet
+                            <button type="button" className="mr-response-clear" onClick={() => setResponseFiles([])} disabled={responsePhotoBusy}>
+                              Clear all
+                            </button>
+                          </p>
+                        </>
+                      )}
+
+                      <button
+                        type="button"
+                        className="mr-action-btn mr-action-btn--approve"
+                        onClick={() =>
+                          askStatusConfirm(
+                            "Save Response Update?",
+                            "This message and these photos will be publicly visible in Track Report. Make sure they do not show faces, vehicle plate numbers, names, or other private information.",
+                            handleResponseSubmit
+                          )
+                        }
+                        disabled={responsePhotoBusy || (!responseMessage.trim() && responseFiles.length === 0)}
+                      >
+                        {responsePhotoBusy ? "Saving..." : "Save Response Update"}
+                      </button>
+                    </div>
                   )}
                   {responsePhotoError && <p className="mr-response-error">{responsePhotoError}</p>}
                 </div>
@@ -2025,7 +2251,7 @@ export default function ManageReports() {
                           <>
                             {["Approved", "Ongoing"].includes(selectedReport.status) ? (
                               <div className="mr-support-actions">
-                                <button className="mr-action-btn mr-action-btn--ongoing" onClick={() => handleUpdateSupportProgress(so, "ongoing")} disabled={supportBusy}>
+                                <button className="mr-action-btn mr-action-btn--ongoing" onClick={() => askStatusConfirm("Mark your part as Ongoing?", "The Primary Office will be notified.", () => handleUpdateSupportProgress(so, "ongoing"))} disabled={supportBusy}>
                                   ▶ Mark Our Part as Ongoing
                                 </button>
                               </div>
@@ -2038,7 +2264,7 @@ export default function ManageReports() {
                           <>
                             {["Approved", "Ongoing"].includes(selectedReport.status) ? (
                               <div className="mr-support-actions">
-                                <button className="mr-action-btn mr-action-btn--resolved" onClick={() => handleUpdateSupportProgress(so, "completed")} disabled={supportBusy}>
+                                <button className="mr-action-btn mr-action-btn--resolved" onClick={() => askStatusConfirm("Mark your part as Completed?", "This only marks your office's part. It does not resolve the report.", () => handleUpdateSupportProgress(so, "completed"))} disabled={supportBusy}>
                                   ✔ Mark Our Part as Completed
                                 </button>
                               </div>
@@ -2148,18 +2374,23 @@ export default function ManageReports() {
       </div>
     )}
 
-      {/* Reject Reason Modal */}
-      {statusConfirm && (
-        <div className="mr-modal-overlay" onClick={() => setStatusConfirm(null)}>
+      
+
+      {responseDeleteConfirm && (
+        <div className="mr-modal-overlay" onClick={() => setResponseDeleteConfirm(null)}>
           <div className="mr-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{statusConfirm.title}</h3>
-            <p>{statusConfirm.message}</p>
+            <h3>{responseDeleteConfirm.type === "update" ? "Delete Response Update?" : "Delete Response Photo?"}</h3>
+            <p>
+              {responseDeleteConfirm.type === "update"
+                ? "This will delete the message and all photos of this update. They will no longer be visible in Track Report."
+                : "This photo will no longer be visible in Track Report."}
+            </p>
             <div className="mr-modal-btns">
-              <button className="mr-modal-cancel" onClick={() => setStatusConfirm(null)}>
+              <button className="mr-modal-cancel" onClick={() => setResponseDeleteConfirm(null)}>
                 Cancel
               </button>
-              <button className="mr-modal-btn mr-modal-btn--emb" onClick={runStatusConfirm}>
-                Confirm
+              <button className="mr-modal-btn mr-modal-btn--emb" onClick={runResponseDelete}>
+                Delete
               </button>
             </div>
           </div>
@@ -2180,6 +2411,7 @@ export default function ManageReports() {
                   onChange={(e) => setRejectReason(e.target.value)}
                   rows={4}
                 />
+                {coordError && <p className="mr-modal-error">{coordError}</p>}
                 <div className="mr-modal-btns">
                   <button className="mr-modal-btn mr-modal-btn--emb" onClick={handleRejectReasonNext}>
                     Next
@@ -2239,10 +2471,11 @@ export default function ManageReports() {
               onChange={(e) => setSupportRemarks(e.target.value)}
               rows={2}
             />
+            {coordError && <p className="mr-modal-error">{coordError}</p>}
             <div className="mr-modal-btns">
               <button
                 className="mr-modal-btn mr-modal-btn--emb"
-                onClick={handleSubmitSupportRequest}
+                onClick={confirmSupportRequest}
                 disabled={supportBusy}
               >
                 Send Request
@@ -2275,10 +2508,11 @@ export default function ManageReports() {
               onChange={(e) => setRerouteReason(e.target.value)}
               rows={3}
             />
+            {coordError && <p className="mr-modal-error">{coordError}</p>}
             <div className="mr-modal-btns">
               <button
                 className="mr-modal-btn mr-modal-btn--emb"
-                onClick={handleSubmitRerouteRequest}
+                onClick={confirmRerouteRequest}
                 disabled={rerouteBusy}
               >
                 Send Request
@@ -2316,6 +2550,7 @@ export default function ManageReports() {
                   onChange={(e) => setRerouteDeclineReason(e.target.value)}
                   rows={4}
                 />
+                {coordError && <p className="mr-modal-error">{coordError}</p>}
                 <div className="mr-modal-btns">
                   <button className="mr-modal-btn mr-modal-btn--emb" onClick={handleRerouteDeclineReasonNext}>
                     Next
@@ -2352,10 +2587,11 @@ export default function ManageReports() {
               onChange={(e) => setEscalateReason(e.target.value)}
               rows={4}
             />
+            {coordError && <p className="mr-modal-error">{coordError}</p>}
             <div className="mr-modal-btns">
               <button
                 className="mr-modal-btn mr-modal-btn--emb"
-                onClick={handleSubmitEscalation}
+                onClick={confirmEscalation}
                 disabled={escalateBusy}
               >
                 Escalate
@@ -2393,6 +2629,7 @@ export default function ManageReports() {
                   onChange={(e) => setSupportDeclineReason(e.target.value)}
                   rows={4}
                 />
+                {coordError && <p className="mr-modal-error">{coordError}</p>}
                 <div className="mr-modal-btns">
                   <button className="mr-modal-btn mr-modal-btn--emb" onClick={handleDeclineReasonNext}>
                     Next
@@ -2413,6 +2650,24 @@ export default function ManageReports() {
                 <button className="mr-modal-cancel" onClick={() => setSupportDecisionConfirming(false)}>← Back</button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Reject Reason Modal */}
+      {statusConfirm && (
+        <div className="mr-modal-overlay" onClick={() => setStatusConfirm(null)}>
+          <div className="mr-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>{statusConfirm.title}</h3>
+            <p>{statusConfirm.message}</p>
+            <div className="mr-modal-btns">
+              <button className="mr-modal-cancel" onClick={() => setStatusConfirm(null)}>
+                Cancel
+              </button>
+              <button className="mr-modal-btn mr-modal-btn--emb" onClick={runStatusConfirm}>
+                Confirm
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -9,6 +9,7 @@ import '../../styles/CitizenHeader.css';
 import { SearchIcon, HourglassIcon, ThumbsUpIcon, RefreshIcon, CheckCircleIcon, XCircleIcon, IdIcon, TrashIcon, ClipboardIcon, BuildingIcon, HomeIcon, TrackIcon, AboutIcon } from '../../components/Icons';
 import OnboardingTour from '../../components/OnboardingTour';
 import { officeName } from "../../constants/offices";
+import { buildResponseGroups, responseOfficeLabel } from '../../utils/responseGroups';
 
 const TOUR_STEPS = [
   {
@@ -89,16 +90,23 @@ function TrackReport() {
     if (!querySnapshot.empty) {
       const reportDoc = querySnapshot.docs[0];
       const data = reportDoc.data();
-      let responsePhotos = [];
+      let responseGroups = [];
       try {
-        const photoSnap = await getDocs(collection(db, 'reports', reportDoc.id, 'responsePhotos'));
-        responsePhotos = photoSnap.docs
-          .map((d) => ({ slot: d.id, data: d.data().data }))
+        const [photoSnap, updateSnap] = await Promise.all([
+          getDocs(collection(db, 'reports', reportDoc.id, 'responsePhotos')),
+          getDocs(collection(db, 'reports', reportDoc.id, 'responseUpdates')).catch((e) => {
+            console.error('Error fetching response updates:', e);
+            return null;
+          }),
+        ]);
+        const photos = photoSnap.docs
+          .map((d) => ({ slot: d.id, ...d.data() }))
           .filter((p) => typeof p.data === 'string' && p.data.startsWith('data:image/jpeg;base64,'))
-          .sort((a, b) => Number(a.slot) - Number(b.slot))
-          .map((p) => p.data);
+          .sort((a, b) => Number(a.slot) - Number(b.slot));
+        const updates = updateSnap ? updateSnap.docs.map((d) => ({ id: d.id, ...d.data() })) : [];
+        responseGroups = buildResponseGroups(updates, photos);
       } catch (photoErr) {
-        console.error('Error fetching response photos:', photoErr);
+        console.error('Error fetching response documentation:', photoErr);
       }
       setReport({
         id: data.reportId,
@@ -112,7 +120,8 @@ function TrackReport() {
         photos: data.photos?.length ? data.photos : (data.photo ? [data.photo] : []),
         primaryOffice: data.primaryOffice || null,
         rejectionReason: data.rejectionReason || null,
-        responsePhotos,
+        responseGroups,
+        supportingOfficeIds: data.supportingOfficeIds || [],
       });
     } else {
       setReport(null);
@@ -206,16 +215,27 @@ function TrackReport() {
               </div>
             )}
 
-                        {data.responsePhotos?.length > 0 && (
-              <div className="detail-box track-response-photos">
-                <span className="detail-label"><BuildingIcon /> Photos from the handling office</span>
-                <div className="track-photo-grid">
-                  {data.responsePhotos.map((src, i) => (
-                    <img key={i} src={src} alt={`Office response ${i + 1}`} className="track-photo" onClick={() => setLightbox({ src, alt: `Office response ${i + 1}` })} />
-                  ))}
+            {data.responseGroups?.map((g) => (
+              <div key={g.key} className="detail-box track-response-photos">
+                <span className="detail-label"><BuildingIcon /> Update from the handling office</span>
+                <div className="track-response-head">
+                  <strong>{responseOfficeLabel(g.office, data, officeName)}</strong>
+                  {g.at?.toDate && (
+                    <span className="track-response-time">
+                      {g.at.toDate().toLocaleString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
                 </div>
+                {g.message && <p className="track-response-message">{g.message}</p>}
+                {g.photos.length > 0 && (
+                  <div className="track-photo-grid">
+                    {g.photos.map((p, i) => (
+                      <img key={p.slot} src={p.data} alt={`Office response ${i + 1}`} className="track-photo" onClick={() => setLightbox({ src: p.data, alt: `Office response ${i + 1}` })} />
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            ))}
 
       {lightbox && (
         <div className="track-lightbox" onClick={() => setLightbox(null)} role="dialog" aria-label="Enlarged photo">

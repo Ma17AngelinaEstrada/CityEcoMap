@@ -524,3 +524,7 @@
   line-height: 1;
   cursor: pointer;
 }
+
+.track-response-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 15px; color: #1a3c1a; }
+.track-response-time { font-size: 13px; color: #777; font-weight: 400; }
+.track-response-message { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; color: #222; margin: 0; }

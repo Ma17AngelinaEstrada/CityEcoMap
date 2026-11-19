@@ -39,6 +39,15 @@ const photo = (uid, office, extra = {}) => ({
 });
 const ref = (db, report, slot) => db.doc(`reports/${report}/responsePhotos/${slot}`);
 
+const updRef = (db, report, id) => db.doc(`reports/${report}/responseUpdates/${id}`);
+const upd = (uid, office, extra = {}) => ({
+  message: 'Cleared the area.',
+  uploadedByUid: uid,
+  uploadedByOffice: office,
+  createdAt: ts(),
+  ...extra,
+});
+
 const testEnv = await initializeTestEnvironment({
   projectId: 'cityecomap',
   firestore: {
@@ -88,6 +97,13 @@ async function seed() {
       [R.rerouteTarget, UID.ce, 'City Engineering'],
     ]) {
       await ref(db, rep, '1').set(photo(uid, office, { uploadedAt: new Date() }));
+    }
+    for (const [rep, uid, office] of [
+      [R.cenro, UID.cenro, 'CENRO'],
+      [R.ce, UID.ce, 'City Engineering'],
+      [R.supportOnly, UID.ce, 'City Engineering'],
+    ]) {
+      await updRef(db, rep, 'u1').set({ message: 'Existing update', uploadedByUid: uid, uploadedByOffice: office, createdAt: new Date() });
     }
   });
 }
@@ -180,6 +196,43 @@ const tests = [
       await NO(ref(c.master, R.cenro, '3').set(photo(UID.master, 'EMB')));
     },
   ],
+
+  // ---------- response updates (message) ----------
+  ['ALLOW', 'CENRO creates an update with a message on its own Approved report', (c) => OK(updRef(c.cenro, R.cenro, 'n1').set(upd(UID.cenro, 'CENRO')))],
+  ['ALLOW', 'CENRO creates an update with an empty message (photos only)', (c) => OK(updRef(c.cenro, R.cenro, 'n1').set(upd(UID.cenro, 'CENRO', { message: '' })))],
+  ['ALLOW', 'CENRO uploads a photo linked to an update (updateId)', (c) => OK(ref(c.cenro, R.cenro, '2').set(photo(UID.cenro, 'CENRO', { updateId: 'u1' })))],
+  ['ALLOW', 'Message-only update (no photos) is allowed', (c) => OK(updRef(c.ce, R.ce, 'n1').set(upd(UID.ce, 'City Engineering')))],
+  ['ALLOW', 'CENRO creates an update on its own Ongoing report (late documentation)', (c) => OK(updRef(c.cenro, R.cenroOngoing, 'n1').set(upd(UID.cenro, 'CENRO')))],
+  ['ALLOW', 'CENRO creates an update on its own Resolved report (late documentation)', (c) => OK(updRef(c.cenro, R.cenroResolved, 'n1').set(upd(UID.cenro, 'CENRO')))],
+  ['ALLOW', 'Master creates an update (same as existing photo permission)', (c) => OK(updRef(c.master, R.ce, 'n1').set(upd(UID.master, 'EMB')))],
+  ['ALLOW', 'Anyone (not logged in) can read response updates', (c) => OK(c.anon.collection(`reports/${R.cenro}/responseUpdates`).get())],
+  ['ALLOW', 'CENRO deletes an update on its own report', (c) => OK(updRef(c.cenro, R.cenro, 'u1').delete())],
+  ['ALLOW', 'Master deletes an update (same as existing photo permission)', (c) => OK(updRef(c.master, R.ce, 'u1').delete())],
+
+  ['DENY', 'CENRO cannot create an update on a City Engineering report', (c) => NO(updRef(c.cenro, R.ce, 'n1').set(upd(UID.cenro, 'CENRO')))],
+  ['DENY', 'City Engineering cannot create an update on a CENRO report', (c) => NO(updRef(c.ce, R.cenro, 'n1').set(upd(UID.ce, 'City Engineering')))],
+  ['DENY', 'CENRO cannot delete an update on a City Engineering report', (c) => NO(updRef(c.cenro, R.ce, 'u1').delete())],
+  ['DENY', 'EMB Admin cannot create an update', (c) => NO(updRef(c.emb, R.cenro, 'n1').set(upd(UID.emb, 'EMB')))],
+  ['DENY', 'EMB Admin cannot delete an update', (c) => NO(updRef(c.emb, R.cenro, 'u1').delete())],
+  ['DENY', 'Not logged in cannot create an update', (c) => NO(updRef(c.anon, R.cenro, 'n1').set(upd(UID.cenro, 'CENRO')))],
+  ['DENY', 'Not logged in cannot delete an update', (c) => NO(updRef(c.anon, R.cenro, 'u1').delete())],
+  ['DENY', 'Signed-in non-admin cannot create an update', (c) => NO(updRef(c.nobody, R.cenro, 'n1').set(upd(UID.nobody, 'CENRO')))],
+  ['DENY', 'Signed-in non-admin cannot delete an update', (c) => NO(updRef(c.nobody, R.cenro, 'u1').delete())],
+  ['DENY', 'Inactive CENRO admin cannot create an update', (c) => NO(updRef(c.inactive, R.cenro, 'n1').set(upd(UID.inactive, 'CENRO')))],
+  ['DENY', 'CENRO (supporting office only) cannot create an update', (c) => NO(updRef(c.cenro, R.supportOnly, 'n1').set(upd(UID.cenro, 'CENRO')))],
+  ['DENY', 'CENRO (supporting office only) cannot delete an update', (c) => NO(updRef(c.cenro, R.supportOnly, 'u1').delete())],
+  ['DENY', 'CENRO cannot create an update on its own Pending report', (c) => NO(updRef(c.cenro, R.cenroPending, 'n1').set(upd(UID.cenro, 'CENRO')))],
+  ['DENY', 'CENRO cannot create an update on its own Rejected report', (c) => NO(updRef(c.cenro, R.cenroRejected, 'n1').set(upd(UID.cenro, 'CENRO')))],
+  ['DENY', 'Cannot edit an existing update (create-only)', (c) => NO(updRef(c.cenro, R.cenro, 'u1').update({ message: 'changed' }))],
+  ['DENY', 'Cannot overwrite an existing update with set()', (c) => NO(updRef(c.cenro, R.cenro, 'u1').set(upd(UID.cenro, 'CENRO')))],
+  ['DENY', 'Cannot fake uploadedByUid on an update', (c) => NO(updRef(c.cenro, R.cenro, 'n1').set(upd(UID.ce, 'CENRO')))],
+  ['DENY', 'Cannot fake uploadedByOffice on an update', (c) => NO(updRef(c.cenro, R.cenro, 'n1').set(upd(UID.cenro, 'City Engineering')))],
+  ['DENY', 'Cannot use a client-side timestamp for createdAt', (c) => NO(updRef(c.cenro, R.cenro, 'n1').set(upd(UID.cenro, 'CENRO', { createdAt: new Date() })))],
+  ['DENY', 'Cannot add extra fields to an update', (c) => NO(updRef(c.cenro, R.cenro, 'n1').set(upd(UID.cenro, 'CENRO', { extra: 'x' })))],
+  ['DENY', 'Message longer than 1000 characters is rejected', (c) => NO(updRef(c.cenro, R.cenro, 'n1').set(upd(UID.cenro, 'CENRO', { message: 'a'.repeat(1001) })))],
+  ['DENY', 'Message must be a string', (c) => NO(updRef(c.cenro, R.cenro, 'n1').set(upd(UID.cenro, 'CENRO', { message: 123 })))],
+  ['DENY', 'Photo updateId must be a string', (c) => NO(ref(c.cenro, R.cenro, '2').set(photo(UID.cenro, 'CENRO', { updateId: 123 })))],
+  ['DENY', 'Photo updateId longer than 40 characters is rejected', (c) => NO(ref(c.cenro, R.cenro, '2').set(photo(UID.cenro, 'CENRO', { updateId: 'x'.repeat(41) })))],
 ];
 
 let failed = 0;
