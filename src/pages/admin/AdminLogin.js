@@ -4,6 +4,7 @@ import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from "fir
 import { doc, getDocFromServer } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import "./AdminLogin.css";
+import { EyeIcon, EyeOffIcon } from "../../components/Icons";
 
 // Only same-site admin paths are accepted as a post-login destination.
 const safeAdminReturnPath = (value) =>
@@ -16,6 +17,7 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const routerLocation = useLocation();
 
@@ -149,12 +151,24 @@ export default function AdminLogin() {
                 </div>
                 <div className="al-field">
                   <label>Password</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
-                  />
+                  <div className="al-password-wrap">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      className="al-eye-btn"
+                      onClick={() => setShowPassword((v) => !v)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-pressed={showPassword}
+                    >
+                      {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                    </button>
+                  </div>
                 </div>
                 <button type="submit" className="al-btn" disabled={loading}>
                   {loading ? "Logging in…" : "Login"}

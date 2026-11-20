@@ -8,6 +8,7 @@ import AdminLayout from "./AdminLayout";
 import "./ManageUsers.css";
 import { useAdminTour } from "../../context/AdminTourContext";
 import { OFFICE_ROLES, roleLabel } from "../../constants/offices";
+import { EyeIcon, EyeOffIcon } from "../../components/Icons";
 
 // Secondary Firebase app to create users without signing out current admin
 const secondaryApp = initializeApp({
@@ -62,6 +63,10 @@ export default function ManageUsers() {
   const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "" });
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
   const { registerTour, showTour, currentStepIndex } = useAdminTour();
   const isMasterAdmin = currentAdmin?.role === "Master Admin";
 
@@ -92,6 +97,15 @@ export default function ManageUsers() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showTour, currentStepIndex, isMasterAdmin]);
+
+  // Start every form open with hidden, empty password fields.
+  useEffect(() => {
+    if (!showModal) {
+      setConfirmPassword("");
+      setShowPassword(false);
+      setShowConfirmPassword(false);
+    }
+  }, [showModal]);
 
   useEffect(() => {
       const unsub = onAuthStateChanged(auth, async (user) => {
@@ -136,10 +150,14 @@ export default function ManageUsers() {
     setShowModal(true);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (confirmed) => {
     setFormError("");
     if (!formData.name.trim() || !formData.email.trim()) {
       setFormError("Name and email are required.");
+      return;
+    }
+    if (!editingAdmin && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(formData.email)) {
+      setFormError("Please enter a valid email address (for example, name@example.com).");
       return;
     }
     if (!editingAdmin && !formData.password.trim()) {
@@ -150,8 +168,25 @@ export default function ManageUsers() {
       setFormError("Password must be at least 6 characters.");
       return;
     }
+    if (!editingAdmin && formData.password !== confirmPassword) {
+      setFormError("Password and Confirm Password do not match.");
+      return;
+    }
     if (!formData.role) {
       setFormError("Please select a role.");
+      return;
+    }
+
+    if (confirmed !== true) {
+      const isEdit = !!editingAdmin;
+      setConfirmAction({
+        title: isEdit ? "Save changes?" : "Create this admin account?",
+        message: isEdit
+          ? `Save the changes to ${formData.name.trim()} (${editingAdmin.email})? Role: ${roleLabel(formData.role)}.`
+          : `Create an admin account for ${formData.name.trim()} (${formData.email.trim()}) as ${roleLabel(formData.role)}?`,
+        confirmLabel: isEdit ? "Save Changes" : "Create Admin",
+        run: () => handleSubmit(true),
+      });
       return;
     }
 
@@ -202,6 +237,8 @@ export default function ManageUsers() {
     } catch (err) {
       if (err.code === "auth/email-already-in-use") {
         setFormError("This email is already in use.");
+      } else if (err.code === "auth/invalid-email") {
+        setFormError("Please enter a valid email address.");
       } else {
         setFormError("Something went wrong. Please try again.");
         console.error(err);
@@ -209,6 +246,12 @@ export default function ManageUsers() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const runConfirm = async () => {
+    const run = confirmAction?.run;
+    setConfirmAction(null);
+    if (run) await run();
   };
 
   const handleToggleStatus = async (admin) => {
@@ -299,7 +342,16 @@ export default function ManageUsers() {
                           </button>
                           <button
                             className={`mu-toggle-btn ${admin.status === "Active" ? "mu-toggle-btn--deactivate" : "mu-toggle-btn--activate"}`}
-                            onClick={() => handleToggleStatus(admin)}
+                            onClick={() =>
+                              setConfirmAction({
+                                title: admin.status === "Active" ? "Deactivate this account?" : "Activate this account?",
+                                message: admin.status === "Active"
+                                  ? `${admin.name} will no longer be able to log in to the admin system.`
+                                  : `${admin.name} will be able to log in to the admin system again.`,
+                                confirmLabel: admin.status === "Active" ? "Deactivate" : "Activate",
+                                run: () => handleToggleStatus(admin),
+                              })
+                            }
                             disabled={admin.id === auth.currentUser?.uid}
                           >
                             {admin.status === "Active" ? "Deactivate" : "Activate"}
@@ -338,7 +390,16 @@ export default function ManageUsers() {
                 <button className="mu-edit-btn" onClick={() => openEditModal(admin)}>Edit</button>
                 <button
                   className={`mu-toggle-btn ${admin.status === "Active" ? "mu-toggle-btn--deactivate" : "mu-toggle-btn--activate"}`}
-                  onClick={() => handleToggleStatus(admin)}
+                  onClick={() =>
+                    setConfirmAction({
+                      title: admin.status === "Active" ? "Deactivate this account?" : "Activate this account?",
+                      message: admin.status === "Active"
+                        ? `${admin.name} will no longer be able to log in to the admin system.`
+                        : `${admin.name} will be able to log in to the admin system again.`,
+                      confirmLabel: admin.status === "Active" ? "Deactivate" : "Activate",
+                      run: () => handleToggleStatus(admin),
+                    })
+                  }
                   disabled={admin.id === auth.currentUser?.uid}
                 >
                   {admin.status === "Active" ? "Deactivate" : "Activate"}
@@ -386,15 +447,53 @@ export default function ManageUsers() {
               </div>
 
               {!editingAdmin && (
-                <div className="mu-field">
-                  <label>Password</label>
-                  <input
-                    type="password"
-                    placeholder="Minimum 6 characters"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  />
-                </div>
+                <>
+                  <div className="mu-field">
+                    <label>Password</label>
+                    <div className="mu-password-wrap">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Minimum 6 characters"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        className="mu-eye-btn"
+                        onClick={() => setShowPassword((v) => !v)}
+                        onMouseDown={(e) => e.preventDefault()}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        aria-pressed={showPassword}
+                      >
+                        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mu-field">
+                    <label>Confirm Password</label>
+                    <div className="mu-password-wrap">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Re-enter the password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        className="mu-eye-btn"
+                        onClick={() => setShowConfirmPassword((v) => !v)}
+                        onMouseDown={(e) => e.preventDefault()}
+                        aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                        aria-pressed={showConfirmPassword}
+                      >
+                        {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
 
               <div className="mu-field">
@@ -424,6 +523,24 @@ export default function ManageUsers() {
           </div>
         </div>
       )}
+
+      {confirmAction && (
+        <div className="mu-modal-overlay" onClick={() => setConfirmAction(null)}>
+          <div className="mu-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="mu-modal-header">
+              <h3>{confirmAction.title}</h3>
+            </div>
+            <div className="mu-modal-body">
+              <p className="mu-confirm-text">{confirmAction.message}</p>
+            </div>
+            <div className="mu-modal-footer">
+              <button className="mu-cancel-btn" onClick={() => setConfirmAction(null)}>Cancel</button>
+              <button className="mu-save-btn" onClick={runConfirm}>{confirmAction.confirmLabel}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </AdminLayout>
   );
 }

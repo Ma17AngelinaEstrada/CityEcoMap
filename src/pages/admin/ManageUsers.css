@@ -386,3 +386,29 @@
   vertical-align: middle;
 }
 
+/* Show/Hide password */
+.mu-password-wrap { position: relative; display: flex; }
+.mu-password-wrap input { width: 100%; padding-right: 42px; }
+.mu-password-wrap input::-ms-reveal { display: none; }
+.mu-eye-btn {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #888;
+  cursor: pointer;
+}
+.mu-eye-btn:hover { color: #1a4a1a; }
+.mu-eye-btn:focus-visible { outline: 2px solid #1a4a1a; outline-offset: 1px; }
+.mu-eye-btn svg { width: 18px; height: 18px; }
+
+.mu-confirm-text { font-size: 0.9rem; color: #444; font-family: sans-serif; line-height: 1.5; margin: 0; }

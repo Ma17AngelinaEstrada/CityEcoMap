@@ -227,3 +227,29 @@
   .al-right { width: 100%; }
   .al-illustration-img { width: 200px; }
 }
+
+/* Show/Hide password */
+.al-password-wrap { position: relative; }
+.al-password-wrap input { padding-right: 44px; }
+.al-password-wrap input::-ms-reveal { display: none; }
+.al-eye-btn {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #6b7a6b;
+  cursor: pointer;
+}
+.al-eye-btn:hover { color: #1a4a1a; }
+.al-eye-btn:focus-visible { outline: 2px solid #1a4a1a; outline-offset: 1px; }
+.al-eye-btn svg { width: 18px; height: 18px; }
+
