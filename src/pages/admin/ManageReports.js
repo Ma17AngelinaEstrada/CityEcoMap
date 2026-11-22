@@ -2022,9 +2022,66 @@ export default function ManageReports() {
                   <span className="mr-photo-hint">Click a photo to enlarge</span>
                 </div>
               )}
+              
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Primary Office</span>
+                <span className="mr-detail-value">{officeLabel(selectedReport)}</span>
+              </div>
+              <div className="mr-detail-row">
+                <span className="mr-detail-label">Supporting Office</span>
+                <span className="mr-detail-value">{supportingOfficesLabel(selectedReport)}</span>
+              </div>
+            </div>
+
+            {/* RIGHT COLUMN — Actions / Coordination / History */}
+            <div className="mr-detail-col-right">
+              <div className="mr-priority-section">
+                <p className="mr-detail-label">Suggested Priority</p>
+                <PriorityBadge level={selSuggestion.level} />
+                <p className="mr-priority-reason">{selSuggestion.reason}</p>
+                {selSuggestion.indicators.length > 0 && (
+                  <ul className="mr-priority-evidence">
+                    {selSuggestion.indicators.map((g) => (
+                      <li key={g.id}>
+                        <span>{g.label}:</span> {g.matched.join(", ")}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                
+              </div>
+              
+              {selectedReport.status === "Rejected" && (
+                <div className="mr-detail-row">
+                  <span className="mr-detail-label">Rejection Reason</span>
+                  <span className="mr-detail-value mr-detail-value--rejected">
+                    {selectedReport.rejectionReason || "—"}
+                  </span>
+                </div>
+              )}
+
+            <div className="mr-workflow-group">
+              <div className="mr-status-actions">
+                <div className="mr-action-row">
+                  <div className="mr-action-info">
+                    <p className="mr-detail-label">Actions</p>
+                    <p className="mr-action-help">Review the report and choose the appropriate action.</p>
+                  </div>
+                  <div className="mr-action-controls">
+                    {renderActions()}
+                  </div>
+                </div>
+                {selectedReport.escalation?.status === "open" && (
+                  <div className="mr-escalation-banner">
+                    <strong>Escalated by {selectedReport.escalation.raisedByOffice}</strong>
+                    <span>{selectedReport.escalation.reason}</span>
+                  </div>
+                )}
+              </div>
+
               {selectedReport && selectedReport.id !== 'SAMPLE_REPORT' &&
                 (responseGroups.length > 0 || canUploadResponsePhotos(selectedReport)) && (
-                <div className="mr-detail-photo mr-response-photos">
+                <div className="mr-response-section mr-response-photos">
                   <span className="mr-detail-label">Response Documentation (Public)</span>
                   <div className="mr-response-warning">
                     Messages and photos added here are <strong>publicly visible</strong> in Track Report.
@@ -2150,61 +2207,6 @@ export default function ManageReports() {
                   {responsePhotoError && <p className="mr-response-error">{responsePhotoError}</p>}
                 </div>
               )}
-              <div className="mr-detail-row">
-                <span className="mr-detail-label">Primary Office</span>
-                <span className="mr-detail-value">{officeLabel(selectedReport)}</span>
-              </div>
-              <div className="mr-detail-row">
-                <span className="mr-detail-label">Supporting Office</span>
-                <span className="mr-detail-value">{supportingOfficesLabel(selectedReport)}</span>
-              </div>
-            </div>
-
-            {/* RIGHT COLUMN — Actions / Coordination / History */}
-            <div className="mr-detail-col-right">
-              <div className="mr-priority-section">
-                <p className="mr-detail-label">Suggested Priority</p>
-                <PriorityBadge level={selSuggestion.level} />
-                <p className="mr-priority-reason">{selSuggestion.reason}</p>
-                {selSuggestion.indicators.length > 0 && (
-                  <ul className="mr-priority-evidence">
-                    {selSuggestion.indicators.map((g) => (
-                      <li key={g.id}>
-                        <span>{g.label}:</span> {g.matched.join(", ")}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                
-              </div>
-              
-              {selectedReport.status === "Rejected" && (
-                <div className="mr-detail-row">
-                  <span className="mr-detail-label">Rejection Reason</span>
-                  <span className="mr-detail-value mr-detail-value--rejected">
-                    {selectedReport.rejectionReason || "—"}
-                  </span>
-                </div>
-              )}
-
-            <div className="mr-workflow-group">
-              <div className="mr-status-actions">
-                <div className="mr-action-row">
-                  <div className="mr-action-info">
-                    <p className="mr-detail-label">Actions</p>
-                    <p className="mr-action-help">Review the report and choose the appropriate action.</p>
-                  </div>
-                  <div className="mr-action-controls">
-                    {renderActions()}
-                  </div>
-                </div>
-                {selectedReport.escalation?.status === "open" && (
-                  <div className="mr-escalation-banner">
-                    <strong>Escalated by {selectedReport.escalation.raisedByOffice}</strong>
-                    <span>{selectedReport.escalation.reason}</span>
-                  </div>
-                )}
-              </div>
 
               <div className="mr-support-section">
                 <div className="mr-section-head">
