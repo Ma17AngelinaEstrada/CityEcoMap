@@ -71,7 +71,7 @@ const compressToJpeg = (file) =>
 
 // Asks the email server to notify the citizen. The server verifies this admin's
 // access to the report and chooses the recipient and the message itself.
-const sendEmailNotification = async (reportDocId, kind) => {
+const sendEmailNotification = async (reportDocId, kind, updateId) => {
   if (!reportDocId || reportDocId === 'SAMPLE_REPORT') return;
   try {
     const user = auth.currentUser;
@@ -83,7 +83,7 @@ const sendEmailNotification = async (reportDocId, kind) => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${idToken}`,
       },
-      body: JSON.stringify({ reportDocId, kind }),
+        body: JSON.stringify({ reportDocId, kind, updateId }),
     });
   } catch (err) {
     console.error('Email notification failed:', err);
@@ -1316,6 +1316,8 @@ export default function ManageReports() {
         }
         setResponseMessage("");
         setResponseFiles([]);
+        // Email the citizen about this update (the server skips it if there is no valid email).
+        if (selectedReport.email) sendEmailNotification(reportId, "response", updateRef.id);
       } catch (err) {
         console.error("Response update failed:", err);
         setResponsePhotoError(err.message || "Could not save the response update. Please try again.");
@@ -2194,7 +2196,7 @@ export default function ManageReports() {
                         onClick={() =>
                           askStatusConfirm(
                             "Save Response Update?",
-                            "This message and these photos will be publicly visible in Track Report. Make sure they do not show faces, vehicle plate numbers, names, or other private information.",
+                            "This message and these photos will be publicly visible in Track Report, and the citizen will be emailed if they provided an email address. Make sure they do not show faces, vehicle plate numbers, names, or other private information.",
                             handleResponseSubmit
                           )
                         }

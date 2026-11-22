@@ -223,6 +223,7 @@ const SIGNATURE = '<br/><p>&mdash; CityEcoMap Team</p>';
 const TRACK_APP_URL = 'https://cityecomap.web.app';
 
 const STATUS_STYLE = {
+  Pending: { bg: '#e53935', fg: '#ffffff' },
   Approved: { bg: '#1565c0', fg: '#ffffff' },
   Ongoing: { bg: '#f9a825', fg: '#3b2a00' },
   Resolved: { bg: '#2e7d32', fg: '#ffffff' },
@@ -331,6 +332,54 @@ function buildEmail(kind, report) {
     default:
       return null;
   }
+}
+
+// ---------- Response-update notification (citizen email) ----------
+// The update's text comes from Firestore, never from the browser.
+async function loadResponseUpdate(docId, updateId) {
+  const r = await firestoreGet(`reports/${docId}/responseUpdates/${updateId}`, null); // public read
+  if (r.status === 404) return null;
+  if (r.status !== 200) throw new Error(`Firestore ${r.status}`);
+  return {
+    message: fieldString(r.doc, 'message').slice(0, 1000),
+    uploadedByUid: fieldString(r.doc, 'uploadedByUid'),
+    uploadedByOffice: fieldString(r.doc, 'uploadedByOffice'),
+    createdAtMs: fsTimestampMs(r.doc, 'createdAt'),
+  };
+}
+
+// Counts the photos saved with this update. Only the updateId field is fetched (no image data).
+async function countResponsePhotos(docId, updateId) {
+  try {
+    const r = await firestoreGet(`reports/${docId}/responsePhotos?mask.fieldPaths=updateId&pageSize=30`, null);
+    if (r.status !== 200 || !r.doc) return 0;
+    return (r.doc.documents || []).filter((d) => fieldString(d, 'updateId') === updateId).length;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function buildResponseEmail(report, update, photoCount) {
+  // Master Admin updates are stored with office "EMB"; citizens see "CityEcoMap Administrator".
+  const fromMaster = update.uploadedByOffice === 'EMB' && report.primaryOffice !== 'EMB';
+  const who = fromMaster
+    ? 'CityEcoMap Administrator'
+    : officeDisplayName(update.uploadedByOffice || report.primaryOffice || 'The handling office');
+  let body = `<p style="margin:0 0 10px;"><strong>${escapeHtml(who)}</strong> posted an update on your report.</p>`;
+  if (update.message) {
+    const text = escapeHtml(update.message).replace(/\r?\n/g, '<br/>');
+    body +=
+      '<div style="margin:0 0 10px;padding:10px 14px;background:#f3f7f4;border-left:4px solid #1b5e20;border-radius:4px;">' +
+      `${text}</div>`;
+  }
+  if (photoCount > 0) {
+    body += `<p style="margin:0 0 10px;">${photoCount} photo${photoCount === 1 ? '' : 's'} added with this update.</p>`;
+  }
+  body += '<p style="margin:0;">You can see the full update on the Track Report page.</p>';
+  return {
+    subject: 'New Update on Your CityEcoMap Report',
+    html: renderCitizenEmail(report, report.status, 'New update on your report', body),
+  };
 }
 
 // ---------- New-report notification helpers ----------
@@ -572,9 +621,11 @@ const newReportLimiter = rateLimit({
 // document ID and the kind of update. The server decides who may send, and to whom.
 app.post('/notify', notifyLimiter, async (req, res) => {
   try {
-    const { reportDocId, kind } = req.body || {};
+    const { reportDocId, kind, updateId } = req.body || {};
+    const isResponse = kind === 'response';
     if (typeof reportDocId !== 'string' || !DOC_ID_RE.test(reportDocId) ||
-        typeof kind !== 'string' || !KIND_TO_STATUS[kind]) {
+        typeof kind !== 'string' || (!isResponse && !KIND_TO_STATUS[kind]) ||
+        (isResponse && !(typeof updateId === 'string' && DOC_ID_RE.test(updateId)))) {
       return res.status(400).json({ error: 'Invalid request.' });
     }
     const match = /^Bearer (\S+)$/.exec(req.get('Authorization') || '');
@@ -599,19 +650,32 @@ app.post('/notify', notifyLimiter, async (req, res) => {
     if (access !== 'ok') return fail(access);
 
     // The email must match the report's current official status.
-    if (!KIND_TO_STATUS[kind].includes(report.status)) {
+    if (!isResponse && !KIND_TO_STATUS[kind].includes(report.status)) {
       return res.status(409).json({ error: 'Report status does not match this notification.' });
     }
     if (!isValidEmail(report.email)) {
       return res.json({ success: true, skipped: 'no-valid-recipient' });
     }
 
-    const dedupeKey = `${reportDocId}:${kind}`;
+    // A response-update email is only for an update this admin just saved on this report.
+    let update = null;
+    if (isResponse) {
+      update = await loadResponseUpdate(reportDocId, updateId);
+      if (!update) return res.status(404).json({ error: 'Update not found.' });
+      const ageMs = update.createdAtMs == null ? Infinity : Date.now() - update.createdAtMs;
+      if (update.uploadedByUid !== admin.uid || ageMs < -60 * 1000 || ageMs > DEDUPE_WINDOW_MS) {
+        return res.status(409).json({ error: 'This update cannot be notified.' });
+      }
+    }
+
+    const dedupeKey = isResponse ? `${reportDocId}:response:${updateId}` : `${reportDocId}:${kind}`;
     if (wasSentRecently(dedupeKey)) return res.json({ success: true, skipped: 'duplicate' });
     if (!takeDailySlot()) return res.status(429).json({ error: 'Daily email limit reached.' });
 
     recentSends.set(dedupeKey, Date.now());
-    const message = buildEmail(kind, report);
+    const message = isResponse
+      ? buildResponseEmail(report, update, await countResponsePhotos(reportDocId, updateId))
+      : buildEmail(kind, report);
     const result = await sendViaBrevo(report.email, message.subject, message.html);
     if (!result.ok) {
       recentSends.delete(dedupeKey);
