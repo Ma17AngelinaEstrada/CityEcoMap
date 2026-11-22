@@ -47,6 +47,10 @@ const RECIPIENT_ENV_BY_OFFICE = {
   EMB: 'NOTIFY_ADMIN_EMAILS_MASTER', // Master Admin's office
 };
 
+// Display names shown in emails. Stored office values are unchanged.
+const OFFICE_DISPLAY_NAME = { CENRO: 'City ENRO' };
+const officeDisplayName = (office) => OFFICE_DISPLAY_NAME[office] || office;
+
 // Local testing only: do not call Brevo. Never set this in production.
 const EMAIL_DRY_RUN = process.env.EMAIL_DRY_RUN === 'true';
 
@@ -190,6 +194,8 @@ async function loadReport(docId) {
     status: fieldString(r.doc, 'status'),
     email: fieldString(r.doc, 'email'),
     primaryOffice: fieldString(r.doc, 'primaryOffice'),
+    category: fieldString(r.doc, 'category'),
+    subCategory: fieldString(r.doc, 'subCategory'),
     rejectionReason: fieldString(r.doc, 'rejectionReason').slice(0, 500),
   };
 }
@@ -213,54 +219,114 @@ async function verifyReportAccess(admin, report, docId, idToken) {
 
 const SIGNATURE = '<br/><p>&mdash; CityEcoMap Team</p>';
 
-function buildEmail(kind, report) {
+// Citizen emails link to the public Track Report page (same site as the app).
+const TRACK_APP_URL = 'https://cityecomap.web.app';
+
+const STATUS_STYLE = {
+  Approved: { bg: '#1565c0', fg: '#ffffff' },
+  Ongoing: { bg: '#f9a825', fg: '#3b2a00' },
+  Resolved: { bg: '#2e7d32', fg: '#ffffff' },
+  Rejected: { bg: '#757575', fg: '#ffffff' },
+};
+
+function summaryRow(label, valueHtml) {
+  return (
+    '<tr>' +
+    `<td style="padding:8px 0;color:#6b7280;font-size:13px;width:38%;vertical-align:top;border-bottom:1px solid #e5e7eb;">${label}</td>` +
+    `<td style="padding:8px 0;color:#111827;font-size:14px;font-weight:600;vertical-align:top;border-bottom:1px solid #e5e7eb;">${valueHtml}</td>` +
+    '</tr>'
+  );
+}
+
+// One shared layout for every citizen email: header, status badge, message,
+// report summary, Track Report button, and footer.
+function renderCitizenEmail(report, status, headline, bodyHtml) {
   const id = escapeHtml(report.reportId);
+  const style = STATUS_STYLE[status] || { bg: '#757575', fg: '#ffffff' };
+  const trackUrl = `${TRACK_APP_URL}/track-report?id=${encodeURIComponent(report.reportId)}`;
+  const safeUrl = escapeHtml(trackUrl);
+
+  let rows = summaryRow('Report ID', `#${id}`);
+  if (report.category) rows += summaryRow('Category', escapeHtml(report.category));
+  if (report.subCategory) rows += summaryRow('Specific Issue', escapeHtml(report.subCategory));
+  if (status !== 'Rejected' && report.primaryOffice) {
+    rows += summaryRow('Handling Office', escapeHtml(officeDisplayName(report.primaryOffice)));
+  }
+  if (status === 'Rejected' && report.rejectionReason) {
+    rows += summaryRow('Reason', escapeHtml(report.rejectionReason));
+  }
+
+  return (
+    '<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f3f4f6;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:24px 12px;">' +
+    '<tr><td align="center">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">' +
+    // Header
+    '<tr><td style="background:#1b5e20;padding:18px 24px;color:#ffffff;font-size:20px;font-weight:700;">CityEcoMap' +
+    '<div style="font-size:12px;font-weight:400;opacity:0.85;margin-top:2px;">Lucena City Environmental Reporting</div></td></tr>' +
+    // Body
+    '<tr><td style="padding:24px;">' +
+    `<span style="display:inline-block;background:${style.bg};color:${style.fg};font-size:12px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:5px 12px;border-radius:999px;">${escapeHtml(status)}</span>` +
+    `<h1 style="margin:14px 0 8px;font-size:20px;line-height:1.3;color:#111827;">${headline}</h1>` +
+    `<div style="font-size:15px;line-height:1.6;color:#374151;">${bodyHtml}</div>` +
+    // Summary
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;border-top:1px solid #e5e7eb;">' +
+    rows +
+    '</table>' +
+    // Button
+    '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;"><tr>' +
+    `<td style="background:#1b5e20;border-radius:6px;"><a href="${safeUrl}" style="display:inline-block;padding:12px 24px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">Track Report</a></td>` +
+    '</tr></table>' +
+    `<p style="margin:12px 0 0;font-size:12px;color:#6b7280;line-height:1.5;">If the button does not work, copy this link into your browser:<br/><a href="${safeUrl}" style="color:#1565c0;word-break:break-all;">${safeUrl}</a></p>` +
+    '</td></tr>' +
+    // Footer
+    '<tr><td style="background:#f9fafb;padding:16px 24px;font-size:12px;color:#6b7280;line-height:1.6;border-top:1px solid #e5e7eb;">' +
+    'This is an automated message from the CityEcoMap Team. Please do not reply to this email.<br/>' +
+    'You received this because an email address was provided with report #' + id + '.' +
+    '</td></tr>' +
+    '</table></td></tr></table></body></html>'
+  );
+}
+
+function buildEmail(kind, report) {
   switch (kind) {
     case 'approved':
       return {
         subject: 'Your CityEcoMap Report Has Been Approved',
-        html:
-          '<p>Dear Citizen,</p>' +
-          `<p>Your report <strong>#${id}</strong> has been reviewed and approved.</p>` +
+        html: renderCitizenEmail(
+          report, 'Approved', 'Your report has been approved',
+          '<p style="margin:0 0 8px;">Good news! Your report has been reviewed and approved.' +
           (report.primaryOffice
-            ? `<p>It is being handled by <strong>${escapeHtml(report.primaryOffice)}</strong>.</p>`
+            ? ` It is now being handled by <strong>${escapeHtml(officeDisplayName(report.primaryOffice))}</strong>.`
             : '') +
-          '<p>Thank you for helping keep Lucena City clean!</p>' +
-          `<p>You can also check your report's progress anytime using your Report ID <strong>#${id}</strong> on our Track Report page.</p>` +
-          SIGNATURE,
+          '</p><p style="margin:0;">Thank you for helping keep Lucena City clean!</p>'
+        ),
       };
     case 'rejected':
       return {
         subject: 'Update on Your CityEcoMap Report',
-        html:
-          '<p>Dear Citizen,</p>' +
-          `<p>Your report <strong>#${id}</strong> has been reviewed but could not be approved.</p>` +
-          (report.rejectionReason
-            ? `<p><strong>Reason:</strong> ${escapeHtml(report.rejectionReason)}</p>`
-            : '') +
-          '<p>If you believe this is an error, please submit a new report with clearer details.</p>' +
-          `<p>You can also check your report's status anytime using your Report ID <strong>#${id}</strong> on our Track Report page.</p>` +
-          SIGNATURE,
+        html: renderCitizenEmail(
+          report, 'Rejected', 'Your report could not be approved',
+          '<p style="margin:0 0 8px;">Your report has been reviewed but could not be approved.</p>' +
+          '<p style="margin:0;">If you believe this is an error, please submit a new report with clearer details.</p>'
+        ),
       };
     case 'ongoing':
       return {
         subject: 'Cleanup in Progress — CityEcoMap Report Update',
-        html:
-          '<p>Dear Citizen,</p>' +
-          `<p>Good news! Cleanup is now in progress for your report <strong>#${id}</strong>.</p>` +
-          '<p>Our team is actively working on resolving the issue. Thank you for your patience.</p>' +
-          `<p>You can also check your report's progress anytime using your Report ID <strong>#${id}</strong> on our Track Report page.</p>` +
-          SIGNATURE,
+        html: renderCitizenEmail(
+          report, 'Ongoing', 'Cleanup is now in progress',
+          '<p style="margin:0;">Our team is actively working on resolving the issue in your report. Thank you for your patience.</p>'
+        ),
       };
     case 'resolved':
       return {
         subject: 'Your Report Has Been Resolved — CityEcoMap',
-        html:
-          '<p>Dear Citizen,</p>' +
-          `<p>Your report <strong>#${id}</strong> has been successfully resolved.</p>` +
-          '<p>Thank you for helping us build a cleaner, greener Lucena City!</p>' +
-          `<p>You can view the full details of your resolved report anytime using your Report ID <strong>#${id}</strong> on our Track Report page.</p>` +
-          SIGNATURE,
+        html: renderCitizenEmail(
+          report, 'Resolved', 'Your report has been resolved',
+          '<p style="margin:0 0 8px;">Your report has been successfully resolved.</p>' +
+          '<p style="margin:0;">Thank you for helping us build a cleaner, greener Lucena City! You can view the full details, including any update from the handling office, on the Track Report page.</p>'
+        ),
       };
     default:
       return null;
@@ -423,9 +489,9 @@ function detailRow(label, valueHtml) {
 function buildNewReportEmail(docId, report) {
   const link = `${ADMIN_APP_URL}/admin/reports?report=${docId}`;
   let routing;
-  if (report.primaryOffice) routing = `Assigned office: <strong>${escapeHtml(report.primaryOffice)}</strong>`;
+  if (report.primaryOffice) routing = `Assigned office: <strong>${escapeHtml(officeDisplayName(report.primaryOffice))}</strong>`;
   else if (report.needsReview) routing = '<strong>Needs manual review</strong>';
-  else routing = `Needs jurisdiction verification: <strong>${escapeHtml(report.jurisdictionCandidates.join(' / '))}</strong>`;
+  else routing = `Needs jurisdiction verification: <strong>${escapeHtml(report.jurisdictionCandidates.map(officeDisplayName).join(' / '))}</strong>`;
 
   const desc = String(report.description || '').trim();
   const descShown = desc.length > 1000 ? `${desc.slice(0, 1000)}…` : desc;

@@ -13,7 +13,7 @@ import {
   limit,
 } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
-import { officeForRole, roleLabel } from "../../constants/offices";
+import { officeForRole, roleLabel, displayOfficeText } from "../../constants/offices";
 import "./AdminLayout.css";
 import { BellIcon } from "../../components/Icons";
 import { useAdminTour } from "../../context/AdminTourContext";
@@ -820,7 +820,7 @@ export default function AdminLayout({ children }) {
                       }}
                     >
                       <span className="al2-notif-desc">
-                        {item.notes || item.action}
+                        {displayOfficeText(item.notes || item.action || "")}
                       </span>
                       <span className="al2-notif-time">
                         {formatNotifDate(item.timestamp)}

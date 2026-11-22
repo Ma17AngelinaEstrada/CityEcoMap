@@ -45,8 +45,13 @@ export function buildResponseGroups(updates = [], photos = []) {
     .sort((a, b) => toMs(b.at) - toMs(a.at));
 }
 
-export function responseOfficeLabel(office, report, nameOf) {
+export function responseOfficeLabel(office, report, nameOf, audience = "admin") {
   if (!office) return "Handling office";
+  // Master Admin uploads are stored with office "EMB" (the rules map Master Admin to EMB).
+  // When EMB is not this report's own Primary Office, the update came from the Master Admin.
+  if (office === "EMB" && !(report && report.primaryOffice === "EMB")) {
+    return audience === "public" ? "CityEcoMap Administrator" : "Master Admin";
+  }
   const name = nameOf ? nameOf(office) : office;
   if (report && office === report.primaryOffice) return `${name} (Primary Office)`;
   if (report && (report.supportingOfficeIds || []).includes(office)) return `${name} (Supporting Office)`;

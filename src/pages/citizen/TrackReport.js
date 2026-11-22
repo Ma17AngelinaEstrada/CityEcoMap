@@ -133,7 +133,9 @@ function TrackReport() {
 };
 
   // Opened from the map's "My Reports" (e.g. a rejected report): search that ID automatically
-  const incomingId = routerLocation.state?.reportId;
+  const incomingId =
+    routerLocation.state?.reportId ||
+    new URLSearchParams(routerLocation.search).get('id');
   useEffect(() => {
     if (!incomingId) return;
     setReportId(incomingId);
@@ -219,7 +221,7 @@ function TrackReport() {
               <div key={g.key} className="detail-box track-response-photos">
                 <span className="detail-label"><BuildingIcon /> Update from the handling office</span>
                 <div className="track-response-head">
-                  <strong>{responseOfficeLabel(g.office, data, officeName)}</strong>
+                  <strong>{responseOfficeLabel(g.office, data, officeName, 'public')}</strong>
                   {g.at?.toDate && (
                     <span className="track-response-time">
                       {g.at.toDate().toLocaleString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
